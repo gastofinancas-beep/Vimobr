@@ -1,0 +1,84 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string", "maxLength": 100 },
+        "handle": { "type": "string", "maxLength": 50 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "bio": { "type": "string", "maxLength": 500 },
+        "homeCityKey": { "type": "string", "maxLength": 100 },
+        "homeCityName": { "type": "string", "maxLength": 100 },
+        "followersCount": { "type": "number" },
+        "followingCount": { "type": "number" }
+      },
+      "required": ["displayName", "handle"]
+    },
+    "FCMToken": {
+      "title": "FCMToken",
+      "description": "User device registration token for Push Notifications",
+      "type": "object",
+      "properties": {
+        "token": { "type": "string", "maxLength": 500 },
+        "platform": { "type": "string", "maxLength": 20 },
+        "userAgent": { "type": "string", "maxLength": 300 }
+      },
+      "required": ["token"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Gastronomic review published by a user",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 100 },
+        "authorHandle": { "type": "string", "maxLength": 50 },
+        "authorPhoto": { "type": "string", "maxLength": 500 },
+        "placeId": { "type": "string", "maxLength": 128 },
+        "placeName": { "type": "string", "maxLength": 150 },
+        "cityKey": { "type": "string", "maxLength": 100 },
+        "cityName": { "type": "string", "maxLength": 100 },
+        "overall": { "type": "number" },
+        "text": { "type": "string", "maxLength": 2000 },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "authorName", "placeId", "placeName", "overall"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Comment on a gastronomic review",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 100 },
+        "authorHandle": { "type": "string", "maxLength": 50 },
+        "authorPhoto": { "type": "string", "maxLength": 500 },
+        "text": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "authorName", "text"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile collection"
+    },
+    "/users/{userId}/fcmTokens/{tokenId}": {
+      "schema": "FCMToken",
+      "description": "User device push tokens for Cloud Messaging"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Reviews collection"
+    },
+    "/reviews/{reviewId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Comments on reviews"
+    }
+  }
+}

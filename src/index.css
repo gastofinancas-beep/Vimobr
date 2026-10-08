@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #111119;
+  --color-s1: #181A24;
+  --color-s2: #222536;
+  --color-line: #2B2F42;
+  --color-ink: #F7F3EE;
+  --color-muted: #9CA0B3;
+  --color-primary: #77ACFC;
+  --color-primary-hover: #5F94E6;
+  --color-on-primary: #111119;
+  --color-star: #F77947;
+
+  --font-display: "Inter", sans-serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+:root { /* tema claro */
+  --bg: #F9F4F1;
+  --s1: #FFFFFF;
+  --s2: #F1EAE4;
+  --line: #E8DFD8;
+  --ink: #111119;
+  --muted: #6B6975;
+  --primary: #1F3163;        /* azul-marinho da identidade */
+  --primary-hover: #152450;
+  --on-primary: #F7E9DC;     /* creme */
+  --star: #F77947;           /* laranja do ponto do logo e do pino */
+}
+
+html.dark { /* tema padrão */
+  --bg: #111119;
+  --s1: #181A24;
+  --s2: #222536;
+  --line: #2B2F42;
+  --ink: #F7F3EE;
+  --muted: #9CA0B3;
+  --primary: #77ACFC;        /* azul claro da identidade */
+  --primary-hover: #5F94E6;
+  --on-primary: #111119;
+  --star: #F77947;
+}
+
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  html, body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 9999px;
+}
+
+/* Login mascot physical card-edge alignment */
+#login-mascote {
+  position: absolute !important;
+  bottom: calc(100% - 14px) !important;
+  z-index: 2 !important;
+}
+
+#login-card {
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+#login-mascote-patas,
+#login-mascote-paws {
+  position: absolute !important;
+  bottom: calc(100% - 14px) !important;
+  z-index: 4 !important;
+}

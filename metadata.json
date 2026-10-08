@@ -1,0 +1,10 @@
+{
+  "name": "VIMO VERSÃO OFICIAL 07.10 (USAR ESSE)",
+  "description": "Rede social e diário de avaliações gastronômicas de restaurantes, cafés, padarias e bares no estilo Letterboxd.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
