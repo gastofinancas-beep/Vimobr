@@ -70,21 +70,3 @@ html.dark { /* tema padrão */
   border-radius: 9999px;
 }
 
-/* Login mascot physical card-edge alignment */
-#login-mascote {
-  position: absolute !important;
-  bottom: calc(100% - 14px) !important;
-  z-index: 2 !important;
-}
-
-#login-card {
-  position: relative !important;
-  z-index: 3 !important;
-}
-
-#login-mascote-patas,
-#login-mascote-paws {
-  position: absolute !important;
-  bottom: calc(100% - 14px) !important;
-  z-index: 4 !important;
-}

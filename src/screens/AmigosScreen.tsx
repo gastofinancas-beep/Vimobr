@@ -191,11 +191,6 @@ export default function AmigosScreen({
             <p className="text-sm text-[var(--muted)] py-12 text-center">Carregando…</p>
           ) : reviews.length === 0 ? (
             <div className="py-10 text-center flex flex-col items-center justify-center space-y-3">
-              <img
-                src="/mascot/mascot_peek.png"
-                alt=""
-                className="w-24 h-24 object-contain opacity-90"
-              />
               <h2 className="text-[16px] font-medium text-[var(--ink)]">
                 {aba === 'seguindo' ? 'Nada por aqui ainda' : 'Nenhuma ida encontrada'}
               </h2>
