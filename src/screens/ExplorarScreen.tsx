@@ -9,10 +9,11 @@ import {
 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
-import PlacePlaceholder from '../components/PlacePlaceholder';
-import MascotMessage from '../components/MascotMessage';
 import { SAMPLE_PLACES, autocompleteCidade } from '../lib/places';
 import type { Place, UserProfile } from '../types';
+
+// Cores lisas da identidade para lugares sem foto
+const CORES_POSTER = ['#1F3163', '#2B2F42', '#222536', '#1C2A3D'];
 
 type TipoRestauranteFiltro =
   | 'todos'
@@ -121,11 +122,10 @@ export default function ExplorarScreen({
 
   return (
     <div className="flex-1 w-full bg-[var(--bg)] text-[var(--ink)] min-h-screen pb-20">
-      {/* HEADER PRINCIPAL NO ESTILO LETTERBOXD */}
-      <header className="sticky top-0 z-30 bg-[var(--bg)]/95 backdrop-blur-md border-b border-[var(--line)] px-4 py-3">
+      {/* CABEÇALHO: logo, cidade e ações simples */}
+      <header className="sticky top-0 z-30 bg-[var(--bg)] px-4 pt-4 pb-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          {/* Logo Wordmark oficial VIMO. & Seletor de Cidade */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <span className="font-sans font-black text-xl tracking-[-0.04em] text-[var(--ink)] select-none">
               VIMO<span className="text-[var(--star)]">.</span>
             </span>
@@ -134,38 +134,36 @@ export default function ExplorarScreen({
               type="button"
               onClick={() => setCidadeModalAberta(true)}
               aria-label="Selecionar cidade"
-              className="px-2.5 py-1 rounded-full bg-[var(--s1)] border border-[var(--line)] hover:border-[var(--primary)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)] flex items-center gap-1.5 transition cursor-pointer min-h-8"
+              className="text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)] underline underline-offset-4 decoration-[var(--line)] flex items-center gap-1 transition cursor-pointer min-h-8"
             >
-              <MapPin size={12} className="text-[var(--star)] shrink-0" />
-              <span className="truncate max-w-[120px]">{cidadeAtual.nome}</span>
-              <ChevronDown size={11} className="text-[var(--muted)] shrink-0" />
+              <span className="truncate max-w-[130px]">{cidadeAtual.nome}</span>
+              <ChevronDown size={12} className="shrink-0" />
             </button>
           </div>
 
-          {/* Ações da Direita */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             {onToggleTema && (
               <button
                 type="button"
                 onClick={onToggleTema}
                 aria-label="Alternar tema claro e escuro"
-                className="w-9 h-9 rounded-full bg-[var(--s1)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--primary)] flex items-center justify-center transition cursor-pointer min-h-9 min-w-9"
+                className="w-8 h-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--ink)] transition cursor-pointer"
               >
-                {tema === 'dark' ? <Moon size={15} /> : <Sun size={15} />}
+                {tema === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
               </button>
             )}
 
             <NotificationBell
               currentUserUid={currentUser.uid}
               onClick={() => setMostrarNotificacoes(true)}
-              className="w-9 h-9 rounded-full bg-[var(--s1)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--primary)] flex items-center justify-center transition cursor-pointer min-h-9 min-w-9"
+              className="w-8 h-8 flex items-center justify-center text-[var(--muted)] hover:text-[var(--ink)] transition cursor-pointer"
             />
 
             <button
               type="button"
               onClick={() => onAbrirPerfil(currentUser.uid)}
               aria-label="Acessar meu perfil"
-              className="w-9 h-9 rounded-full overflow-hidden p-0.5 ring-1 ring-[var(--line)] hover:ring-[var(--primary)] transition cursor-pointer min-h-9 min-w-9"
+              className="w-8 h-8 rounded-full overflow-hidden transition cursor-pointer"
             >
               <img
                 src={currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
@@ -180,7 +178,7 @@ export default function ExplorarScreen({
       <main className="max-w-4xl mx-auto px-4 pt-4 space-y-4">
         {/* BARRA DE PESQUISA (sem botão + ao lado) */}
         <div className="w-full">
-          <div className="w-full h-11 rounded-xl bg-[var(--s1)] px-3.5 flex items-center gap-2.5 text-xs text-[var(--muted)] border border-[var(--line)] focus-within:border-[var(--primary)] transition shadow-2xs">
+          <div className="w-full h-11 rounded-lg bg-[var(--s1)] px-3 flex items-center gap-2 text-xs text-[var(--muted)] focus-within:ring-1 focus-within:ring-[var(--primary)] transition">
             <Search size={16} className="text-[var(--muted)] shrink-0" />
             <input
               type="text"
@@ -203,8 +201,8 @@ export default function ExplorarScreen({
           </div>
         </div>
 
-        {/* FILTROS POR TIPO DE RESTAURANTE (chips roláveis) */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 text-xs">
+        {/* FILTROS POR TIPO: texto simples, o ativo fica sublinhado */}
+        <div className="flex items-center gap-5 overflow-x-auto no-scrollbar border-b border-[var(--s2)] text-[13px]">
           {chips.map((chip) => {
             const isAtivo = filtroTipo === chip.id;
             return (
@@ -213,10 +211,10 @@ export default function ExplorarScreen({
                 type="button"
                 onClick={() => setFiltroTipo(chip.id)}
                 aria-pressed={isAtivo}
-                className={`px-3.5 py-1.5 rounded-full font-semibold transition shrink-0 cursor-pointer min-h-8 ${
+                className={`shrink-0 pb-2.5 -mb-px border-b-2 transition cursor-pointer ${
                   isAtivo
-                    ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-xs'
-                    : 'bg-[var(--s1)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]'
+                    ? 'border-[var(--primary)] text-[var(--ink)] font-semibold'
+                    : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
                 }`}
               >
                 {chip.label}
@@ -228,44 +226,50 @@ export default function ExplorarScreen({
         {/* GRADE DE CARDS DOS RESTAURANTES (ESTILO PÔSTER LETTERBOXD) */}
         <section className="space-y-3 pt-1">
           {lugaresFiltrados.length === 0 ? (
-            <div className="bg-[var(--s1)] rounded-2xl border border-[var(--line)]">
-              <MascotMessage
-                reaction="pensando"
-                title="Nenhum restaurante encontrado"
-                subtitle="Tente buscar com outro termo ou limpar os filtros."
-                ctaLabel="Limpar filtros"
-                onCta={() => {
+            <div className="py-16 text-center space-y-3">
+              <p className="text-sm text-[var(--ink)]">Nenhum lugar encontrado</p>
+              <p className="text-xs text-[var(--muted)]">Tente outro termo ou limpe os filtros.</p>
+              <button
+                type="button"
+                onClick={() => {
                   setFiltroTipo('todos');
                   setBuscaTermo('');
                 }}
-                size={100}
-              />
+                className="text-xs font-semibold text-[var(--primary)] underline underline-offset-4 cursor-pointer"
+              >
+                Limpar filtros
+              </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-4">
               {lugaresFiltrados.map((place) => (
                 <article
                   key={place.id}
                   onClick={() => onAbrirLugar(place)}
-                  className="group cursor-pointer space-y-1.5 focus:outline-none transition duration-150"
+                  className="cursor-pointer"
                 >
-                  {/* Poster Vertical Estilo Letterboxd (Aspect 3/4) */}
-                  <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-[var(--s2)] border border-[var(--line)] group-hover:border-[var(--primary)] transition-all duration-200 shadow-2xs">
-                    {place.photoUrl ? (
+                  {/* Pôster 3:4 com o nome dentro, como no mockup */}
+                  <div
+                    className="relative aspect-[3/4] w-full rounded-md overflow-hidden flex items-end"
+                    style={
+                      place.photoUrl
+                        ? undefined
+                        : { backgroundColor: CORES_POSTER[place.name.length % CORES_POSTER.length] }
+                    }
+                  >
+                    {place.photoUrl && (
                       <img
                         src={place.photoUrl}
                         alt={place.name}
                         loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300 ease-out"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
-                    ) : (
-                      <PlacePlaceholder name={place.name} className="w-full h-full" />
                     )}
-                  </div>
-
-                  {/* Nome do Restaurante embaixo */}
-                  <div className="pt-0.5 px-0.5">
-                    <h3 className="font-sans font-medium text-[13px] text-[var(--ink)] group-hover:text-[var(--primary)] transition-colors leading-tight truncate">
+                    <h3
+                      className={`relative w-full px-2.5 py-2 text-xs font-semibold leading-snug text-[var(--ink)] line-clamp-2 ${
+                        place.photoUrl ? 'bg-[var(--bg)]/85' : ''
+                      }`}
+                    >
                       {place.name}
                     </h3>
                   </div>

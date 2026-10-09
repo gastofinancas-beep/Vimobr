@@ -3,6 +3,11 @@ import { Compass, Map, Plus, Users, User } from 'lucide-react';
 
 export type TabKey = 'explorar' | 'mapa' | 'amigos' | 'perfil';
 
+const tabClass = (ativa: boolean) =>
+  `flex-1 h-full flex flex-col items-center justify-center gap-1 pt-2 transition-colors cursor-pointer min-h-11 ${
+    ativa ? 'text-[var(--primary)]' : 'text-[#6F7390] hover:text-[var(--ink)]'
+  }`;
+
 export default function Navigation({
   tabAtiva,
   onMudarTab,
@@ -13,21 +18,18 @@ export default function Navigation({
   onAbrirAvaliar: () => void;
 }) {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-[var(--bg)] border-t border-[var(--line)] h-16 pb-[env(safe-area-inset-bottom,0px)] flex items-center justify-between">
-      <div className="w-full max-w-lg mx-auto flex items-center h-full px-2">
+    <nav className="fixed bottom-0 inset-x-0 z-40 bg-[var(--s1)] border-t border-[var(--s2)] h-[76px] pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="w-full max-w-lg mx-auto flex items-start h-full px-1.5">
         {/* 1. Explorar */}
         <button
           type="button"
           onClick={() => onMudarTab('explorar')}
           aria-label="Aba Explorar"
-          className={`flex-1 h-full min-h-11 flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${
-            tabAtiva === 'explorar'
-              ? 'text-[var(--primary)] font-semibold'
-              : 'text-[var(--muted)] hover:text-[var(--ink)]'
-          }`}
+          aria-current={tabAtiva === 'explorar' ? 'page' : undefined}
+          className={tabClass(tabAtiva === 'explorar')}
         >
-          <Compass size={22} className="stroke-[1.8]" />
-          <span className="text-[11px] tracking-tight leading-none">Explorar</span>
+          <Compass size={24} strokeWidth={1.8} />
+          <span className="text-[10px] font-semibold leading-none">Explorar</span>
         </button>
 
         {/* 2. Mapa */}
@@ -35,25 +37,22 @@ export default function Navigation({
           type="button"
           onClick={() => onMudarTab('mapa')}
           aria-label="Aba Mapa"
-          className={`flex-1 h-full min-h-11 flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${
-            tabAtiva === 'mapa'
-              ? 'text-[var(--primary)] font-semibold'
-              : 'text-[var(--muted)] hover:text-[var(--ink)]'
-          }`}
+          aria-current={tabAtiva === 'mapa' ? 'page' : undefined}
+          className={tabClass(tabAtiva === 'mapa')}
         >
-          <Map size={22} className="stroke-[1.8]" />
-          <span className="text-[11px] tracking-tight leading-none">Mapa</span>
+          <Map size={24} strokeWidth={1.8} />
+          <span className="text-[10px] font-semibold leading-none">Mapa</span>
         </button>
 
-        {/* 3. Botão Central de Adicionar (+) */}
-        <div className="flex-1 h-full flex items-center justify-center">
+        {/* 3. Botão central de avaliar, elevado sobre a barra */}
+        <div className="flex-1 h-full flex items-start justify-center">
           <button
             type="button"
             onClick={onAbrirAvaliar}
             aria-label="Nova avaliação gastronômica"
-            className="w-11 h-11 rounded-[14px] bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center transition-transform active:scale-95 shadow-xs cursor-pointer min-h-11 min-w-11"
+            className="-mt-5 w-14 h-14 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center border-[5px] border-[var(--bg)] shadow-md transition-transform active:scale-95 cursor-pointer"
           >
-            <Plus size={22} className="stroke-[2.2]" />
+            <Plus size={24} strokeWidth={2.4} />
           </button>
         </div>
 
@@ -62,14 +61,11 @@ export default function Navigation({
           type="button"
           onClick={() => onMudarTab('amigos')}
           aria-label="Aba Amigos"
-          className={`flex-1 h-full min-h-11 flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${
-            tabAtiva === 'amigos'
-              ? 'text-[var(--primary)] font-semibold'
-              : 'text-[var(--muted)] hover:text-[var(--ink)]'
-          }`}
+          aria-current={tabAtiva === 'amigos' ? 'page' : undefined}
+          className={tabClass(tabAtiva === 'amigos')}
         >
-          <Users size={22} className="stroke-[1.8]" />
-          <span className="text-[11px] tracking-tight leading-none">Amigos</span>
+          <Users size={24} strokeWidth={1.8} />
+          <span className="text-[10px] font-semibold leading-none">Amigos</span>
         </button>
 
         {/* 5. Perfil */}
@@ -77,14 +73,11 @@ export default function Navigation({
           type="button"
           onClick={() => onMudarTab('perfil')}
           aria-label="Aba Perfil"
-          className={`flex-1 h-full min-h-11 flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${
-            tabAtiva === 'perfil'
-              ? 'text-[var(--primary)] font-semibold'
-              : 'text-[var(--muted)] hover:text-[var(--ink)]'
-          }`}
+          aria-current={tabAtiva === 'perfil' ? 'page' : undefined}
+          className={tabClass(tabAtiva === 'perfil')}
         >
-          <User size={22} className="stroke-[1.8]" />
-          <span className="text-[11px] tracking-tight leading-none">Perfil</span>
+          <User size={24} strokeWidth={1.8} />
+          <span className="text-[10px] font-semibold leading-none">Perfil</span>
         </button>
       </div>
     </nav>
