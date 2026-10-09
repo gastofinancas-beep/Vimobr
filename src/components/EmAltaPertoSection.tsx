@@ -366,11 +366,12 @@ export default function EmAltaPertoSection({ onAbrirLugar }: EmAltaPertoSectionP
 
       {/* ESTADO 5: Nenhum Estabelecimento Encontrado */}
       {!carregando && statusErro === 'sem_resultados' && (
-        <div className="mx-4 my-2 p-5 rounded-3xl bg-white dark:bg-[#18181B] text-center space-y-1 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
-          <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
+        <div className="mx-4 my-2 p-5 rounded-3xl bg-[var(--s1)] border border-[var(--line)] text-center">
+          <img src="/mascot/vimo_explorando.png" alt="" aria-hidden="true" width={72} height={72} className="mx-auto object-contain mb-2" />
+          <p className="text-xs font-bold text-[var(--ink)]">
             Nenhum estabelecimento gastronômico encontrado
           </p>
-          <p className="text-[11px] text-gray-400">
+          <p className="text-[11px] text-[var(--muted)] mt-1">
             Não localizamos restaurantes cadastrados no Google em um raio de 20 km desta localização.
           </p>
         </div>

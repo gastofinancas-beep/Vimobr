@@ -146,6 +146,8 @@ export default function AvaliarModal({
 
   const [salvando, setSalvando] = useState(false);
   const [erroValidacao, setErroValidacao] = useState<string | null>(null);
+  const [publicado, setPublicado] = useState(false);
+  const [reviewIdPublicado, setReviewIdPublicado] = useState<string | null>(null);
 
   // Critérios específicos do estabelecimento
   const criteriosObj = useMemo(() => obterCriteriosParaLugar(lugar), [lugar]);
@@ -346,7 +348,9 @@ export default function AvaliarModal({
         })),
       });
 
-      onSucesso(revId);
+      setReviewIdPublicado(revId);
+      setPublicado(true);
+      setTimeout(() => onSucesso(revId), 2500);
     } catch (err: any) {
       console.warn('Erro ao salvar avaliação:', err);
       setErroValidacao('Ocorreu um erro ao publicar sua ida. Tente novamente.');
@@ -357,6 +361,33 @@ export default function AvaliarModal({
 
   // Barra de progresso: ((passoAtual + 1) / total) * 100%, altura 3px, cor var(--star)
   const progressoPct = Math.round(((passoIndex + 1) / totalPassos) * 100);
+
+  // Tela de sucesso após publicar
+  if (publicado) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="w-full max-w-sm rounded-2xl bg-[var(--s1)] border border-[var(--line)] shadow-2xl p-8 text-center animate-in zoom-in-95 duration-300">
+          <img
+            src="/mascot/vimo_comemorando.png"
+            alt="Mascote comemorando"
+            width={120}
+            height={120}
+            className="mx-auto object-contain drop-shadow-lg animate-bounce"
+          />
+          <h2 className="text-xl font-bold text-[var(--ink)] mt-4">
+            Ida publicada!
+          </h2>
+          <p className="text-sm text-[var(--muted)] mt-2 leading-relaxed">
+            Sua experiência em <span className="font-medium text-[var(--ink)]">{lugar?.displayName?.text || 'este lugar'}</span> foi registrada com sucesso.
+          </p>
+          <div className="flex items-center justify-center gap-1.5 mt-4 text-[var(--star)]">
+            <img src="/mascot/vimo_joinha.png" alt="" aria-hidden="true" width={24} height={24} className="object-contain" />
+            <span className="text-xs font-medium">Obrigado por compartilhar!</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">

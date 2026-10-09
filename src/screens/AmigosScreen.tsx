@@ -11,6 +11,7 @@ import {
   obterListasUsuario,
   seguir,
 } from '../lib/reviews';
+import MascotMessage from '../components/MascotMessage';
 import type { FeedMode, Review, UserProfile } from '../types';
 
 interface AmigosScreenProps {
@@ -188,25 +189,22 @@ export default function AmigosScreen({
         {/* Feed de avaliações */}
         <div className="space-y-3 pt-1">
           {carregando ? (
-            <p className="text-sm text-[var(--muted)] py-12 text-center">Carregando…</p>
-          ) : reviews.length === 0 ? (
-            <div className="py-10 text-center flex flex-col items-center justify-center space-y-3">
-              <h2 className="text-[16px] font-medium text-[var(--ink)]">
-                {aba === 'seguindo' ? 'Nada por aqui ainda' : 'Nenhuma ida encontrada'}
-              </h2>
-              <p className="text-[13px] text-[var(--muted)] max-w-xs mx-auto leading-relaxed">
-                {aba === 'seguindo'
-                  ? 'Quando você seguir pessoas e elas registrarem idas, elas aparecerão aqui.'
-                  : 'Ainda não há idas registradas para este filtro.'}
-              </p>
-              <button
-                type="button"
-                onClick={aba === 'seguindo' ? () => setAba('descobrir') : onAbrirAvaliar}
-                className="min-h-12 px-6 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-medium text-sm transition shadow-2xs cursor-pointer"
-              >
-                {aba === 'seguindo' ? 'Descobrir pessoas' : 'Registrar uma ida'}
-              </button>
+            <div className="py-12 text-center flex flex-col items-center gap-2">
+              <img src="/mascot/vimo_carregando.png" alt="" aria-hidden="true" width={72} height={72} className="object-contain animate-pulse" />
+              <p className="text-[13px] text-[var(--muted)]">Carregando…</p>
             </div>
+          ) : reviews.length === 0 ? (
+            <MascotMessage
+              reaction={aba === 'seguindo' ? 'social' : 'explorando'}
+              title={aba === 'seguindo' ? 'Nada por aqui ainda' : 'Nenhuma ida encontrada'}
+              subtitle={
+                aba === 'seguindo'
+                  ? 'Quando você seguir pessoas e elas registrarem idas, elas aparecerão aqui.'
+                  : 'Ainda não há idas registradas para este filtro.'
+              }
+              ctaLabel={aba === 'seguindo' ? 'Descobrir pessoas' : 'Registrar uma ida'}
+              onCta={aba === 'seguindo' ? () => setAba('descobrir') : onAbrirAvaliar}
+            />
           ) : (
             reviews.map((r) => (
               <FeedReviewCard

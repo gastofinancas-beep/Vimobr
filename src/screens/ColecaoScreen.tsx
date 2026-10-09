@@ -17,6 +17,7 @@ import type { Place, Review, UserProfile } from '../types';
 import { obterListasUsuario, alternarListaUsuario, carregarReviewsDoUsuario } from '../lib/reviews';
 import { getPlace, SAMPLE_PLACES } from '../lib/places';
 import RestaurantCard from '../components/RestaurantCard';
+import MascotMessage from '../components/MascotMessage';
 
 export type ColecaoTab = 'salvos' | 'jafui' | 'avaliacoes' | 'queroConhecer';
 
@@ -291,9 +292,9 @@ export default function ColecaoScreen({
       {/* Conteúdo Principal */}
       <div className="space-y-4">
         {carregando ? (
-          <div className="py-20 text-center">
-            <div className="w-8 h-8 rounded-full border-2 border-[#0D3E2F] border-t-transparent animate-spin mx-auto mb-3" />
-            <p className="text-xs text-[#636C66]">Carregando sua coleção...</p>
+          <div className="py-16 text-center flex flex-col items-center gap-2">
+            <img src="/mascot/vimo_carregando.png" alt="" aria-hidden="true" width={80} height={80} className="object-contain animate-pulse" />
+            <p className="text-[13px] text-[var(--muted)]">Carregando sua coleção...</p>
           </div>
         ) : (
           <>
@@ -301,25 +302,14 @@ export default function ColecaoScreen({
             {tabAtiva === 'salvos' && (
               <div>
                 {lugaresSalvos.length === 0 ? (
-                  <div className="py-16 text-center bg-white dark:bg-[#171E1A] rounded-[28px] border border-[#E5EAE6] dark:border-[#26332C] p-8">
-                    <div className="w-14 h-14 rounded-full bg-[#EBF3EE] dark:bg-[#1A3127] text-[#0D3E2F] flex items-center justify-center mx-auto mb-3">
-                      <Heart size={24} className="stroke-[1.8]" />
-                    </div>
-                    <h3 className="font-semibold text-base text-[#141715] dark:text-[#F2F5F3] mb-1">
-                      Nenhum restaurante salvo ainda
-                    </h3>
-                    <p className="text-xs text-[#636C66] dark:text-[#95A199] max-w-sm mx-auto mb-5">
-                      Explore restaurantes incríveis e salve os seus favoritos com o coração para encontrá-los facilmente aqui.
-                    </p>
-                    {onExplorar && (
-                      <button
-                        type="button"
-                        onClick={onExplorar}
-                        className="px-5 py-2.5 rounded-full bg-[#0D3E2F] text-white text-xs font-semibold hover:bg-[#082A20] transition inline-flex items-center gap-1.5 shadow-sm"
-                      >
-                        <Compass size={14} /> Explorar restaurantes
-                      </button>
-                    )}
+                  <div className="rounded-3xl border border-[var(--line)] bg-[var(--s1)] my-4">
+                    <MascotMessage
+                      reaction="amor"
+                      title="Nenhum restaurante salvo ainda"
+                      subtitle="Explore restaurantes incríveis e salve os seus favoritos com o coração para encontrá-los facilmente aqui."
+                      ctaLabel={onExplorar ? 'Explorar restaurantes' : undefined}
+                      onCta={onExplorar}
+                    />
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -350,25 +340,14 @@ export default function ColecaoScreen({
             {tabAtiva === 'jafui' && (
               <div className="space-y-8">
                 {Object.keys(diarioItems).length === 0 ? (
-                  <div className="py-16 text-center bg-white dark:bg-[#171E1A] rounded-[28px] border border-[#E5EAE6] dark:border-[#26332C] p-8">
-                    <div className="w-14 h-14 rounded-full bg-[#EBF3EE] dark:bg-[#1A3127] text-[#0D3E2F] flex items-center justify-center mx-auto mb-3">
-                      <BookOpen size={24} className="stroke-[1.8]" />
-                    </div>
-                    <h3 className="font-semibold text-base text-[#141715] dark:text-[#F2F5F3] mb-1">
-                      Seu diário gastronômico está vazio
-                    </h3>
-                    <p className="text-xs text-[#636C66] dark:text-[#95A199] max-w-sm mx-auto mb-5">
-                      Marque os restaurantes que você já visitou e adicione suas impressões, fotos e notas para guardar sua história gastronômica.
-                    </p>
-                    {onNovaAvaliacao && (
-                      <button
-                        type="button"
-                        onClick={onNovaAvaliacao}
-                        className="px-5 py-2.5 rounded-full bg-[#0D3E2F] text-white text-xs font-semibold hover:bg-[#082A20] transition inline-flex items-center gap-1.5 shadow-sm"
-                      >
-                        <Plus size={14} /> Registrar primeira visita
-                      </button>
-                    )}
+                  <div className="rounded-3xl border border-[var(--line)] bg-[var(--s1)] my-4">
+                    <MascotMessage
+                      reaction="lendo"
+                      title="Seu diário gastronômico está vazio"
+                      subtitle="Marque os restaurantes que você já visitou e adicione suas impressões para guardar sua história gastronômica."
+                      ctaLabel={onNovaAvaliacao ? 'Registrar primeira visita' : undefined}
+                      onCta={onNovaAvaliacao}
+                    />
                   </div>
                 ) : (
                   Object.entries(diarioItems).map(([mesAno, itens]) => (
@@ -485,25 +464,14 @@ export default function ColecaoScreen({
             {tabAtiva === 'avaliacoes' && (
               <div>
                 {minhasAvaliacoes.length === 0 ? (
-                  <div className="py-16 text-center bg-white dark:bg-[#171E1A] rounded-[28px] border border-[#E5EAE6] dark:border-[#26332C] p-8">
-                    <div className="w-14 h-14 rounded-full bg-[#EBF3EE] dark:bg-[#1A3127] text-[#0D3E2F] flex items-center justify-center mx-auto mb-3">
-                      <Star size={24} className="stroke-[1.8]" />
-                    </div>
-                    <h3 className="font-semibold text-base text-[#141715] dark:text-[#F2F5F3] mb-1">
-                      Você ainda não fez avaliações
-                    </h3>
-                    <p className="text-xs text-[#636C66] dark:text-[#95A199] max-w-sm mx-auto mb-5">
-                      Conte como foi sua experiência nos restaurantes que você visitou e ajude outros amantes da gastronomia.
-                    </p>
-                    {onNovaAvaliacao && (
-                      <button
-                        type="button"
-                        onClick={onNovaAvaliacao}
-                        className="px-5 py-2.5 rounded-full bg-[#0D3E2F] text-white text-xs font-semibold hover:bg-[#082A20] transition inline-flex items-center gap-1.5 shadow-sm"
-                      >
-                        <Plus size={14} /> Escrever avaliação
-                      </button>
-                    )}
+                  <div className="rounded-3xl border border-[var(--line)] bg-[var(--s1)] my-4">
+                    <MascotMessage
+                      reaction="analisando"
+                      title="Você ainda não fez avaliações"
+                      subtitle="Conte como foi sua experiência nos restaurantes que você visitou e ajude outros amantes da gastronomia."
+                      ctaLabel={onNovaAvaliacao ? 'Escrever avaliação' : undefined}
+                      onCta={onNovaAvaliacao}
+                    />
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -569,25 +537,14 @@ export default function ColecaoScreen({
             {tabAtiva === 'queroConhecer' && (
               <div>
                 {lugaresQueroConhecer.length === 0 ? (
-                  <div className="py-16 text-center bg-white dark:bg-[#171E1A] rounded-[28px] border border-[#E5EAE6] dark:border-[#26332C] p-8">
-                    <div className="w-14 h-14 rounded-full bg-[#EBF3EE] dark:bg-[#1A3127] text-[#0D3E2F] flex items-center justify-center mx-auto mb-3">
-                      <Bookmark size={24} className="stroke-[1.8]" />
-                    </div>
-                    <h3 className="font-semibold text-base text-[#141715] dark:text-[#F2F5F3] mb-1">
-                      Sua lista de desejos está vazia
-                    </h3>
-                    <p className="text-xs text-[#636C66] dark:text-[#95A199] max-w-sm mx-auto mb-5">
-                      Encontrou um lugar que gostaria de conhecer? Marque como "Quero conhecer" para planejar suas próximas saídas.
-                    </p>
-                    {onExplorar && (
-                      <button
-                        type="button"
-                        onClick={onExplorar}
-                        className="px-5 py-2.5 rounded-full bg-[#0D3E2F] text-white text-xs font-semibold hover:bg-[#082A20] transition inline-flex items-center gap-1.5 shadow-sm"
-                      >
-                        <Compass size={14} /> Explorar restaurantes
-                      </button>
-                    )}
+                  <div className="rounded-3xl border border-[var(--line)] bg-[var(--s1)] my-4">
+                    <MascotMessage
+                      reaction="explorando"
+                      title="Sua lista de desejos está vazia"
+                      subtitle="Encontrou um lugar que gostaria de conhecer? Marque como 'Quero conhecer' para planejar suas próximas saídas."
+                      ctaLabel={onExplorar ? 'Explorar restaurantes' : undefined}
+                      onCta={onExplorar}
+                    />
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

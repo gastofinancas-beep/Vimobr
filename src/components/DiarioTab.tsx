@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import StarRating from './StarRating';
 import PlacePlaceholder from './PlacePlaceholder';
+import MascotMessage from './MascotMessage';
 import { photoUrl } from '../lib/places';
 import { NOMES_MESES } from '../lib/diario';
 import type { Review } from '../types';
@@ -60,20 +61,13 @@ export default function DiarioTab({
 
   if (reviews.length === 0) {
     return (
-      <div className="py-10 text-center space-y-3">
-        <p className="text-[13px] text-[var(--muted)]">
-          Nenhuma ida registrada ainda.
-        </p>
-        {onNovaIda && !somenteLeitura && (
-          <button
-            type="button"
-            onClick={onNovaIda}
-            className="min-h-12 px-6 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-medium text-sm transition shadow-2xs cursor-pointer"
-          >
-            Registrar primeira ida
-          </button>
-        )}
-      </div>
+      <MascotMessage
+        reaction="comendo"
+        title="Nenhuma ida registrada ainda"
+        subtitle="Registre seus restaurantes favoritos e construa seu diário gastronômico!"
+        ctaLabel={onNovaIda && !somenteLeitura ? 'Registrar primeira ida' : undefined}
+        onCta={onNovaIda && !somenteLeitura ? onNovaIda : undefined}
+      />
     );
   }
 

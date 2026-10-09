@@ -9,7 +9,8 @@ import {
   Cell,
   CartesianGrid,
 } from 'recharts';
-import { Utensils, Star, Award, Compass, BarChart3, TrendingUp, Sparkles } from 'lucide-react';
+import { Utensils, Star, Award, BarChart3, TrendingUp, Sparkles } from 'lucide-react';
+import MascotMessage from './MascotMessage';
 import type { Review } from '../types';
 import { SAMPLE_PLACES } from '../lib/places';
 
@@ -131,14 +132,17 @@ export default function ResumoPaladar({ reviews, userName, isMeuPerfil }: Resumo
 
   if (reviews.length === 0) {
     return (
-      <div className="rounded-2xl border border-[var(--line)] bg-[var(--s1)] p-8 text-center space-y-3">
-        <Compass size={32} className="mx-auto text-[var(--muted)]" />
-        <h3 className="text-base text-[var(--ink)] font-semibold">Resumo do Paladar</h3>
-        <p className="text-[12px] text-[var(--muted)] max-w-sm mx-auto leading-relaxed">
-          {isMeuPerfil
-            ? 'Avalie seus primeiros restaurantes, cafés e padarias para desbloquear suas estatísticas gastronômicas e gráficos de paladar!'
-            : 'Este usuário ainda não tem avaliações suficientes para gerar o resumo do paladar.'}
-        </p>
+      <div className="rounded-2xl border border-[var(--line)] bg-[var(--s1)] p-6">
+        <MascotMessage
+          reaction="analisando"
+          title="Resumo do Paladar"
+          subtitle={
+            isMeuPerfil
+              ? 'Avalie seus primeiros restaurantes, cafés e padarias para desbloquear suas estatísticas gastronômicas e gráficos de paladar!'
+              : 'Este usuário ainda não tem avaliações suficientes para gerar o resumo do paladar.'
+          }
+          size={80}
+        />
       </div>
     );
   }

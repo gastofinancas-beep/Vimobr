@@ -313,16 +313,12 @@ export default function NotificationsModal({
         {/* Lista de Notificações */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5 no-scrollbar">
           {filtradas.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
-              <div className="h-12 w-12 rounded-full bg-[var(--s2)] flex items-center justify-center text-[var(--muted)]">
-                <Bell size={22} />
-              </div>
-              <div>
-                <p className="font-medium text-sm text-[var(--ink)]">Nenhuma notificação</p>
-                <p className="text-[12px] text-[var(--muted)] mt-0.5">
-                  Interações, curtidas e comentários nas suas visitas aparecerão aqui.
-                </p>
-              </div>
+            <div className="py-6 flex flex-col items-center justify-center text-center gap-2">
+              <img src="/mascot/vimo_dormindo.png" alt="" aria-hidden="true" width={90} height={90} className="object-contain" />
+              <p className="font-medium text-sm text-[var(--ink)]">Tudo tranquilo por aqui</p>
+              <p className="text-[12px] text-[var(--muted)] max-w-[220px]">
+                Curtidas, comentários e interações aparecerão aqui.
+              </p>
             </div>
           ) : (
             filtradas.map((n) => (

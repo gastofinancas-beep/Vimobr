@@ -23,6 +23,7 @@ import {
   obterScoreRestaurante,
 } from '../lib/reviews';
 import StarRating from '../components/StarRating';
+import MascotMessage from '../components/MascotMessage';
 import type { Place, Review, UserProfile } from '../types';
 
 interface PlaceDetailScreenProps {
@@ -226,16 +227,14 @@ export default function PlaceDetailScreen({
 
   if (!place) {
     return (
-      <div className="flex-1 min-h-screen bg-[var(--bg)] text-[var(--ink)] flex flex-col items-center justify-center p-6 text-center">
-        <MapPin size={36} className="text-[var(--star)] mb-3" />
-        <h3 className="font-bold text-base mb-1">Restaurante não encontrado</h3>
-        <button
-          type="button"
-          onClick={onVoltar}
-          className="mt-4 px-5 py-2.5 rounded-full bg-[var(--primary)] text-[var(--on-primary)] font-semibold text-xs shadow-xs cursor-pointer min-h-11"
-        >
-          Voltar para Explorar
-        </button>
+      <div className="flex-1 min-h-screen bg-[var(--bg)] text-[var(--ink)] flex flex-col items-center justify-center p-6">
+        <MascotMessage
+          reaction="confuso"
+          title="Restaurante não encontrado"
+          subtitle="Parece que este lugar não existe mais ou o link está incorreto."
+          ctaLabel="Voltar para Explorar"
+          onCta={onVoltar}
+        />
       </div>
     );
   }
@@ -595,9 +594,10 @@ export default function PlaceDetailScreen({
               </div>
             </div>
           ) : (
-            <p className="text-xs sm:text-sm text-[var(--muted)]">
-              Nenhum amigo visitou ainda. Seja o primeiro a registrar!
-            </p>
+            <div className="flex items-center gap-3 py-3">
+              <img src="/mascot/vimo_social.png" alt="" aria-hidden="true" width={48} height={48} className="object-contain" />
+              <p className="text-xs text-[var(--muted)]">Nenhum amigo visitou ainda. Seja o primeiro a registrar!</p>
+            </div>
           )}
         </section>
 
@@ -619,17 +619,15 @@ export default function PlaceDetailScreen({
           </div>
 
           {reviews.length === 0 ? (
-            <div className="bg-[var(--s1)] rounded-2xl p-8 border border-[var(--line)] text-center space-y-3">
-              <p className="text-xs sm:text-sm text-[var(--muted)]">
-                Ainda não há avaliações para este lugar no Vimo.
-              </p>
-              <button
-                type="button"
-                onClick={() => onAvaliar(place)}
-                className="px-5 py-2.5 rounded-full bg-[var(--primary)] text-[var(--on-primary)] text-xs font-bold shadow-xs cursor-pointer min-h-11"
-              >
-                Escrever a primeira crítica
-              </button>
+            <div className="bg-[var(--s1)] rounded-2xl border border-[var(--line)]">
+              <MascotMessage
+                reaction="comendo"
+                title="Seja o primeiro a avaliar!"
+                subtitle="Conte como foi sua experiência e ajude outros a descobrir este lugar."
+                ctaLabel="Escrever avaliação"
+                onCta={() => onAvaliar(place)}
+                size={100}
+              />
             </div>
           ) : (
             <div className="space-y-3">

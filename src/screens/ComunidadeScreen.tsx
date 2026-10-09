@@ -15,6 +15,7 @@ import type { Review, UserProfile, Place } from '../types';
 import CommentsSheet from '../components/CommentsSheet';
 import ShareReviewModal from '../components/ShareReviewModal';
 import PlacePlaceholder from '../components/PlacePlaceholder';
+import MascotMessage from '../components/MascotMessage';
 
 export const SUGGESTED_FRIENDS = [
   {
@@ -266,22 +267,14 @@ export default function ComunidadeScreen({
 
         {/* ABA: AMIGOS VAZIA (Frame 00:15) */}
         {tabAtiva === 'amigos' && reviewsFiltradas.length === 0 && (
-          <div className="flex flex-col items-center justify-center pt-24 text-center px-6 animate-in fade-in duration-200">
-            <div className="w-20 h-20 rounded-full bg-gray-50 dark:bg-neutral-900 flex items-center justify-center mb-4">
-              <FileText size={34} className="text-gray-400 stroke-[1.5]" />
-            </div>
-            <h3 className="text-base font-bold text-gray-950 dark:text-white">
-              Nenhuma publicação ainda
-            </h3>
-            <p className="text-xs text-gray-400 dark:text-gray-400 max-w-xs mt-1 leading-relaxed">
-              As publicações vão aparecer aqui conforme as pessoas que você segue compartilham.
-            </p>
-            <button
-              onClick={onAbrirBusca}
-              className="mt-5 h-9 px-5 rounded-full bg-gray-950 dark:bg-white text-white dark:text-gray-950 text-xs font-bold shadow-sm hover:opacity-90 active:scale-95 transition"
-            >
-              Encontrar amigos
-            </button>
+          <div className="pt-12 px-4">
+            <MascotMessage
+              reaction="social"
+              title="Nenhuma publicação ainda"
+              subtitle="As publicações vão aparecer aqui conforme as pessoas que você segue compartilham."
+              ctaLabel="Encontrar amigos"
+              onCta={onAbrirBusca}
+            />
           </div>
         )}
 

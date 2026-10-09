@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, MapPin, User, Check, AlertCircle } from 'lucide-react';
+import { MapPin, Check, AlertCircle } from 'lucide-react';
 import { autocompleteCidade, slug } from '../lib/places';
 import type { UserProfile } from '../types';
 
@@ -63,8 +63,8 @@ export default function OnboardingModal({
       bio: bio.trim(),
       homeCityKey: cityKey,
       homeCityName: cidadeTexto,
-      followersCount: initialUser.followersCount || 12,
-      followingCount: initialUser.followingCount || 8,
+      followersCount: initialUser.followersCount || 0,
+      followingCount: initialUser.followingCount || 0,
     };
 
     onSalvar(perfil);
@@ -77,12 +77,16 @@ export default function OnboardingModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center space-y-1">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-[var(--s2)] border border-[var(--line)] flex items-center justify-center text-[var(--primary)] mb-2">
-            <Sparkles size={24} />
-          </div>
-          <h2 className="text-xl font-semibold text-[var(--ink)]">Editar Perfil</h2>
+          <img
+            src="/mascot/vimo_bem_vindo.png"
+            alt="Mascote dando boas-vindas"
+            width={80}
+            height={80}
+            className="mx-auto object-contain drop-shadow-md mb-1"
+          />
+          <h2 className="text-xl font-semibold text-[var(--ink)]">Bem-vindo ao Vimo!</h2>
           <p className="text-[13px] text-[var(--muted)]">
-            Configure seu perfil gastronômico no Vimo
+            Configure seu perfil gastronômico para começar
           </p>
         </div>
 

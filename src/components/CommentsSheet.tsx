@@ -150,9 +150,10 @@ export default function CommentsSheet({
               ))}
             </div>
           ) : comentarios.length === 0 ? (
-            <div className="py-16 text-center text-muted">
-              <p className="font-display text-base text-ink">Nenhum comentário ainda</p>
-              <p className="text-xs mt-1">Seja o primeiro a compartilhar sua opinião sobre este lugar!</p>
+            <div className="py-8 flex flex-col items-center text-center gap-2">
+              <img src="/mascot/vimo_timido.png" alt="" aria-hidden="true" width={80} height={80} className="object-contain" />
+              <p className="font-medium text-sm text-[var(--ink)]">Nenhum comentário ainda</p>
+              <p className="text-xs text-[var(--muted)]">Seja o primeiro a compartilhar sua opinião!</p>
             </div>
           ) : (
             raiz.map((c) => {

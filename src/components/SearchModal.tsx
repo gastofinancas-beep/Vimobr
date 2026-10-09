@@ -13,6 +13,7 @@ import {
   Users,
 } from 'lucide-react';
 import { searchPlaces, SAMPLE_PLACES } from '../lib/places';
+import MascotMessage from './MascotMessage';
 import { SUGGESTED_FRIENDS } from '../screens/ComunidadeScreen';
 import type { Place } from '../types';
 
@@ -230,15 +231,17 @@ export default function SearchModal({
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5 no-scrollbar">
           {abaPrincipal === 'lugares' ? (
             carregando && lugares.length === 0 ? (
-              <div className="py-12 flex flex-col items-center justify-center text-[var(--muted)] space-y-2">
-                <Loader2 size={24} className="animate-spin text-[var(--primary)]" />
+              <div className="py-8 flex flex-col items-center justify-center text-[var(--muted)] space-y-2">
+                <img src="/mascot/vimo_carregando.png" alt="" aria-hidden="true" width={72} height={72} className="object-contain animate-pulse" />
                 <p className="text-[13px]">Buscando lugares...</p>
               </div>
             ) : lugares.length === 0 ? (
-              <div className="py-12 text-center text-[var(--muted)] space-y-2">
-                <p className="text-sm font-medium text-[var(--ink)]">Nenhum lugar encontrado</p>
-                <p className="text-[13px]">Tente buscar por outro termo, culinária ou bairro.</p>
-              </div>
+              <MascotMessage
+                reaction="explorando"
+                title="Nenhum lugar encontrado"
+                subtitle="Tente buscar por outro termo, culinária ou bairro."
+                size={90}
+              />
             ) : (
               lugares.map((p) => (
                 <button
@@ -292,9 +295,12 @@ export default function SearchModal({
             )
           ) : (
             amigosFiltrados.length === 0 ? (
-              <p className="py-8 text-center text-[13px] text-[var(--muted)]">
-                Nenhum usuário encontrado para &quot;{query}&quot;.
-              </p>
+              <MascotMessage
+                reaction="social"
+                title="Nenhum usuário encontrado"
+                subtitle={`Não encontramos ninguém com "${query}".`}
+                size={80}
+              />
             ) : (
               amigosFiltrados.map((f: any) => (
                 <button

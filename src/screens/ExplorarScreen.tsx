@@ -10,6 +10,7 @@ import {
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
 import PlacePlaceholder from '../components/PlacePlaceholder';
+import MascotMessage from '../components/MascotMessage';
 import { SAMPLE_PLACES, autocompleteCidade } from '../lib/places';
 import type { Place, UserProfile } from '../types';
 
@@ -227,20 +228,18 @@ export default function ExplorarScreen({
         {/* GRADE DE CARDS DOS RESTAURANTES (ESTILO PÔSTER LETTERBOXD) */}
         <section className="space-y-3 pt-1">
           {lugaresFiltrados.length === 0 ? (
-            <div className="py-16 text-center space-y-2 bg-[var(--s1)] rounded-2xl border border-[var(--line)]">
-              <p className="text-xs sm:text-sm text-[var(--muted)]">
-                Nenhum restaurante encontrado com este filtro.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
+            <div className="bg-[var(--s1)] rounded-2xl border border-[var(--line)]">
+              <MascotMessage
+                reaction="pensando"
+                title="Nenhum restaurante encontrado"
+                subtitle="Tente buscar com outro termo ou limpar os filtros."
+                ctaLabel="Limpar filtros"
+                onCta={() => {
                   setFiltroTipo('todos');
                   setBuscaTermo('');
                 }}
-                className="text-xs text-[var(--primary)] font-semibold hover:underline cursor-pointer"
-              >
-                Limpar filtros de busca
-              </button>
+                size={100}
+              />
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">

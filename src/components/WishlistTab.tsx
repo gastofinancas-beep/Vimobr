@@ -120,31 +120,29 @@ export default function WishlistTab({
 
       {/* Lista de Lugares Salvos */}
       {ordenados.length === 0 ? (
-        <div className="rounded-3xl border border-line bg-s1 p-8 text-center space-y-4 my-4">
-          <div className="mx-auto w-16 h-16 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center text-accent">
-            <Bookmark size={30} className="fill-accent/40" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="font-display text-lg font-bold text-ink">
+        <div className="rounded-3xl border border-[var(--line)] bg-[var(--s1)] my-4">
+          <div className="flex flex-col items-center justify-center gap-2 px-6 py-8 text-center">
+            <img
+              src={items.length === 0 ? '/mascot/vimo_explorando.png' : '/mascot/vimo_pensando.png'}
+              alt="" aria-hidden="true" width={100} height={100} className="object-contain drop-shadow-lg"
+            />
+            <h3 className="mt-2 text-[15px] font-semibold text-[var(--ink)]">
+              {items.length === 0 ? 'Sua Lista de Desejos está vazia' : 'Nenhum lugar nesta categoria'}
+            </h3>
+            <p className="max-w-[260px] text-[13px] leading-relaxed text-[var(--muted)]">
               {items.length === 0
-                ? 'Sua Lista de Desejos está vazia'
-                : 'Nenhum lugar nesta categoria'}
-            </h4>
-            <p className="text-xs text-muted max-w-xs mx-auto leading-relaxed">
-              {items.length === 0
-                ? 'Explore o feed ou o mapa e toque no ícone de salvar para guardar restaurantes e cafés que você quer conhecer!'
-                : 'Tente selecionar outra categoria para ver os estabelecimentos salvos.'}
+                ? 'Explore o feed ou o mapa e salve os lugares que você quer conhecer!'
+                : 'Tente selecionar outra categoria.'}
             </p>
+            {items.length === 0 && onExplorar && (
+              <button
+                onClick={onExplorar}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-5 py-2.5 text-[13px] font-semibold text-[var(--on-primary)] transition active:scale-[0.97]"
+              >
+                Explorar lugares
+              </button>
+            )}
           </div>
-          {items.length === 0 && onExplorar && (
-            <button
-              onClick={onExplorar}
-              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-xs font-bold text-bg hover:brightness-110 shadow-lg shadow-accent/20 transition"
-            >
-              <Sparkles size={16} />
-              Explorar lugares em alta
-            </button>
-          )}
         </div>
       ) : (
         <div className="space-y-3.5">
