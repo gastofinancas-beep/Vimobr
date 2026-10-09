@@ -314,7 +314,7 @@ export default function DescobrirPertoDeMimScreen({
         onClick={handleRecentralizar}
         aria-label="Voltar para minha localização"
         className={`absolute right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-s1 text-ink shadow-md transition-[bottom] duration-200 hover:text-primary cursor-pointer ${
-          sel ? 'bottom-[13.5rem]' : 'bottom-24'
+          sel ? 'bottom-[15.5rem]' : 'bottom-24'
         }`}
       >
         <Crosshair size={19} strokeWidth={1.8} />
