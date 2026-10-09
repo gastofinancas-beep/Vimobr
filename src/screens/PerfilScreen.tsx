@@ -220,9 +220,9 @@ export default function PerfilScreen({
           </div>
 
           <div className="flex items-center gap-3 text-[12px] text-[var(--muted)] pt-0.5">
-            <span><strong className="text-[var(--ink)]">{usuario.followersCount ?? 54}</strong> seguidores</span>
+            <span><strong className="text-[var(--ink)]">{usuario.followersCount ?? 0}</strong> seguidores</span>
             <span>·</span>
-            <span><strong className="text-[var(--ink)]">{usuario.followingCount ?? 42}</strong> seguindo</span>
+            <span><strong className="text-[var(--ink)]">{usuario.followingCount ?? 0}</strong> seguindo</span>
           </div>
 
           {usuario.bio && (

@@ -400,6 +400,26 @@ export async function carregarReviewsDoUsuario(uid: string): Promise<Review[]> {
   return [...lista].sort((a, b) => b.visitedAt - a.visitedAt);
 }
 
+// Reviews de um lugar específico (para PlaceDetailScreen)
+export async function carregarReviewsDoLugar(placeId: string): Promise<Review[]> {
+  const locais = getLocalReviews().filter((r) => r.placeId === placeId);
+  let remotas: Review[] = [];
+
+  if (isFirebaseConfigured) {
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'reviews'), where('placeId', '==', placeId), orderBy('createdAt', 'desc'), limit(100))
+      );
+      remotas = snap.docs.map(toReview);
+    } catch (err) {
+      console.warn('Firestore carregarReviewsDoLugar fallback:', err);
+    }
+  }
+
+  const lista = remotas.length > 0 ? remotas : locais;
+  return [...lista].sort((a, b) => b.createdAt - a.createdAt);
+}
+
 // ---------- Aba COMUNIDADE (só amigos)
 export async function carregarComunidade(meuUid: string): Promise<Review[]> {
   const ids = await idsSeguindo(meuUid);

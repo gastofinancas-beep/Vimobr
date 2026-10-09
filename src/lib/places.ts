@@ -2,14 +2,18 @@ import type { Place } from '../types';
 
 const getApiKey = () => {
   try {
-    return (
+    const key =
       (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) ||
       (import.meta.env.VITE_GOOGLE_PLACES_KEY as string) ||
       localStorage.getItem('vimo_gmaps_api_key') ||
-      'AIzaSyDYIeymrJ3OUAbAqO_DhBZqYSjWoV-E6G8'
-    );
+      '';
+    if (!key) {
+      console.warn('[Vimo] Chave do Google Maps não configurada. Defina VITE_GOOGLE_MAPS_API_KEY no .env');
+    }
+    return key;
   } catch {
-    return 'AIzaSyDYIeymrJ3OUAbAqO_DhBZqYSjWoV-E6G8';
+    console.warn('[Vimo] Erro ao obter chave do Google Maps.');
+    return '';
   }
 };
 

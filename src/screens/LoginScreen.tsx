@@ -12,12 +12,12 @@ interface LoginScreenProps {
 }
 
 const ICONE =
-  'pointer-events-none absolute left-[14px] top-1/2 h-[19px] w-[19px] -translate-y-1/2 text-[#6E6960]';
+  'pointer-events-none absolute left-[14px] top-1/2 h-[19px] w-[19px] -translate-y-1/2 text-[var(--muted)]';
 const CAMPO =
-  'h-[52px] w-full rounded-[15px] border border-[#E7E0D5] bg-white pl-[43px] pr-[14px] text-[15px] text-[#121219] outline-none transition placeholder:text-[#9B958A] focus:border-[#F77947] focus:shadow-[0_0_0_3px_rgba(247,121,71,0.16)]';
+  'h-[52px] w-full rounded-[15px] border border-[var(--line)] bg-[var(--s1)] pl-[43px] pr-[14px] text-[15px] text-[var(--ink)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--star)] focus:shadow-[0_0_0_3px_rgba(247,121,71,0.16)]';
 const CAMPO_SENHA = CAMPO.replace('pr-[14px]', 'pr-[50px]');
 const SOCIAL =
-  'flex min-h-[54px] items-center justify-center gap-[9px] rounded-[15px] border border-[#E7E0D5] bg-white px-2 text-left text-[13.5px] font-medium leading-[1.2] text-[#121219] transition active:scale-[0.98] disabled:opacity-60';
+  'flex min-h-[54px] items-center justify-center gap-[9px] rounded-[15px] border border-[var(--line)] bg-[var(--s1)] px-2 text-left text-[13.5px] font-medium leading-[1.2] text-[var(--ink)] transition active:scale-[0.98] disabled:opacity-60';
 
 export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginScreenProps) {
   const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar');
@@ -80,8 +80,8 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
               bio: 'Explorando bons restaurantes e boas companhias no VIMO.',
               homeCityKey: 'sao-paulo-sp',
               homeCityName: 'São Paulo - SP',
-              followersCount: 12,
-              followingCount: 8,
+              followersCount: 0,
+              followingCount: 0,
             };
             await setDoc(doc(db, 'users', fbUser.uid), perfil, { merge: true });
           }
@@ -97,8 +97,8 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
           bio: 'Explorando bons restaurantes e boas companhias no VIMO.',
           homeCityKey: 'sao-paulo-sp',
           homeCityName: 'São Paulo - SP',
-          followersCount: 38,
-          followingCount: 29,
+          followersCount: 0,
+          followingCount: 0,
         };
         setTimeout(() => onLoginSuccess(perfilLocal), 250);
       }
@@ -119,8 +119,8 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
           bio: 'Explorador da gastronomia.',
           homeCityKey: 'sao-paulo-sp',
           homeCityName: 'São Paulo - SP',
-          followersCount: 15,
-          followingCount: 12,
+          followersCount: 0,
+          followingCount: 0,
         };
         setTimeout(() => onLoginSuccess(perfilFallback), 250);
       }
@@ -149,8 +149,8 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
             bio: 'Explorando sabores incríveis com boa companhia.',
             homeCityKey: 'sao-paulo-sp',
             homeCityName: 'São Paulo - SP',
-            followersCount: 24,
-            followingCount: 18,
+            followersCount: 0,
+            followingCount: 0,
           };
           await setDoc(doc(db, 'users', fbUser.uid), perfil, { merge: true });
         }
@@ -164,8 +164,8 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
           bio: 'Explorador da gastronomia paulistana.',
           homeCityKey: 'sao-paulo-sp',
           homeCityName: 'São Paulo - SP',
-          followersCount: 54,
-          followingCount: 42,
+          followersCount: 0,
+          followingCount: 0,
         };
         setTimeout(() => onLoginSuccess(perfilGoogle), 250);
       }
@@ -188,8 +188,8 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
         bio: 'Explorador da gastronomia.',
         homeCityKey: 'sao-paulo-sp',
         homeCityName: 'São Paulo - SP',
-        followersCount: 40,
-        followingCount: 22,
+        followersCount: 0,
+        followingCount: 0,
       };
       setTimeout(() => onLoginSuccess(perfilApple), 250);
       setCarregando(false);
@@ -200,26 +200,26 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
 
   return (
     <div
-      className="h-[100dvh] w-full overflow-hidden flex justify-center font-sans antialiased text-[#E8EAF2]"
+      className="h-[100dvh] w-full overflow-hidden flex justify-center font-sans antialiased text-[var(--ink)]"
       style={{
         background:
-          'radial-gradient(118% 62% at 72% 6%, rgba(31,49,99,0.7) 0%, rgba(31,49,99,0) 62%), linear-gradient(180deg,#171A2E 0%,#111119 48%,#0B0B11 100%)',
+          'radial-gradient(118% 62% at 72% 6%, color-mix(in srgb, var(--primary) 70%, transparent) 0%, transparent 62%), linear-gradient(180deg, var(--s2) 0%, var(--bg) 48%, var(--bg) 100%)',
       }}
     >
       <div className="relative flex h-full w-full max-w-[400px] flex-col overflow-y-auto">
         {/* Logo e slogan */}
         <div className="relative z-[2] px-[22px] pt-[calc(env(safe-area-inset-top,0px)+24px)]">
-          <h1 className="m-0 select-none text-[40px] font-[900] leading-none tracking-[-0.045em] text-white">
-            VIMO<span className="text-[#F77947]">.</span>
+          <h1 className="m-0 select-none text-[40px] font-[900] leading-none tracking-[-0.045em] text-[var(--ink)]">
+            VIMO<span className="text-[var(--star)]">.</span>
           </h1>
-          <p className="mb-0 mt-[9px] text-[15px] leading-[1.3] text-[#DDE2F0]">
+          <p className="mb-0 mt-[9px] text-[15px] leading-[1.3] text-[var(--muted)]">
             Mais do que
             <br />
             restaurantes,
             <br />
             boas companhias.
           </p>
-          <div className="mt-[11px] h-[3.5px] w-[38px] rounded-full bg-[#F77947]" />
+          <div className="mt-[11px] h-[3.5px] w-[38px] rounded-full bg-[var(--star)]" />
         </div>
 
         {/* Mascote apoiado no card + card de formulário */}
@@ -227,7 +227,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
           <VimoMascot coberto={cobrindo} />
 
           <div
-            className="relative z-[3] rounded-t-[30px] bg-[#FAF7F1] px-5 pb-5 pt-[34px] text-[#121219]"
+            className="relative z-[3] rounded-t-[30px] bg-[var(--s1)] px-5 pb-5 pt-[34px] text-[var(--ink)]"
             style={{ boxShadow: '0 -10px 34px rgba(4,7,18,0.42)' }}
           >
             {erro && (
@@ -285,7 +285,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
                   onClick={() => setMostrarSenha((v) => !v)}
                   aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                   aria-pressed={mostrarSenha}
-                  className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-xl text-[#6E6960] transition-colors hover:text-[#121219]"
+                  className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-xl text-[var(--muted)] transition-colors hover:text-[var(--ink)]"
                 >
                   {mostrarSenha ? <EyeOff size={19} strokeWidth={1.7} /> : <Eye size={19} strokeWidth={1.7} />}
                 </button>
@@ -294,17 +294,17 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
               <button
                 type="submit"
                 disabled={carregando}
-                className="relative mt-1 flex h-14 w-full cursor-pointer items-center justify-center rounded-2xl bg-[#121219] text-[16px] font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
+                className="relative mt-1 flex h-14 w-full cursor-pointer items-center justify-center rounded-2xl bg-[var(--primary)] text-[16px] font-semibold text-[var(--on-primary)] transition active:scale-[0.99] disabled:opacity-60"
               >
                 {carregando ? 'Acessando...' : modo === 'entrar' ? 'Entrar' : 'Cadastrar'}
                 {!carregando && <ArrowRight size={20} strokeWidth={2.1} className="absolute right-5" aria-hidden="true" />}
               </button>
             </form>
 
-            <div className="my-[15px] mb-3 flex items-center gap-3 text-[13px] text-[#9B958A]">
-              <span className="h-px flex-1 bg-[#E7E0D5]" />
+            <div className="my-[15px] mb-3 flex items-center gap-3 text-[13px] text-[var(--muted)]">
+              <span className="h-px flex-1 bg-[var(--line)]" />
               <span>ou</span>
-              <span className="h-px flex-1 bg-[#E7E0D5]" />
+              <span className="h-px flex-1 bg-[var(--line)]" />
             </div>
 
             <div className="grid grid-cols-2 gap-[10px]">
@@ -322,7 +322,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
                 </span>
               </button>
               <button type="button" onClick={handleAppleLogin} disabled={carregando} className={SOCIAL}>
-                <svg className="h-[21px] w-[21px] shrink-0 fill-[#121219]" viewBox="0 0 170 170" aria-hidden="true">
+                <svg className="h-[21px] w-[21px] shrink-0 fill-[var(--ink)]" viewBox="0 0 170 170" aria-hidden="true">
                   <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.69-7.85-12.02-14.42-6.53-9.92-11.75-21.2-15.66-33.84-3.91-12.64-5.87-24.64-5.87-36 0-14.54 3.75-26.85 11.25-36.93 7.5-10.08 17.06-15.22 28.68-15.42 5.02 0 10.42 1.34 16.21 4.02 5.79 2.68 9.54 4.07 11.25 4.17 1.57 0 5.48-1.42 11.74-4.25 6.26-2.83 11.66-4.13 16.21-3.9 12.05.67 21.84 5.39 29.37 14.15-10.49 6.37-15.64 15.2-15.44 26.51.2 8.71 3.52 16.03 9.97 21.97 6.45 5.94 14.12 9.29 23 10.05-2.12 6.53-4.8 13.12-8.03 19.78zm-30.85-115.53c0 7.15-2.6 13.91-7.81 20.28-5.21 6.37-11.63 10.35-19.26 11.95-.33-1.63-.5-3.13-.5-4.5 0-7.05 2.82-14.07 8.46-21.05 5.64-6.98 12.01-10.88 19.11-11.68z" />
                 </svg>
                 <span>
@@ -333,7 +333,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
               </button>
             </div>
 
-            <div className="mt-[15px] text-center text-[13.5px] text-[#6E6960]">
+            <div className="mt-[15px] text-center text-[13.5px] text-[var(--muted)]">
               {modo === 'entrar' ? (
                 <p className="m-0">
                   Ainda não tem uma conta?{' '}
@@ -343,7 +343,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
                       setModo('cadastrar');
                       setErro(null);
                     }}
-                    className="font-semibold text-[#1F3163] hover:underline"
+                    className="font-semibold text-[var(--primary)] hover:underline"
                   >
                     Criar conta
                   </button>
@@ -357,7 +357,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
                       setModo('entrar');
                       setErro(null);
                     }}
-                    className="font-semibold text-[#1F3163] hover:underline"
+                    className="font-semibold text-[var(--primary)] hover:underline"
                   >
                     Fazer login
                   </button>
@@ -368,7 +368,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
                 <button
                   type="button"
                   onClick={onExploreAsGuest}
-                  className="mt-1 inline-flex min-h-[40px] items-center justify-center text-[13px] text-[#9B958A] underline transition hover:text-[#121219]"
+                  className="mt-1 inline-flex min-h-[40px] items-center justify-center text-[13px] text-[var(--muted)] underline transition hover:text-[var(--ink)]"
                 >
                   Entrar como convidado
                 </button>

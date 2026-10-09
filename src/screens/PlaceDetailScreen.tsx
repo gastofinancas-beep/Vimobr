@@ -19,7 +19,7 @@ import { getPlace, SAMPLE_PLACES } from '../lib/places';
 import {
   alternarListaUsuario,
   obterListasUsuario,
-  carregarExplorar,
+  carregarReviewsDoLugar,
   obterScoreRestaurante,
 } from '../lib/reviews';
 import StarRating from '../components/StarRating';
@@ -80,8 +80,7 @@ export default function PlaceDetailScreen({
       }
 
       try {
-        const allReviews = await carregarExplorar('algoritmo', currentUser.uid);
-        const filtradas = allReviews.filter((r) => r.placeId === placeId);
+        const filtradas = await carregarReviewsDoLugar(placeId);
         if (ativo) {
           setReviews(filtradas);
         }

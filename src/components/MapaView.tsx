@@ -40,7 +40,7 @@ const ROTULOS_FILTRO: Record<FiltroColecao, string> = {
   salvos: 'Só os meus salvos',
 };
 
-export default function MapaView({ onAbrirLugar }: { onAbrirLugar: (p: Place) => void }) {
+export default function MapaView({ onAbrirLugar, userId = '' }: { onAbrirLugar: (p: Place) => void; userId?: string }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const gmapRef = useRef<google.maps.Map | null>(null);
   const gmapUserMarkerRef = useRef<any>(null);
@@ -69,14 +69,14 @@ export default function MapaView({ onAbrirLugar }: { onAbrirLugar: (p: Place) =>
   useEffect(() => {
     const map: Record<string, boolean> = {};
     lugares.forEach((p) => {
-      if (estaNaWishlist('user-me', p.id)) map[p.id] = true;
+      if (estaNaWishlist(userId, p.id)) map[p.id] = true;
     });
     setWishlistMap(map);
   }, [lugares]);
 
   const handleAlternarWishlist = async (e: React.MouseEvent, p: Place) => {
     e.stopPropagation();
-    const res = await alternarWishlist('user-me', p);
+    const res = await alternarWishlist(userId, p);
     setWishlistMap((prev) => ({ ...prev, [p.id]: res.added }));
     setToastMsg(res.added ? `${p.name} salvo na Lista de Desejos!` : 'Removido da Lista de Desejos');
     setTimeout(() => setToastMsg(null), 2500);
