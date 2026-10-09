@@ -22,6 +22,7 @@ export interface UnifiedPlace {
   vimoRating?: number | null;
   vimoReviewsCount?: number;
   googleRating?: number | null;
+  googleUserRatingCount?: number;
   priceLevel?: string | null;
   distanceFormatted?: string;
   photoUrl?: string;
@@ -770,7 +771,7 @@ const GoogleMapsView = forwardRef<GoogleMapsViewRef, GoogleMapsViewProps>(functi
                       }`}
                     >
                       <span className={`text-[12px] ${isSelected ? 'text-white' : 'text-[var(--star)]'} font-bold`}>★</span>
-                      <span className="leading-tight">${nota}</span>
+                      <span className="leading-tight">{nota}</span>
                     </div>
                     <div
                       className={`w-1.5 h-1.5 rotate-45 -mt-0.5 shadow-2xs ${

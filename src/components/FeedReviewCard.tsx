@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bookmark, Heart, MessageCircle, Share2 } from 'lucide-react';
 import StarRating from './StarRating';
-import PlacePlaceholder from './PlacePlaceholder';
+import { Avatar, PlaceImage } from './ui';
 import { alternarCurtida, verificarCurtida } from '../lib/reviews';
 import { photoUrl } from '../lib/places';
 import type { Review, UserProfile } from '../types';
@@ -23,16 +23,24 @@ function tempoRelativo(timestamp: number): string {
   const diff = Date.now() - timestamp;
   const minutos = Math.floor(diff / 60000);
   if (minutos < 1) return 'agora';
-  if (minutos < 60) return `${minutos}min`;
+  if (minutos < 60) return `${minutos} min`;
   const horas = Math.floor(minutos / 60);
-  if (horas < 24) return `${horas}h`;
+  if (horas < 24) return `${horas} h`;
   const dias = Math.floor(horas / 24);
-  if (dias < 30) return `${dias}d`;
+  if (dias < 30) return dias === 1 ? 'ontem' : `${dias} dias`;
   const meses = Math.floor(dias / 30);
-  if (meses < 12) return `${meses}m`;
-  return `${Math.floor(meses / 12)}a`;
+  if (meses < 12) return meses === 1 ? '1 mês' : `${meses} meses`;
+  const anos = Math.floor(meses / 12);
+  return anos === 1 ? '1 ano' : `${anos} anos`;
 }
 
+const acao =
+  'min-h-11 -mx-1 px-1 flex items-center gap-1.5 text-sm tabular transition-colors cursor-pointer';
+
+/**
+ * Entrada do feed: quem avaliou → foto do lugar → lugar e nota → texto → ações.
+ * Sem moldura de card: as entradas são separadas por uma linha fina na lista.
+ */
 export default function FeedReviewCard({
   review,
   currentUser,
@@ -64,153 +72,108 @@ export default function FeedReviewCard({
   };
 
   return (
-    <article className="bg-[var(--s1)] border border-[var(--line)] rounded-2xl overflow-hidden">
-      {/* 1. Foto no topo: aspect-[16/9] com nome do lugar no canto inferior esquerdo */}
+    <article className="py-5">
+      {/* Quem avaliou */}
+      <header className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => onAbrirPerfil(review.uid)}
+          className="flex min-w-0 items-center gap-2.5 text-left cursor-pointer"
+        >
+          <Avatar src={review.authorPhoto} name={review.authorName} size={32} />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold text-ink">{review.authorName}</span>
+            <span className="block t-meta">
+              {tempoRelativo(review.visitedAt || review.createdAt || Date.now())}
+            </span>
+          </span>
+        </button>
+
+        {!ehMeu && !seguindo && (
+          <button
+            type="button"
+            onClick={() => onSeguir(review.uid)}
+            className="h-8 shrink-0 rounded-full px-3.5 text-sm font-semibold text-primary ring-1 ring-inset ring-line hover:ring-primary transition cursor-pointer"
+          >
+            Seguir
+          </button>
+        )}
+      </header>
+
+      {/* Foto do lugar */}
       <button
         type="button"
         onClick={() => onAbrirLugar(review.placeId)}
-        aria-label={`Ver detalhes de ${review.placeName}`}
-        className="relative block w-full aspect-[16/9] max-h-40 overflow-hidden cursor-pointer"
+        aria-label={`Ver ${review.placeName}`}
+        className="mt-3 block w-full overflow-hidden rounded-md cursor-pointer"
       >
-        {foto ? (
-          <img
-            src={foto}
-            alt={review.placeName}
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <PlacePlaceholder name={review.placeName} className="w-full h-full" />
-        )}
-        <div className="absolute bottom-2 left-2 max-w-[85%] rounded px-2 py-0.5 bg-black/45 backdrop-blur-[2px]">
-          <span className="text-[16px] font-medium text-white truncate block">
-            {review.placeName}
-          </span>
-        </div>
+        <PlaceImage src={foto} name={review.placeName} className="aspect-[16/10] w-full" />
       </button>
 
-      {/* 2. Corpo do Cartão (padding 12px) */}
-      <div className="p-3 space-y-2.5">
-        {/* Linha do autor */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <button
-              type="button"
-              onClick={() => onAbrirPerfil(review.uid)}
-              aria-label={`Ver perfil de ${review.authorName}`}
-              className="w-7 h-7 rounded-full overflow-hidden bg-[var(--s2)] text-[var(--primary)] flex items-center justify-center text-xs font-medium shrink-0 cursor-pointer"
-            >
-              {review.authorPhoto ? (
-                <img src={review.authorPhoto} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span>{review.authorName?.charAt(0) || 'U'}</span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => onAbrirPerfil(review.uid)}
-              className="text-[13px] font-medium text-[var(--ink)] hover:underline truncate cursor-pointer text-left"
-            >
-              {review.authorName}
-            </button>
-          </div>
+      {/* Lugar e nota */}
+      <button
+        type="button"
+        onClick={() => onAbrirLugar(review.placeId)}
+        className="mt-3 flex w-full items-center justify-between gap-3 text-left cursor-pointer"
+      >
+        <h3 className="min-w-0 truncate text-lg font-semibold tracking-tight text-ink">{review.placeName}</h3>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <StarRating value={review.overall || 0} size={14} />
+        </span>
+      </button>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {!ehMeu && !seguindo && (
-              <button
-                type="button"
-                onClick={() => onSeguir(review.uid)}
-                className="h-9 px-3 rounded-lg border border-[var(--line)] text-[13px] font-medium text-[var(--ink)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition cursor-pointer"
-              >
-                Seguir
-              </button>
-            )}
-            <span className="text-[12px] text-[var(--muted)]">
-              {tempoRelativo(review.visitedAt || review.createdAt || Date.now())}
-            </span>
-          </div>
-        </div>
+      {review.text && (
+        <p className="mt-2 t-body text-ink-2 line-clamp-4">{review.text}</p>
+      )}
 
-        {/* Estrelas da nota geral em var(--star) (15px) */}
-        <div>
-          <StarRating value={review.overall || 0} size={15} />
-        </div>
+      {review.pratoDestaque && (
+        <p className="mt-2 text-sm text-muted truncate">
+          Prato destaque: <span className="font-medium text-ink">{review.pratoDestaque}</span>
+        </p>
+      )}
 
-        {/* Texto da review (13px, leading-relaxed, line-clamp-4) */}
-        {review.text && (
-          <p className="text-[13px] text-[var(--ink)] leading-relaxed line-clamp-4">
-            {review.text}
-          </p>
-        )}
+      {/* Ações */}
+      <div className="mt-2 flex items-center gap-5">
+        <button
+          type="button"
+          onClick={curtir}
+          aria-pressed={curtido}
+          aria-label={`Curtir. ${curtidas} curtidas`}
+          className={`${acao} ${curtido ? 'text-star' : 'text-muted hover:text-ink'}`}
+        >
+          <Heart size={18} strokeWidth={1.8} className={curtido ? 'fill-star' : ''} />
+          <span>{curtidas}</span>
+        </button>
 
-        {/* Prato destaque (se houver) */}
-        {review.pratoDestaque && (
-          <p className="text-[12px] text-[var(--muted)] truncate">
-            Destaque: <span className="text-[var(--ink)] font-medium">{review.pratoDestaque}</span>
-          </p>
-        )}
+        <button
+          type="button"
+          onClick={() => onComentarios(review)}
+          aria-label={`Comentar. ${review.commentsCount || 0} comentários`}
+          className={`${acao} text-muted hover:text-ink`}
+        >
+          <MessageCircle size={18} strokeWidth={1.8} />
+          <span>{review.commentsCount || 0}</span>
+        </button>
 
-        {/* Barra de ações: curtir, comentar, quero ir, compartilhar */}
-        <div className="flex items-center justify-between pt-1 border-t border-[var(--line)]">
-          {/* Curtir */}
-          <button
-            type="button"
-            onClick={curtir}
-            aria-pressed={curtido}
-            aria-label={`Curtir. ${curtidas} curtidas`}
-            className={`min-h-11 px-2.5 flex items-center gap-1.5 text-[12px] transition cursor-pointer ${
-              curtido
-                ? 'text-[var(--star)] font-medium'
-                : 'text-[var(--muted)] hover:text-[var(--ink)]'
-            }`}
-          >
-            <Heart
-              size={17}
-              className={curtido ? 'fill-[var(--star)] text-[var(--star)]' : ''}
-            />
-            <span>{curtidas}</span>
-          </button>
+        <button
+          type="button"
+          onClick={() => onSalvar(review)}
+          aria-pressed={salvo}
+          aria-label={salvo ? 'Salvo em Quero ir' : 'Salvar em Quero ir'}
+          className={`${acao} ${salvo ? 'text-primary' : 'text-muted hover:text-ink'}`}
+        >
+          <Bookmark size={18} strokeWidth={1.8} className={salvo ? 'fill-primary' : ''} />
+          <span>{salvo ? 'Salvo' : 'Quero ir'}</span>
+        </button>
 
-          {/* Comentar */}
-          <button
-            type="button"
-            onClick={() => onComentarios(review)}
-            aria-label={`Comentar. ${review.commentsCount || 0} comentários`}
-            className="min-h-11 px-2.5 flex items-center gap-1.5 text-[12px] text-[var(--muted)] hover:text-[var(--ink)] transition cursor-pointer"
-          >
-            <MessageCircle size={17} />
-            <span>{review.commentsCount || 0}</span>
-          </button>
-
-          {/* Quero ir */}
-          <button
-            type="button"
-            onClick={() => onSalvar(review)}
-            aria-pressed={salvo}
-            aria-label={salvo ? 'Salvo em Quero ir' : 'Salvar em Quero ir'}
-            className={`min-h-11 px-2.5 flex items-center gap-1.5 text-[12px] transition cursor-pointer ${
-              salvo
-                ? 'text-[var(--primary)] font-medium'
-                : 'text-[var(--muted)] hover:text-[var(--ink)]'
-            }`}
-          >
-            <Bookmark
-              size={17}
-              className={salvo ? 'fill-[var(--primary)] text-[var(--primary)]' : ''}
-            />
-            <span>Quero ir</span>
-          </button>
-
-          {/* Compartilhar */}
-          <button
-            type="button"
-            onClick={() => onCompartilhar(review)}
-            aria-label="Compartilhar avaliação"
-            className="min-h-11 px-2.5 flex items-center justify-center text-[var(--muted)] hover:text-[var(--ink)] transition cursor-pointer"
-          >
-            <Share2 size={17} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => onCompartilhar(review)}
+          aria-label="Compartilhar avaliação"
+          className={`${acao} ml-auto text-muted hover:text-ink`}
+        >
+          <Share2 size={18} strokeWidth={1.8} />
+        </button>
       </div>
     </article>
   );

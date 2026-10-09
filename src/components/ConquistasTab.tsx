@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Trophy,
-  CheckCircle2,
   Lock,
   Sparkles,
   Award,
@@ -15,14 +14,12 @@ import {
   Camera,
   Heart,
   HelpCircle,
-  EyeOff,
-  ShieldCheck,
 } from 'lucide-react';
 import { obterResumoConquistas, type Badge, type BadgeTier } from '../lib/badges';
 import type { Review } from '../types';
 
 function renderBadgeIcon(icone: string, desbloqueada: boolean) {
-  const size = 22;
+  const size = 20;
   const className = desbloqueada ? 'text-[var(--star)]' : 'text-[var(--muted)]';
 
   if (!desbloqueada) {
@@ -60,7 +57,7 @@ function renderBadgeIcon(icone: string, desbloqueada: boolean) {
 const TIER_CONFIG: Record<BadgeTier, { label: string }> = {
   bronze: { label: 'Bronze' },
   prata: { label: 'Prata' },
-  ouro: { label: 'Ouro Raro' },
+  ouro: { label: 'Ouro' },
   diamante: { label: 'Lendário' },
 };
 
@@ -77,143 +74,87 @@ export default function ConquistasTab({ reviews }: { reviews: Review[] }) {
     return true;
   });
 
+  const pct = badges.length ? Math.round((desbloqueadas.length / badges.length) * 100) : 0;
+  const filtros: { key: Filtro; label: string; n: number }[] = [
+    { key: 'todas', label: 'Todas', n: badges.length },
+    { key: 'conquistadas', label: 'Desbloqueadas', n: desbloqueadas.length },
+    { key: 'ocultas', label: 'Ocultas', n: badges.length - desbloqueadas.length },
+  ];
+
   return (
-    <div className="space-y-4 pt-1">
-      {/* Banner de Reconhecimentos */}
-      <div className="rounded-2xl border border-[var(--line)] bg-[var(--s1)] p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-[var(--s2)] text-[var(--star)] flex items-center justify-center shrink-0">
-                <ShieldCheck size={18} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-[15px] text-[var(--ink)] leading-tight">
-                  Cofre de Reconhecimentos
-                </h3>
-                <p className="text-[12px] text-[var(--muted)]">
-                  Recompensas secretas conquistadas com dedicação gastronômica.
-                </p>
-              </div>
-            </div>
+    <div className="space-y-5">
+      {/* Resumo com o mascote: conquistas são um momento de celebração */}
+      <div className="flex items-center gap-4">
+        <img
+          src={`/mascot/vimo_${desbloqueadas.length > 0 ? 'orgulhoso' : 'incentivando'}.png`}
+          alt=""
+          aria-hidden="true"
+          width={56}
+          height={58}
+          className="shrink-0 object-contain"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-semibold text-ink tabular">
+            {desbloqueadas.length} de {badges.length} conquistas
+          </p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-s2" aria-hidden="true">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
           </div>
-
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[var(--s2)] border border-[var(--line)] text-[12px] font-medium text-[var(--ink)] shrink-0">
-            <Sparkles size={13} className="text-[var(--star)]" />
-            <span>{desbloqueadas.length}/{badges.length} reveladas</span>
-          </div>
-        </div>
-
-        <div className="p-3 rounded-xl bg-[var(--s2)] text-[12px] text-[var(--muted)] flex items-center gap-2.5 leading-relaxed">
-          <EyeOff size={16} className="text-[var(--star)] shrink-0" />
-          <span>
-            Cada conquista é um marco. Viva experiências reais, avalie com sinceridade e descubra cada selo ao atingir os feitos.
-          </span>
+          <p className="mt-1.5 text-sm text-muted">Algumas só aparecem quando você chega lá.</p>
         </div>
       </div>
 
-      {/* Filtros em chips roláveis com alvo de toque mín 44px */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
-        <button
-          type="button"
-          onClick={() => setFiltro('todas')}
-          className={`min-h-11 px-4 rounded-xl text-[13px] font-medium cursor-pointer transition ${
-            filtro === 'todas'
-              ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-              : 'bg-[var(--s1)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]'
-          }`}
-        >
-          Todas ({badges.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setFiltro('conquistadas')}
-          className={`min-h-11 px-4 rounded-xl text-[13px] font-medium cursor-pointer transition ${
-            filtro === 'conquistadas'
-              ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-              : 'bg-[var(--s1)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]'
-          }`}
-        >
-          Desbloqueadas ({desbloqueadas.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setFiltro('ocultas')}
-          className={`min-h-11 px-4 rounded-xl text-[13px] font-medium cursor-pointer transition ${
-            filtro === 'ocultas'
-              ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-              : 'bg-[var(--s1)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]'
-          }`}
-        >
-          Ocultas ({badges.length - desbloqueadas.length})
-        </button>
+      {/* Filtros */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        {filtros.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setFiltro(f.key)}
+            aria-pressed={filtro === f.key}
+            className={`h-9 shrink-0 rounded-full px-3.5 text-sm whitespace-nowrap transition-colors cursor-pointer ${
+              filtro === f.key ? 'bg-ink text-bg font-semibold' : 'text-muted ring-1 ring-inset ring-line hover:text-ink'
+            }`}
+          >
+            {f.label} <span className="tabular opacity-70">{f.n}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Grid de Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Lista */}
+      <ul className="divide-y divide-line">
         {listaExibida.map((b) => {
           const tierInfo = TIER_CONFIG[b.tier] || TIER_CONFIG.bronze;
-
           return (
-            <div
-              key={b.id}
-              className={`relative overflow-hidden rounded-2xl border p-3.5 flex gap-3 transition ${
-                b.desbloqueada
-                  ? 'border-[var(--primary)]/40 bg-[var(--s1)]'
-                  : 'border-[var(--line)] bg-[var(--s1)] opacity-75'
-              }`}
-            >
-              {/* Ícone da Badge */}
+            <li key={b.id} className={`flex gap-3.5 py-3.5 ${b.desbloqueada ? '' : 'opacity-60'}`}>
               <div
-                className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
-                  b.desbloqueada
-                    ? 'bg-[var(--s2)] text-[var(--star)] border border-[var(--primary)]/30'
-                    : 'bg-[var(--s2)] text-[var(--muted)] border border-[var(--line)]'
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+                  b.desbloqueada ? 'bg-star/12' : 'bg-s2'
                 }`}
               >
                 {renderBadgeIcon(b.icone, b.desbloqueada)}
               </div>
-
-              {/* Informações da Badge */}
-              <div className="flex-1 min-w-0 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between gap-1">
-                    <h4 className="font-medium text-[14px] text-[var(--ink)] truncate">
-                      {b.desbloqueada ? b.titulo : 'Conquista Oculta'}
-                    </h4>
-                    {b.desbloqueada ? (
-                      <span className="inline-flex items-center gap-1 text-[12px] font-medium text-[var(--star)] px-2 py-0.5 rounded-full bg-[var(--s2)] shrink-0">
-                        <CheckCircle2 size={12} />
-                        <span>+{b.pontos} pts</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[12px] text-[var(--muted)] px-2 py-0.5 rounded-full bg-[var(--s2)] shrink-0">
-                        <Lock size={11} />
-                        <span>Secreta</span>
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[12px] text-[var(--muted)] leading-relaxed mt-1">
-                    {b.desbloqueada ? b.descricao : b.pistaSecreta}
-                  </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h4 className="truncate text-[15px] font-semibold text-ink">
+                    {b.desbloqueada ? b.titulo : 'Conquista oculta'}
+                  </h4>
+                  {b.desbloqueada ? (
+                    <span className="shrink-0 t-meta tabular">
+                      {tierInfo.label} · {b.pontos} pts
+                    </span>
+                  ) : (
+                    <span className="flex shrink-0 items-center gap-1 t-meta">
+                      <Lock size={11} /> Oculta
+                    </span>
+                  )}
                 </div>
-
-                {b.desbloqueada ? (
-                  <div className="pt-2 flex items-center justify-between text-[12px] text-[var(--star)] font-medium border-t border-[var(--line)] mt-2">
-                    <span className="uppercase tracking-wider">{tierInfo.label}</span>
-                    <span>Desbloqueada 🎉</span>
-                  </div>
-                ) : (
-                  <div className="pt-2 flex items-center justify-between text-[12px] text-[var(--muted)] border-t border-[var(--line)] mt-2">
-                    <span>Recompensa Oculta</span>
-                    <span>??? pts</span>
-                  </div>
-                )}
+                <p className="mt-0.5 text-sm text-muted">{b.desbloqueada ? b.descricao : b.pistaSecreta}</p>
               </div>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </div>
   );
 }

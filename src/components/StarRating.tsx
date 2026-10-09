@@ -55,7 +55,7 @@ export default function StarRating({
                 {/* Estrela de Fundo Vazia */}
                 <Star
                   size={size}
-                  className="absolute inset-0 text-neutral-300 dark:text-[#44403C] transition-colors"
+                  className="absolute inset-0 text-s3 transition-colors"
                   strokeWidth={1.5}
                 />
 
@@ -87,13 +87,13 @@ export default function StarRating({
               onMouseMove={(e) => handleMouseMove(e, i)}
               onClick={(e) => handleClick(e, i)}
               aria-label={`${i + 1} estrelas`}
-              className="relative transition-transform focus:outline-hidden hover:scale-110 active:scale-95 cursor-pointer"
+              className="relative transition-transform focus:outline-hidden active:scale-95 cursor-pointer"
               style={{ width: size, height: size }}
             >
               {/* Estrela de Fundo Vazia */}
               <Star
                 size={size}
-                className="absolute inset-0 text-neutral-300 dark:text-[#44403C] transition-colors"
+                className="absolute inset-0 text-s3 transition-colors"
                 strokeWidth={1.5}
               />
 
@@ -120,7 +120,7 @@ export default function StarRating({
       </div>
 
       {showScore && (
-        <span className="text-xs font-bold text-[var(--ink)] tabular-nums ml-1">
+        <span className="t-rating text-xs text-ink ml-1">
           {displayValue.toFixed(1)}
         </span>
       )}

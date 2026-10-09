@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { signInWithPopup, onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, isFirebaseConfigured } from './lib/firebase';
@@ -242,15 +243,15 @@ export default function App() {
         ) : perfilVisualizadoUid && perfilVisualizadoUid !== currentUser.uid ? (
           <div>
             {/* Header com botão voltar ao ver perfil de terceiros */}
-            <div className="sticky top-0 z-30 p-3 bg-bg/95 backdrop-blur border-b border-line flex items-center justify-between">
+            <div className="sticky top-0 z-30 bg-bg px-2 py-2 flex items-center">
               <button
+                type="button"
                 onClick={() => setPerfilVisualizadoUid(null)}
-                className="text-xs font-bold text-accent px-3 py-1.5 rounded-full border border-accent/40 bg-accent/10 cursor-pointer"
+                aria-label="Voltar"
+                className="inline-flex items-center justify-center w-10 h-10 rounded-full text-ink hover:bg-s2 transition-colors cursor-pointer"
               >
-                ← Voltar
+                <ArrowLeft size={20} strokeWidth={2} />
               </button>
-              <span className="font-display text-sm font-semibold">Perfil</span>
-              <div className="w-16" />
             </div>
             <PerfilScreen
               uid={perfilVisualizadoUid}
@@ -332,7 +333,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Barra Inferior Flutuante (pílula 66px arredondada) */}
+      {/* Barra inferior */}
       <Navigation
         tabAtiva={tabAtiva}
         onMudarTab={(novaTab) => {

@@ -27,16 +27,17 @@ import {
 } from '../lib/notifications';
 import { solicitarPermissaoNotificacoes, dispararNotificacaoLocalPush } from '../lib/fcm';
 import type { NotificationItem, NotificationType, CompanionStatus } from '../types';
+import { Avatar } from './ui';
 
 function tempoAtras(timestamp: number): string {
   const seg = Math.floor((Date.now() - timestamp) / 1000);
-  if (seg < 60) return 'agora mesmo';
+  if (seg < 60) return 'agora';
   const min = Math.floor(seg / 60);
-  if (min < 60) return `${min} min atrás`;
+  if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h}h atrás`;
+  if (h < 24) return `${h} h`;
   const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d atrás`;
+  if (d < 7) return d === 1 ? 'ontem' : `${d} dias`;
   return new Date(timestamp).toLocaleDateString('pt-BR');
 }
 
@@ -134,67 +135,39 @@ export default function NotificationsModal({
     carregar();
   };
 
-  const renderIconeTipo = (tipo: NotificationType) => {
-    switch (tipo) {
-      case 'curtida':
-        return (
-          <div className="h-4 w-4 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/30">
-            <Heart size={10} className="fill-red-500" />
-          </div>
-        );
-      case 'comentario':
-        return (
-          <div className="h-4 w-4 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center border border-blue-500/30">
-            <MessageCircle size={10} className="fill-blue-500" />
-          </div>
-        );
-      case 'marcacao_presenca':
-        return (
-          <div className="h-4 w-4 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center border border-amber-500/30">
-            <Users size={10} />
-          </div>
-        );
-      case 'seguir':
-        return (
-          <div className="h-4 w-4 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center border border-emerald-500/30">
-            <UserPlus size={10} />
-          </div>
-        );
-    }
-  };
+  const ICONE: Record<NotificationType, { Icon: typeof Heart; cor: string }> = {
+    curtida: { Icon: Heart, cor: 'bg-star text-white' },
+    comentario: { Icon: MessageCircle, cor: 'bg-primary text-on-primary' },
+    marcacao_presenca: { Icon: Users, cor: 'bg-primary text-on-primary' },
+    seguir: { Icon: UserPlus, cor: 'bg-success text-white' },
+  } as Record<NotificationType, { Icon: typeof Heart; cor: string }>;
+
+  const filtros: { key: 'todas' | NotificationType; label: string }[] = [
+    { key: 'todas', label: 'Todas' },
+    { key: 'curtida', label: 'Curtidas' },
+    { key: 'comentario', label: 'Comentários' },
+    { key: 'marcacao_presenca', label: 'Marcações' },
+  ];
+
+  const botaoResposta =
+    'h-8 rounded-full px-3 text-sm font-semibold transition-colors cursor-pointer';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:p-4" onClick={onClose}>
       <div
-        className="w-full sm:max-w-lg max-h-[88vh] rounded-t-2xl sm:rounded-2xl border border-[var(--line)] bg-[var(--bg)] flex flex-col shadow-2xl overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-notificacoes"
+        className="w-full sm:max-w-lg h-[88dvh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-2xl bg-s1 flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="p-4 border-b border-[var(--line)] bg-[var(--s1)] shrink-0 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="h-10 w-10 rounded-xl bg-[var(--s2)] text-[var(--star)] flex items-center justify-center shrink-0">
-                <Bell size={20} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-semibold text-base text-[var(--ink)]">Notificações</h2>
-                  {naoLidas > 0 && (
-                    <span className="px-2 py-0.5 rounded-full text-[12px] font-medium bg-[var(--star)] text-white">
-                      {naoLidas} {naoLidas === 1 ? 'nova' : 'novas'}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[12px] text-[var(--muted)]">
-                  Alertas em tempo real
-                </p>
-              </div>
-            </div>
+        <div className="mx-auto mt-2.5 h-1 w-9 shrink-0 rounded-full bg-s3 sm:hidden" />
 
-            <div className="flex items-center gap-1.5">
+        {/* Cabeçalho */}
+        <div className="shrink-0 px-4 pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="titulo-notificacoes" className="t-title text-ink whitespace-nowrap">Notificações</h2>
+            <div className="flex items-center gap-1">
               {naoLidas > 0 && (
                 <button
                   type="button"
@@ -202,169 +175,124 @@ export default function NotificationsModal({
                     marcarTodasComoLidas(currentUserUid);
                     carregar();
                   }}
-                  className="min-h-11 px-3 rounded-xl border border-[var(--line)] bg-[var(--s2)] text-[12px] font-medium text-[var(--muted)] hover:text-[var(--ink)] flex items-center gap-1.5 transition cursor-pointer"
-                  title="Marcar todas como lidas"
+                  className="h-9 whitespace-nowrap rounded-full px-3 text-sm font-medium text-primary hover:bg-s2 transition-colors cursor-pointer"
                 >
-                  <CheckCheck size={15} className="text-[var(--primary)]" />
-                  <span>Lidas</span>
+                  Marcar {naoLidas} como lidas
                 </button>
               )}
               <button
                 type="button"
                 onClick={onClose}
-                className="w-11 h-11 rounded-xl text-[var(--muted)] hover:text-[var(--ink)] flex items-center justify-center transition cursor-pointer"
                 aria-label="Fechar"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-s2 hover:text-ink transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
           </div>
 
-          {/* Banner de Push Notification */}
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--s2)] p-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[var(--s1)] text-[var(--primary)] flex items-center justify-center shrink-0">
-                <Smartphone size={16} />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] font-medium text-[var(--ink)]">Notificações Push</span>
-                  {pushStatus === 'granted' ? (
-                    <span className="text-[12px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-medium">
-                      Ativo
-                    </span>
-                  ) : (
-                    <span className="text-[12px] px-1.5 py-0.5 rounded bg-[var(--s1)] text-[var(--muted)]">
-                      Inativo
-                    </span>
-                  )}
-                </div>
-                <p className="text-[12px] text-[var(--muted)] truncate">
-                  {pushStatus === 'granted'
-                    ? 'Recebendo alertas instantâneos'
-                    : 'Receba alertas quando amigos interagirem'}
-                </p>
-              </div>
+          {/* Push: uma linha discreta, só enquanto não estiver ativo */}
+          {pushStatus !== 'granted' && (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-s2 px-3 py-2.5">
+              <p className="min-w-0 text-sm text-ink-2">Receba um aviso quando alguém interagir com você.</p>
+              <button
+                type="button"
+                onClick={handleAtivarPush}
+                disabled={ativandoPush}
+                className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3.5 text-sm font-semibold text-on-primary disabled:opacity-60 cursor-pointer"
+              >
+                {ativandoPush && <Loader2 size={14} className="animate-spin" />}
+                Ativar
+              </button>
             </div>
+          )}
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              {pushStatus !== 'granted' && (
-                <button
-                  type="button"
-                  onClick={handleAtivarPush}
-                  disabled={ativandoPush}
-                  className="min-h-11 px-3.5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-medium text-[12px] hover:opacity-90 transition cursor-pointer flex items-center gap-1"
-                >
-                  {ativandoPush ? <Loader2 size={13} className="animate-spin" /> : <Bell size={13} />}
-                  <span>Ativar</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Abas de Filtro */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pt-1">
-            <button
-              onClick={() => setFiltro('todas')}
-              className={`min-h-11 px-3.5 rounded-xl text-[13px] font-medium transition shrink-0 cursor-pointer ${
-                filtro === 'todas'
-                  ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-                  : 'bg-[var(--s1)] text-[var(--muted)] border border-[var(--line)] hover:text-[var(--ink)]'
-              }`}
-            >
-              Todas ({notifs.length})
-            </button>
-            <button
-              onClick={() => setFiltro('curtida')}
-              className={`min-h-11 px-3.5 rounded-xl text-[13px] font-medium transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
-                filtro === 'curtida'
-                  ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-                  : 'bg-[var(--s1)] text-[var(--muted)] border border-[var(--line)] hover:text-[var(--ink)]'
-              }`}
-            >
-              <Heart size={13} />
-              <span>Curtidas</span>
-            </button>
-            <button
-              onClick={() => setFiltro('comentario')}
-              className={`min-h-11 px-3.5 rounded-xl text-[13px] font-medium transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
-                filtro === 'comentario'
-                  ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-                  : 'bg-[var(--s1)] text-[var(--muted)] border border-[var(--line)] hover:text-[var(--ink)]'
-              }`}
-            >
-              <MessageCircle size={13} />
-              <span>Comentários</span>
-            </button>
-            <button
-              onClick={() => setFiltro('marcacao_presenca')}
-              className={`min-h-11 px-3.5 rounded-xl text-[13px] font-medium transition shrink-0 flex items-center gap-1.5 cursor-pointer ${
-                filtro === 'marcacao_presenca'
-                  ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-                  : 'bg-[var(--s1)] text-[var(--muted)] border border-[var(--line)] hover:text-[var(--ink)]'
-              }`}
-            >
-              <Users size={13} />
-              <span>Marcações</span>
-            </button>
+          {/* Filtros */}
+          <div className="mt-3 flex gap-5 overflow-x-auto no-scrollbar border-b border-line">
+            {filtros.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFiltro(f.key)}
+                aria-pressed={filtro === f.key}
+                className={`-mb-px shrink-0 border-b-2 pb-2.5 text-sm transition-colors cursor-pointer ${
+                  filtro === f.key ? 'border-primary font-semibold text-ink' : 'border-transparent text-muted hover:text-ink'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Lista de Notificações */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2.5 no-scrollbar">
+        {/* Lista */}
+        <div className="flex-1 overflow-y-auto px-4">
           {filtradas.length === 0 ? (
-            <div className="py-6 flex flex-col items-center justify-center text-center gap-2">
-              <img src="/mascot/vimo_dormindo.png" alt="" aria-hidden="true" width={90} height={90} className="object-contain" />
-              <p className="font-medium text-sm text-[var(--ink)]">Tudo tranquilo por aqui</p>
-              <p className="text-[12px] text-[var(--muted)] max-w-[220px]">
-                Curtidas, comentários e interações aparecerão aqui.
-              </p>
+            <div className="flex flex-col items-center py-12 text-center">
+              <img src="/mascot/vimo_dormindo.png" alt="" aria-hidden="true" width={72} height={75} className="object-contain" />
+              <p className="mt-4 text-base font-semibold text-ink">Tudo calmo por aqui</p>
+              <p className="mt-1 max-w-[240px] text-sm text-muted">Curtidas, comentários e marcações aparecem aqui.</p>
             </div>
           ) : (
-            filtradas.map((n) => (
-              <div
-                key={n.id}
-                onClick={() => handleMarcarLida(n)}
-                className={`p-3 rounded-xl border transition cursor-pointer relative group flex gap-3 ${
-                  !n.lida
-                    ? 'border-[var(--primary)]/40 bg-[var(--s1)]'
-                    : 'border-[var(--line)] bg-[var(--s1)] hover:border-[var(--primary)]/30'
-                }`}
-              >
-                {/* Indicador de não lida */}
-                {!n.lida && (
-                  <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-[var(--star)]" />
-                )}
-
-                {/* Avatar com badge do tipo */}
-                <div className="relative shrink-0">
-                  <img
-                    src={n.remetente.photo}
-                    alt={n.remetente.name}
-                    className="h-10 w-10 rounded-full object-cover border border-[var(--line)]"
-                  />
-                  <div className="absolute -bottom-1 -right-1">
-                    {renderIconeTipo(n.tipo)}
-                  </div>
-                </div>
-
-                {/* Conteúdo */}
-                <div className="flex-1 min-w-0 pr-4">
-                  <p className="text-[13px] text-[var(--ink)] leading-relaxed">
-                    <strong className="font-medium">{n.remetente.name}</strong>{' '}
-                    <span className="text-[var(--muted)]">{n.texto}</span>
-                  </p>
-
-                  {/* Informações adicionais de lugar se houver */}
-                  {n.placeName && (
-                    <div className="mt-1 flex items-center gap-1 text-[12px] font-medium text-[var(--star)]">
-                      <MapPin size={12} className="shrink-0" />
-                      <span className="truncate">{n.placeName}</span>
+            <ul className="divide-y divide-line">
+              {filtradas.map((n) => {
+                const tipo = ICONE[n.tipo] || ICONE.curtida;
+                const pendente =
+                  n.tipo === 'marcacao_presenca' && (!n.companionStatus || n.companionStatus === 'pendente');
+                return (
+                  <li
+                    key={n.id}
+                    onClick={() => handleMarcarLida(n)}
+                    className="group relative flex cursor-pointer gap-3 py-3.5"
+                  >
+                    <div className="relative shrink-0">
+                      <Avatar src={n.remetente.photo} name={n.remetente.name} size={40} />
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full ring-2 ring-s1 ${tipo.cor}`}
+                      >
+                        <tipo.Icon size={10} strokeWidth={2.4} className={n.tipo === 'curtida' ? 'fill-current' : ''} />
+                      </span>
                     </div>
-                  )}
 
-                  <div className="mt-1.5 flex items-center justify-between text-[12px] text-[var(--muted)]">
-                    <span>{tempoAtras(n.createdAt)}</span>
+                    <div className="min-w-0 flex-1 pr-4">
+                      <p className="text-sm text-ink-2">
+                        <span className="font-semibold text-ink">{n.remetente.name}</span> {n.texto}
+                      </p>
+                      <p className="mt-0.5 t-meta">
+                        {n.placeName ? `${n.placeName} · ` : ''}
+                        {tempoAtras(n.createdAt)}
+                      </p>
+
+                      {pendente && (
+                        <div className="mt-2.5 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => handleResponderMarcacao(n, 'aprovado_coautor', e)}
+                            className={`${botaoResposta} bg-primary text-on-primary`}
+                          >
+                            Coautor
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleResponderMarcacao(n, 'aprovado_presenca', e)}
+                            className={`${botaoResposta} bg-s2 text-ink hover:bg-s3`}
+                          >
+                            Só presença
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleResponderMarcacao(n, 'recusado', e)}
+                            className={`${botaoResposta} text-muted hover:text-ink`}
+                          >
+                            Recusar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {!n.lida && (
+                      <span aria-label="Não lida" className="absolute right-0 top-5 h-2 w-2 rounded-full bg-primary" />
+                    )}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -372,15 +300,15 @@ export default function NotificationsModal({
                         removerNotificacao(currentUserUid, n.id);
                         carregar();
                       }}
-                      className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition p-1 cursor-pointer"
-                      title="Excluir notificação"
+                      aria-label="Excluir notificação"
+                      className="absolute bottom-3 right-0 p-1 text-muted opacity-0 transition-opacity hover:text-ink group-hover:opacity-100 focus:opacity-100 cursor-pointer"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={14} />
                     </button>
-                  </div>
-                </div>
-              </div>
-            ))
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </div>

@@ -12,6 +12,7 @@ import {
   seguir,
 } from '../lib/reviews';
 import MascotMessage from '../components/MascotMessage';
+import { Spinner, btn } from '../components/ui';
 import type { FeedMode, Review, UserProfile } from '../types';
 
 interface AmigosScreenProps {
@@ -103,27 +104,18 @@ export default function AmigosScreen({
   };
 
   return (
-    <div className="flex-1 w-full bg-[var(--bg)] text-[var(--ink)] min-h-screen">
-      <div className="max-w-md mx-auto px-4 pt-4 pb-24 space-y-3">
+    <div className="flex-1 w-full bg-bg text-ink min-h-screen">
+      <div className="max-w-xl mx-auto px-4 pt-4 pb-28">
         {/* Cabeçalho */}
-        <header className="flex items-center justify-between">
-          <h1 className="text-[22px] font-medium text-[var(--ink)]">Amigos</h1>
-          <button
-            type="button"
-            onClick={onAbrirBusca}
-            aria-label="Buscar pessoas"
-            className="w-11 h-11 flex items-center justify-center text-[var(--muted)] hover:text-[var(--ink)] transition cursor-pointer"
-          >
-            <Search size={22} />
+        <header className="flex items-center justify-between pb-3">
+          <h1 className="t-title text-ink">Amigos</h1>
+          <button type="button" onClick={onAbrirBusca} aria-label="Buscar pessoas" className={btn.icon}>
+            <Search size={20} strokeWidth={1.8} />
           </button>
         </header>
 
         {/* Abas "Quem eu sigo" / "Descobrir" com sublinhado */}
-        <div
-          role="tablist"
-          aria-label="Tipo de feed"
-          className="flex border-b border-[var(--line)]"
-        >
+        <div role="tablist" aria-label="Tipo de feed" className="flex gap-6 border-b border-line">
           {(['seguindo', 'descobrir'] as Aba[]).map((a) => (
             <button
               key={a}
@@ -131,10 +123,10 @@ export default function AmigosScreen({
               role="tab"
               aria-selected={aba === a}
               onClick={() => setAba(a)}
-              className={`flex-1 min-h-11 pb-2 text-sm text-center transition cursor-pointer ${
+              className={`-mb-px border-b-2 pb-2.5 pt-1 text-[15px] transition-colors cursor-pointer ${
                 aba === a
-                  ? 'text-[var(--ink)] font-medium border-b-2 border-[var(--primary)] -mb-px'
-                  : 'text-[var(--muted)] hover:text-[var(--ink)] font-normal'
+                  ? 'border-primary text-ink font-semibold'
+                  : 'border-transparent text-muted hover:text-ink'
               }`}
             >
               {a === 'seguindo' ? 'Quem eu sigo' : 'Descobrir'}
@@ -144,18 +136,18 @@ export default function AmigosScreen({
 
         {/* Filtros (apenas na aba Descobrir) */}
         {aba === 'descobrir' && (
-          <div className="space-y-2 pt-1">
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+          <div className="space-y-3 pt-4">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar">
               {FILTROS.map((f) => (
                 <button
                   key={f.key}
                   type="button"
                   aria-pressed={filtro === f.key}
                   onClick={() => setFiltro(f.key)}
-                  className={`min-h-11 px-4 rounded-xl text-[13px] whitespace-nowrap cursor-pointer transition ${
+                  className={`h-9 px-3.5 rounded-full text-sm whitespace-nowrap cursor-pointer transition-colors ${
                     filtro === f.key
-                      ? 'bg-[var(--primary)] text-[var(--on-primary)] font-medium shadow-2xs'
-                      : 'bg-[var(--s1)] text-[var(--muted)] border border-[var(--line)] hover:text-[var(--ink)]'
+                      ? 'bg-ink text-bg font-semibold'
+                      : 'text-muted ring-1 ring-inset ring-line hover:text-ink'
                   }`}
                 >
                   {f.label}
@@ -172,7 +164,7 @@ export default function AmigosScreen({
                   id="cidade-outra"
                   value={cidadeOutra}
                   onChange={(e) => setCidadeOutra(e.target.value)}
-                  className="w-full min-h-12 rounded-xl bg-[var(--s1)] border border-[var(--line)] px-4 text-sm text-[var(--ink)] outline-none focus:border-[var(--primary)] transition"
+                  className="w-full h-11 rounded-lg bg-s2 px-3.5 text-base text-ink outline-none ring-1 ring-transparent focus:ring-primary transition"
                 >
                   <option value="">Escolha uma cidade</option>
                   {cidades.map((c) => (
@@ -187,20 +179,17 @@ export default function AmigosScreen({
         )}
 
         {/* Feed de avaliações */}
-        <div className="space-y-3 pt-1">
+        <div className="divide-y divide-line">
           {carregando ? (
-            <div className="py-12 text-center flex flex-col items-center gap-2">
-              <img src="/mascot/vimo_carregando.png" alt="" aria-hidden="true" width={72} height={72} className="object-contain animate-pulse" />
-              <p className="text-[13px] text-[var(--muted)]">Carregando…</p>
-            </div>
+            <Spinner label="Carregando avaliações" />
           ) : reviews.length === 0 ? (
             <MascotMessage
               reaction={aba === 'seguindo' ? 'social' : 'explorando'}
-              title={aba === 'seguindo' ? 'Nada por aqui ainda' : 'Nenhuma ida encontrada'}
+              title={aba === 'seguindo' ? 'Siga quem come bem' : 'Nenhuma ida por aqui'}
               subtitle={
                 aba === 'seguindo'
-                  ? 'Quando você seguir pessoas e elas registrarem idas, elas aparecerão aqui.'
-                  : 'Ainda não há idas registradas para este filtro.'
+                  ? 'As idas das pessoas que você segue aparecem aqui.'
+                  : 'Ninguém registrou idas com este filtro ainda.'
               }
               ctaLabel={aba === 'seguindo' ? 'Descobrir pessoas' : 'Registrar uma ida'}
               onCta={aba === 'seguindo' ? () => setAba('descobrir') : onAbrirAvaliar}

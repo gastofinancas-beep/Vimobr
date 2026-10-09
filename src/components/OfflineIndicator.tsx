@@ -28,9 +28,12 @@ export function OfflineIndicator() {
   if (isOnline) return null;
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-xs font-bold text-bg shadow-xl animate-bounce">
-      <WifiOff size={14} />
-      <span>Modo Offline — exibindo dados salvos</span>
+    <div
+      role="status"
+      className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-ink px-3.5 py-2 text-sm font-medium text-bg shadow-lg animate-in slide-in-from-top-2"
+    >
+      <WifiOff size={15} strokeWidth={2} />
+      <span>Sem conexão. Mostrando o que já foi salvo.</span>
     </div>
   );
 }

@@ -1,15 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Cell,
-  CartesianGrid,
-} from 'recharts';
-import { Utensils, Star, Award, BarChart3, TrendingUp, Sparkles } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import MascotMessage from './MascotMessage';
 import type { Review } from '../types';
 import { SAMPLE_PLACES } from '../lib/places';
@@ -132,264 +122,116 @@ export default function ResumoPaladar({ reviews, userName, isMeuPerfil }: Resumo
 
   if (reviews.length === 0) {
     return (
-      <div className="rounded-2xl border border-[var(--line)] bg-[var(--s1)] p-6">
-        <MascotMessage
-          reaction="analisando"
-          title="Resumo do Paladar"
-          subtitle={
-            isMeuPerfil
-              ? 'Avalie seus primeiros restaurantes, cafés e padarias para desbloquear suas estatísticas gastronômicas e gráficos de paladar!'
-              : 'Este usuário ainda não tem avaliações suficientes para gerar o resumo do paladar.'
-          }
-          size={80}
-        />
-      </div>
+      <MascotMessage
+        reaction="analisando"
+        title={isMeuPerfil ? 'Seu paladar aparece aqui' : 'Sem dados ainda'}
+        subtitle={
+          isMeuPerfil
+            ? 'Depois das primeiras avaliações, você vê o que mais avalia e como costuma dar nota.'
+            : 'Esta pessoa ainda não tem avaliações suficientes.'
+        }
+      />
     );
   }
 
-  // Cores da identidade VIMO
-  const CORES_CATEGORIAS = ['var(--primary)', 'var(--star)', '#5F94E6', '#F19E75', '#9CA0B3'];
+  const nota = (n: number) => n.toFixed(1).replace('.', ',');
+
+  const destaques = [
+    {
+      rotulo: 'Lugares',
+      valor: String(stats.lugaresUnicos),
+      detalhe: `${stats.totalLugares} ${stats.totalLugares === 1 ? 'visita' : 'visitas'}`,
+    },
+    { rotulo: 'Nota média', valor: nota(stats.mediaGeral), detalhe: 'de 5' },
+    {
+      rotulo: 'Mais avaliado',
+      valor: stats.categoriaFavorita,
+      detalhe: `${stats.categoriaFavoritaCount} ${stats.categoriaFavoritaCount === 1 ? 'avaliação' : 'avaliações'}`,
+    },
+    { rotulo: 'Ponto forte', valor: stats.criterioDestaque, detalhe: `média ${nota(stats.criterioDestaqueNota)}` },
+  ];
+
+  const graficos = [
+    { key: 'categorias' as const, label: 'Categorias' },
+    { key: 'criterios' as const, label: 'Critérios' },
+    { key: 'estrelas' as const, label: 'Notas' },
+  ];
+
+  // Série única por gráfico: uma só cor (azul da marca), grade discreta, pontas de 4px
+  const eixo = { fill: 'var(--muted)', fontSize: 12, fontFamily: 'Inter' };
+  const dica = (texto: (v: number) => string) =>
+    ({ active, payload, label }: any) =>
+      active && payload?.length ? (
+        <div className="rounded-lg bg-s1 px-3 py-2 shadow-lg ring-1 ring-line">
+          <p className="text-xs font-semibold text-ink">{label}</p>
+          <p className="text-xs text-ink-2 tabular">{texto(Number(payload[0].value))}</p>
+        </div>
+      ) : null;
+
+  const dados =
+    graficoAtivo === 'categorias'
+      ? { data: stats.dadosCategorias, x: 'categoria', y: 'total', dominio: undefined, tip: dica((v) => `${v} ${v === 1 ? 'visita' : 'visitas'}`) }
+      : graficoAtivo === 'criterios'
+      ? { data: stats.dadosCriterios, x: 'criterio', y: 'nota', dominio: [0, 5] as [number, number], tip: dica((v) => `média ${nota(v)}`) }
+      : { data: stats.dadosEstrelas, x: 'estrelas', y: 'total', dominio: undefined, tip: dica((v) => `${v} ${v === 1 ? 'avaliação' : 'avaliações'}`) };
 
   return (
-    <div className="rounded-2xl border border-[var(--line)] bg-[var(--s1)] p-4 space-y-5">
-      {/* Título & Badge */}
-      <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-        <div className="flex items-center gap-2">
-          <Utensils size={18} className="text-[var(--primary)]" />
-          <h2 className="text-[15px] font-semibold text-[var(--ink)]">
-            Resumo do Paladar
-          </h2>
-        </div>
-        <span className="text-[12px] font-medium text-[var(--primary)] bg-[var(--s2)] px-2.5 py-1 rounded-xl border border-[var(--line)] flex items-center gap-1">
-          <Sparkles size={12} />
-          Estatísticas
-        </span>
-      </div>
-
-      {/* Grid de 4 Cards de Destaque / Métricas Principais */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        {/* 1. Lugares Visitados */}
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--s2)] p-3 flex flex-col justify-between">
-          <span className="text-[12px] text-[var(--muted)]">Lugares Visitados</span>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-[20px] font-bold text-[var(--ink)]">
-              {stats.lugaresUnicos}
-            </span>
-            <span className="text-[12px] text-[var(--muted)]">
-              ({stats.totalLugares} {stats.totalLugares === 1 ? 'visita' : 'visitas'})
-            </span>
+    <div className="space-y-7">
+      {/* Destaques em texto, sem caixas */}
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-5">
+        {destaques.map((d) => (
+          <div key={d.rotulo} className="min-w-0">
+            <dt className="t-meta">{d.rotulo}</dt>
+            <dd className="mt-0.5 truncate text-xl font-semibold tracking-tight text-ink tabular">{d.valor}</dd>
+            <dd className="text-sm text-muted">{d.detalhe}</dd>
           </div>
-        </div>
+        ))}
+      </dl>
 
-        {/* 2. Média Geral de Notas */}
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--s2)] p-3 flex flex-col justify-between">
-          <span className="text-[12px] text-[var(--muted)]">Média Geral</span>
-          <div className="mt-1 flex items-center gap-1.5">
-            <span className="text-[20px] font-bold text-[var(--star)]">
-              ★ {stats.mediaGeral.toFixed(1).replace('.', ',')}
-            </span>
-            <span className="text-[12px] text-[var(--muted)]">/ 5,0</span>
-          </div>
-        </div>
-
-        {/* 3. Categoria Favorita */}
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--s2)] p-3 flex flex-col justify-between">
-          <span className="text-[12px] text-[var(--muted)]">Categoria Favorita</span>
-          <div className="mt-1">
-            <p className="text-[14px] font-semibold text-[var(--ink)] truncate">
-              {stats.categoriaFavorita}
-            </p>
-            <span className="text-[12px] text-[var(--primary)] font-medium">
-              {stats.categoriaFavoritaCount} {stats.categoriaFavoritaCount === 1 ? 'avaliação' : 'avaliações'}
-            </span>
-          </div>
-        </div>
-
-        {/* 4. Critério Mais Elogiado */}
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--s2)] p-3 flex flex-col justify-between">
-          <span className="text-[12px] text-[var(--muted)]">Ponto Forte</span>
-          <div className="mt-1">
-            <p className="text-[14px] font-semibold text-[var(--ink)] truncate">
-              {stats.criterioDestaque}
-            </p>
-            <span className="text-[12px] text-[var(--star)] font-medium">
-              ★ {stats.criterioDestaqueNota.toFixed(1).replace('.', ',')}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Seletor do Gráfico */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold text-[var(--ink)] flex items-center gap-1.5">
-            <BarChart3 size={15} className="text-[var(--primary)]" />
-            Análise Visual
+      <section aria-labelledby="titulo-grafico">
+        <div className="flex items-center justify-between gap-3">
+          <h3 id="titulo-grafico" className="t-section text-ink">
+            {graficoAtivo === 'categorias' ? 'Visitas por categoria' : graficoAtivo === 'criterios' ? 'Média por critério' : 'Como você dá nota'}
           </h3>
-
-          <div className="flex items-center bg-[var(--s2)] p-0.5 rounded-xl border border-[var(--line)] text-[12px]">
-            <button
-              type="button"
-              onClick={() => setGraficoAtivo('categorias')}
-              className={`min-h-9 px-3 rounded-lg font-medium transition cursor-pointer ${
-                graficoAtivo === 'categorias'
-                  ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              Categorias
-            </button>
-            <button
-              type="button"
-              onClick={() => setGraficoAtivo('criterios')}
-              className={`min-h-9 px-3 rounded-lg font-medium transition cursor-pointer ${
-                graficoAtivo === 'criterios'
-                  ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              Critérios
-            </button>
-            <button
-              type="button"
-              onClick={() => setGraficoAtivo('estrelas')}
-              className={`min-h-9 px-3 rounded-lg font-medium transition cursor-pointer ${
-                graficoAtivo === 'estrelas'
-                  ? 'bg-[var(--primary)] text-[var(--on-primary)]'
-                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              Notas ★
-            </button>
-          </div>
         </div>
 
-        {/* Container do Gráfico com Recharts */}
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--s2)]/40 p-4 pt-6 h-[260px] w-full">
-          {graficoAtivo === 'categorias' && (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.dadosCategorias} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
-                <XAxis
-                  dataKey="categoria"
-                  tick={{ fill: 'var(--muted)', fontSize: 12, fontFamily: 'Inter' }}
-                  axisLine={{ stroke: 'var(--line)' }}
-                  tickLine={false}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fill: 'var(--muted)', fontSize: 12, fontFamily: 'Inter' }}
-                  axisLine={{ stroke: 'var(--line)' }}
-                  tickLine={false}
-                />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="rounded-xl border border-[var(--line)] bg-[var(--s1)] px-3 py-2 shadow-lg">
-                          <p className="text-[12px] font-semibold text-[var(--ink)]">{label}</p>
-                          <p className="text-[12px] font-medium text-[var(--primary)]">
-                            {payload[0].value} {payload[0].value === 1 ? 'lugar visitado' : 'lugares visitados'}
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="total" radius={[6, 6, 0, 0]}>
-                  {stats.dadosCategorias.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={CORES_CATEGORIAS[index % CORES_CATEGORIAS.length]}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-
-          {graficoAtivo === 'criterios' && (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.dadosCriterios} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
-                <XAxis
-                  dataKey="criterio"
-                  tick={{ fill: 'var(--muted)', fontSize: 12, fontFamily: 'Inter' }}
-                  axisLine={{ stroke: 'var(--line)' }}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={[0, 5]}
-                  ticks={[1, 2, 3, 4, 5]}
-                  tick={{ fill: 'var(--muted)', fontSize: 12, fontFamily: 'Inter' }}
-                  axisLine={{ stroke: 'var(--line)' }}
-                  tickLine={false}
-                />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="rounded-xl border border-[var(--line)] bg-[var(--s1)] px-3 py-2 shadow-lg">
-                          <p className="text-[12px] font-semibold text-[var(--ink)]">{label}</p>
-                          <p className="text-[12px] font-medium text-[var(--star)]">
-                            ★ {Number(payload[0].value).toFixed(1).replace('.', ',')} de média
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="nota" fill="var(--star)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-
-          {graficoAtivo === 'estrelas' && (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.dadosEstrelas} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
-                <XAxis
-                  dataKey="estrelas"
-                  tick={{ fill: 'var(--muted)', fontSize: 12, fontFamily: 'Inter' }}
-                  axisLine={{ stroke: 'var(--line)' }}
-                  tickLine={false}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fill: 'var(--muted)', fontSize: 12, fontFamily: 'Inter' }}
-                  axisLine={{ stroke: 'var(--line)' }}
-                  tickLine={false}
-                />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="rounded-xl border border-[var(--line)] bg-[var(--s1)] px-3 py-2 shadow-lg">
-                          <p className="text-[12px] font-semibold text-[var(--ink)]">{label}</p>
-                          <p className="text-[12px] font-medium text-[var(--primary)]">
-                            {payload[0].value} {payload[0].value === 1 ? 'avaliação' : 'avaliações'}
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="total" fill="var(--star)" radius={[6, 6, 0, 0]}>
-                  {stats.dadosEstrelas.map((_, index) => (
-                    <Cell
-                      key={`star-${index}`}
-                      fill="var(--star)"
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+        <div role="tablist" aria-label="Escolher gráfico" className="mt-3 inline-flex rounded-lg bg-s2 p-0.5">
+          {graficos.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              role="tab"
+              aria-selected={graficoAtivo === g.key}
+              onClick={() => setGraficoAtivo(g.key)}
+              className={`h-8 rounded-md px-3 text-sm transition-colors cursor-pointer ${
+                graficoAtivo === g.key ? 'bg-s1 font-semibold text-ink shadow-sm' : 'text-muted hover:text-ink'
+              }`}
+            >
+              {g.label}
+            </button>
+          ))}
         </div>
-      </div>
+
+        <div className="mt-4 h-[220px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={dados.data as Record<string, string | number>[]} margin={{ top: 8, right: 4, left: -24, bottom: 0 }} barCategoryGap="28%">
+              <CartesianGrid stroke="var(--line)" vertical={false} />
+              <XAxis dataKey={dados.x} tick={eixo} axisLine={false} tickLine={false} interval={0} />
+              <YAxis
+                allowDecimals={false}
+                domain={dados.dominio}
+                ticks={dados.dominio ? [0, 1, 2, 3, 4, 5] : undefined}
+                tick={eixo}
+                axisLine={false}
+                tickLine={false}
+                width={40}
+              />
+              <Tooltip cursor={{ fill: 'var(--s2)' }} content={dados.tip} />
+              <Bar dataKey={dados.y} fill="var(--primary)" radius={[4, 4, 0, 0]} maxBarSize={44} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
     </div>
   );
 }

@@ -9,7 +9,7 @@
     <meta property="og:description" content="Vimo — Diário Gastronômico. Registre onde você comeu, dê sua nota e descubra os lugares dos seus amigos." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#191A18" />
+    <meta name="theme-color" content="#111119" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -18,9 +18,16 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Inter variável (peso + tamanho óptico) em uma única requisição -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+    <script>
+      // Aplica o tema salvo antes do primeiro paint (evita piscar claro/escuro)
+      try {
+        if (localStorage.getItem('vimo_theme_mode_v2') !== 'light') document.documentElement.classList.add('dark');
+      } catch (e) { document.documentElement.classList.add('dark'); }
+    </script>
   </head>
-  <body class="bg-[#F7F6F2] text-[#191A18] dark:bg-[#151614] dark:text-[#F5F4EF] antialiased selection:bg-[#8A6A45]/20 selection:text-[#191A18]">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

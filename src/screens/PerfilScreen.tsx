@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, Edit3, Moon, Sun, MapPin, Plus, LogOut } from 'lucide-react';
+import { Bell, Moon, Sun, Plus, LogOut } from 'lucide-react';
 import { carregarReviewsDoUsuario, obterListasUsuario } from '../lib/reviews';
 import { photoUrl, SAMPLE_PLACES } from '../lib/places';
 import DiarioTab from '../components/DiarioTab';
 import ResumoPaladar from '../components/ResumoPaladar';
 import ConquistasTab from '../components/ConquistasTab';
 import NotificationsModal from '../components/NotificationsModal';
+import { Avatar, PlaceImage, Spinner, btn, corDoLugar } from '../components/ui';
 import type { Place, Review, UserProfile } from '../types';
 
 interface PerfilScreenProps {
@@ -129,197 +130,146 @@ export default function PerfilScreen({
   }, [listas.favoritos, reviews]);
 
   const abasVisiveis = ABAS.filter((a) => !a.soDono || isMeuPerfil);
+  const capa = reviews[0] ? fotoCard(reviews[0]) : null;
+
+  const numeros: { valor: number; rotulo: string }[] = [
+    { valor: reviews.length, rotulo: reviews.length === 1 ? 'ida' : 'idas' },
+    { valor: idasNoAno, rotulo: 'neste ano' },
+    { valor: usuario.followersCount ?? 0, rotulo: 'seguidores' },
+    { valor: usuario.followingCount ?? 0, rotulo: 'seguindo' },
+  ];
 
   return (
-    <div className="flex-1 w-full bg-[var(--bg)] text-[var(--ink)] min-h-screen pb-24">
-      <div className="max-w-md mx-auto px-4 pt-4 space-y-4">
-        {/* Top Header Bar */}
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-[22px] font-medium text-[var(--ink)]">
-              {isMeuPerfil ? 'Meu Perfil' : 'Perfil'}
-            </h1>
-            <p className="text-[12px] text-[var(--muted)]">
-              {usuario.handle}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {onToggleTema && (
-              <button
-                type="button"
-                onClick={onToggleTema}
-                aria-label="Alternar tema claro ou escuro"
-                className="w-11 h-11 rounded-xl bg-[var(--s1)] border border-[var(--line)] text-[var(--ink)] hover:text-[var(--primary)] flex items-center justify-center cursor-pointer transition"
-              >
-                {tema === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+    <div className="flex-1 w-full bg-bg text-ink min-h-screen pb-28">
+      <div className="max-w-xl mx-auto">
+        {/* Barra superior */}
+        {isMeuPerfil && (
+          <header className="flex items-center justify-between px-4 pt-4 pb-3">
+            <h1 className="t-title text-ink">Perfil</h1>
+            <div className="flex items-center gap-1">
+              {onToggleTema && (
+                <button
+                  type="button"
+                  onClick={onToggleTema}
+                  aria-label={tema === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}
+                  className={btn.icon}
+                >
+                  {tema === 'dark' ? <Sun size={19} strokeWidth={1.8} /> : <Moon size={19} strokeWidth={1.8} />}
+                </button>
+              )}
+              <button type="button" onClick={() => setMostrarNotificacoes(true)} aria-label="Notificações" className={btn.icon}>
+                <Bell size={19} strokeWidth={1.8} />
               </button>
-            )}
-            {isMeuPerfil && onLogout && (
-              <button
-                type="button"
-                onClick={onLogout}
-                aria-label="Sair da conta"
-                title="Sair ou trocar de conta"
-                className="w-11 h-11 rounded-xl bg-[var(--s1)] border border-[var(--line)] text-[var(--muted)] hover:text-red-500 flex items-center justify-center cursor-pointer transition"
-              >
-                <LogOut size={18} />
-              </button>
-            )}
-            {isMeuPerfil && (
-              <button
-                type="button"
-                onClick={() => setMostrarNotificacoes(true)}
-                aria-label="Notificações"
-                className="w-11 h-11 rounded-xl bg-[var(--s1)] border border-[var(--line)] text-[var(--ink)] hover:text-[var(--primary)] flex items-center justify-center cursor-pointer transition"
-              >
-                <Bell size={18} />
-              </button>
-            )}
-          </div>
-        </header>
-
-        {/* User Card Info */}
-        <div className="bg-[var(--s1)] border border-[var(--line)] rounded-2xl p-4 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[var(--primary)] bg-[var(--s2)] shrink-0 flex items-center justify-center text-xl font-bold text-[var(--primary)]">
-                {usuario.photoURL ? (
-                  <img src={usuario.photoURL} alt={usuario.displayName} className="w-full h-full object-cover" />
-                ) : (
-                  usuario.displayName.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-[18px] font-semibold text-[var(--ink)] truncate">
-                  {usuario.displayName}
-                </h2>
-                <div className="flex items-center gap-1.5 text-[12px] text-[var(--muted)] mt-0.5">
-                  <span className="font-medium">{usuario.handle}</span>
-                  {usuario.homeCityName && (
-                    <>
-                      <span>·</span>
-                      <MapPin size={12} className="shrink-0 text-[var(--star)]" />
-                      <span className="truncate">{usuario.homeCityName}</span>
-                    </>
-                  )}
-                </div>
-              </div>
+              {onLogout && (
+                <button type="button" onClick={onLogout} aria-label="Sair da conta" className={btn.icon}>
+                  <LogOut size={19} strokeWidth={1.8} />
+                </button>
+              )}
             </div>
+          </header>
+        )}
 
-            {isMeuPerfil && (
-              <button
-                type="button"
-                onClick={onEditarPerfil}
-                aria-label="Editar perfil"
-                className="min-h-11 px-3.5 rounded-xl border border-[var(--line)] text-[var(--ink)] hover:border-[var(--primary)] hover:text-[var(--primary)] text-[13px] font-medium flex items-center gap-1.5 cursor-pointer transition shrink-0"
-              >
-                <Edit3 size={14} /> Editar
-              </button>
-            )}
+        {/* Capa (foto da ida mais recente) com a foto do perfil sobreposta */}
+        <div className="px-4">
+          <div className="relative h-28 overflow-hidden rounded-lg" style={{ backgroundColor: corDoLugar(usuario.displayName) }}>
+            {capa && <PlaceImage src={capa} name="" className="h-full w-full opacity-70" />}
+          </div>
+          <div className="relative z-10 -mt-10 px-1">
+            <Avatar
+              src={usuario.photoURL}
+              name={usuario.displayName}
+              size={80}
+              className="ring-4 ring-bg text-2xl"
+            />
           </div>
 
-          <div className="flex items-center gap-3 text-[12px] text-[var(--muted)] pt-0.5">
-            <span><strong className="text-[var(--ink)]">{usuario.followersCount ?? 0}</strong> seguidores</span>
-            <span>·</span>
-            <span><strong className="text-[var(--ink)]">{usuario.followingCount ?? 0}</strong> seguindo</span>
-          </div>
+          <div className="mt-3 px-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-2xl font-bold tracking-tight text-ink">{usuario.displayName}</h2>
+                <p className="t-meta mt-0.5">
+                  {usuario.handle}
+                  {usuario.homeCityName ? ` · ${usuario.homeCityName}` : ''}
+                </p>
+              </div>
+              {isMeuPerfil && (
+                <button type="button" onClick={onEditarPerfil} className={`${btn.secondary} h-8 shrink-0 px-3.5 text-sm`}>
+                  Editar perfil
+                </button>
+              )}
+            </div>
+            {usuario.bio && <p className="mt-3 t-body text-ink-2">{usuario.bio}</p>}
 
-          {usuario.bio && (
-            <p className="text-[13px] text-[var(--ink)] leading-relaxed pt-2 border-t border-[var(--line)]">
-              {usuario.bio}
-            </p>
-          )}
+            {/* Números reais em uma linha */}
+            <dl className="mt-4 flex flex-wrap gap-x-5 gap-y-1">
+              {numeros.map((n) => (
+                <div key={n.rotulo} className="flex items-baseline gap-1.5">
+                  <dt className="sr-only">{n.rotulo}</dt>
+                  <dd className="t-rating text-base text-ink">{n.valor}</dd>
+                  <span className="text-sm text-muted">{n.rotulo}</span>
+                </div>
+              ))}
+            </dl>
+          </div>
         </div>
 
-        <main className="space-y-4">
-          {/* Números reais */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-[var(--s1)] border border-[var(--line)] rounded-xl py-3 text-center">
-              <div className="text-[20px] font-bold text-[var(--primary)]">{reviews.length}</div>
-              <div className="text-[12px] text-[var(--muted)]">Idas</div>
-            </div>
-            <div className="bg-[var(--s1)] border border-[var(--line)] rounded-xl py-3 text-center">
-              <div className="text-[20px] font-bold text-[var(--primary)]">{idasNoAno}</div>
-              <div className="text-[12px] text-[var(--muted)]">Neste ano</div>
-            </div>
-            <div className="bg-[var(--s1)] border border-[var(--line)] rounded-xl py-3 text-center">
-              <div className="text-[20px] font-bold text-[var(--primary)]">{listas.queroIr.length}</div>
-              <div className="text-[12px] text-[var(--muted)]">Quero ir</div>
-            </div>
-          </div>
-
-          {/* 4 favoritos */}
-          <section aria-label="Lugares favoritos">
-            <h2 className="text-[12px] font-medium tracking-wider text-[var(--muted)] mb-2 uppercase">
-              Lugares Favoritos
-            </h2>
-            <div className="grid grid-cols-4 gap-2">
-              {Array.from({ length: 4 }).map((_, i) => {
-                const fav = favoritos[i];
-                if (fav) {
-                  return (
-                    <button
-                      key={fav.placeId}
-                      type="button"
-                      onClick={() => onAbrirLugar(fav.placeId)}
-                      aria-label={fav.placeName}
-                      className="aspect-[3/4] rounded-xl bg-[var(--s2)] border border-[var(--line)] overflow-hidden cursor-pointer hover:border-[var(--primary)] transition"
-                    >
-                      {fav.photoUrl ? (
-                        <img src={fav.photoUrl} alt={fav.placeName} loading="lazy" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[12px] text-[var(--muted)] p-1 text-center font-medium">
-                          {fav.placeName}
-                        </div>
-                      )}
-                    </button>
-                  );
-                }
-                return isMeuPerfil ? (
+        {/* 4 favoritos */}
+        <section aria-labelledby="titulo-favoritos" className="mt-7 px-4">
+          <h2 id="titulo-favoritos" className="t-section text-ink mb-3">Favoritos</h2>
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: 4 }).map((_, i) => {
+              const fav = favoritos[i];
+              if (fav) {
+                return (
                   <button
-                    key={i}
+                    key={fav.placeId}
                     type="button"
-                    onClick={onExplorar || onNovaAvaliacao}
-                    aria-label="Adicionar lugar favorito"
-                    className="aspect-[3/4] rounded-xl border border-dashed border-[var(--line)] text-[var(--muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] flex items-center justify-center cursor-pointer transition"
+                    onClick={() => onAbrirLugar(fav.placeId)}
+                    aria-label={fav.placeName}
+                    className="relative aspect-[3/4] overflow-hidden rounded-md cursor-pointer"
                   >
-                    <Plus size={20} />
+                    <PlaceImage src={fav.photoUrl} name={fav.placeName} showName className="absolute inset-0 h-full w-full" />
                   </button>
-                ) : (
-                  <div key={i} className="aspect-[3/4] rounded-xl border border-dashed border-[var(--line)]" />
                 );
-              })}
-            </div>
-          </section>
-
-          {/* Abas */}
-          <div
-            role="tablist"
-            aria-label="Seções do perfil"
-            className="flex border-b border-[var(--line)]"
-          >
-            {abasVisiveis.map((a) => (
-              <button
-                key={a.key}
-                type="button"
-                role="tab"
-                aria-selected={aba === a.key}
-                onClick={() => setAba(a.key)}
-                className={`flex-1 min-h-11 pb-2 text-[14px] text-center transition cursor-pointer ${
-                  aba === a.key
-                    ? 'text-[var(--ink)] font-medium border-b-2 border-[var(--primary)] -mb-px'
-                    : 'text-[var(--muted)] hover:text-[var(--ink)] font-normal'
-                }`}
-              >
-                {a.label}
-              </button>
-            ))}
+              }
+              return isMeuPerfil ? (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={onExplorar || onNovaAvaliacao}
+                  aria-label="Adicionar lugar favorito"
+                  className="flex aspect-[3/4] items-center justify-center rounded-md bg-s1 text-muted ring-1 ring-inset ring-line hover:text-primary hover:ring-primary transition cursor-pointer"
+                >
+                  <Plus size={18} strokeWidth={1.8} />
+                </button>
+              ) : (
+                <div key={i} className="aspect-[3/4] rounded-md bg-s1" />
+              );
+            })}
           </div>
+        </section>
 
-          {/* Conteúdo */}
+        {/* Abas */}
+        <div role="tablist" aria-label="Seções do perfil" className="mt-7 flex gap-6 border-b border-line px-4">
+          {abasVisiveis.map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              role="tab"
+              aria-selected={aba === a.key}
+              onClick={() => setAba(a.key)}
+              className={`-mb-px border-b-2 pb-2.5 text-[15px] transition-colors cursor-pointer ${
+                aba === a.key ? 'border-primary font-semibold text-ink' : 'border-transparent text-muted hover:text-ink'
+              }`}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+
+        <main className="px-4 pt-4">
           {carregando ? (
-            <p className="text-[13px] text-[var(--muted)] py-8 text-center">Carregando…</p>
+            <Spinner label="Carregando perfil" />
           ) : (
             <>
               {aba === 'diario' && (

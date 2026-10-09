@@ -4,18 +4,14 @@ import {
   Heart,
   Bookmark,
   Check,
-  Star,
-  MapPin,
   Navigation as NavigationIcon,
   Map as MapIcon,
   Share2,
   Plus,
-  ThumbsUp,
-  MessageSquare,
-  Images,
+  MessageCircle,
   X,
 } from 'lucide-react';
-import { getPlace, SAMPLE_PLACES } from '../lib/places';
+import { getPlace, SAMPLE_PLACES, formatarPrecoLabel } from '../lib/places';
 import {
   alternarListaUsuario,
   obterListasUsuario,
@@ -24,6 +20,16 @@ import {
 } from '../lib/reviews';
 import StarRating from '../components/StarRating';
 import MascotMessage from '../components/MascotMessage';
+import { Avatar, PlaceImage, Spinner, btn } from '../components/ui';
+
+const TIPOS: Record<string, string> = {
+  restaurant: 'Restaurante',
+  cafe: 'Café',
+  bakery: 'Padaria',
+  bar: 'Bar',
+};
+
+const nota = (n: number) => n.toFixed(1).replace('.', ',');
 import type { Place, Review, UserProfile } from '../types';
 
 interface PlaceDetailScreenProps {
@@ -110,19 +116,19 @@ export default function PlaceDetailScreen({
   const handleToggleFavorito = () => {
     const added = alternarListaUsuario(currentUser.uid, 'favoritos', placeId);
     setListas(obterListasUsuario(currentUser.uid));
-    showToast(added ? 'Salvo nos seus restaurantes favoritos!' : 'Removido dos favoritos.');
+    showToast(added ? 'Adicionado aos favoritos' : 'Removido dos favoritos');
   };
 
   const handleToggleQueroIr = () => {
     const added = alternarListaUsuario(currentUser.uid, 'queroIr', placeId);
     setListas(obterListasUsuario(currentUser.uid));
-    showToast(added ? 'Adicionado à lista Quero ir!' : 'Removido de Quero ir.');
+    showToast(added ? 'Salvo em Quero ir' : 'Removido de Quero ir');
   };
 
   const handleToggleJaFui = () => {
     const added = alternarListaUsuario(currentUser.uid, 'jaFui', placeId);
     setListas(obterListasUsuario(currentUser.uid));
-    showToast(added ? 'Marcado como Já fui!' : 'Removido de Já fui.');
+    showToast(added ? 'Marcado como Já fui' : 'Removido de Já fui');
   };
 
   const handleShare = () => {
@@ -134,7 +140,7 @@ export default function PlaceDetailScreen({
       }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(window.location.href);
-      showToast('Link copiado para a área de transferência!');
+      showToast('Link copiado');
     }
   };
 
@@ -218,21 +224,20 @@ export default function PlaceDetailScreen({
 
   if (carregando && !place) {
     return (
-      <div className="flex-1 min-h-screen bg-[var(--bg)] text-[var(--ink)] flex flex-col items-center justify-center p-6">
-        <div className="w-8 h-8 rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin mb-3" />
-        <p className="text-xs text-[var(--muted)]">Carregando detalhes...</p>
+      <div className="flex-1 min-h-screen bg-bg">
+        <Spinner label="Carregando lugar" className="pt-40" />
       </div>
     );
   }
 
   if (!place) {
     return (
-      <div className="flex-1 min-h-screen bg-[var(--bg)] text-[var(--ink)] flex flex-col items-center justify-center p-6">
+      <div className="flex-1 min-h-screen bg-bg flex items-center justify-center p-6">
         <MascotMessage
           reaction="confuso"
-          title="Restaurante não encontrado"
-          subtitle="Parece que este lugar não existe mais ou o link está incorreto."
-          ctaLabel="Voltar para Explorar"
+          title="Lugar não encontrado"
+          subtitle="Ele pode ter sido removido ou o link está incorreto."
+          ctaLabel="Voltar"
           onCta={onVoltar}
         />
       </div>
@@ -250,513 +255,330 @@ export default function PlaceDetailScreen({
     `${place.name} ${place.address || ''}`
   )}`;
 
+  // Só dados reais: sem nota ou contagem inventada
+  const notaGoogle = place.googleRating ?? place.rating ?? null;
+  const qtdGoogle = place.googleUserRatingCount ?? place.reviewsCount ?? 0;
+  const tipo = place.tipo ? TIPOS[place.tipo] || place.tipo : null;
+  const meta = [tipo, place.bairro, place.priceLevel ? formatarPrecoLabel(place.priceLevel) : null].filter(Boolean);
+  const maxHist = Math.max(1, ...histograma.map((h) => h.quantidade));
+  const faltam = Math.max(0, 5 - reviews.length);
+
+  const toggles = [
+    { key: 'jafui', ativo: isJaFui, onClick: handleToggleJaFui, Icon: Check, label: 'Já fui', cor: 'text-primary' },
+    { key: 'queroir', ativo: isQueroIr, onClick: handleToggleQueroIr, Icon: Bookmark, label: 'Quero ir', cor: 'text-primary' },
+    { key: 'favorito', ativo: isFavorito, onClick: handleToggleFavorito, Icon: Heart, label: 'Favorito', cor: 'text-star' },
+  ];
+
+  const nomesAmigos =
+    amigosQueForam.length === 1
+      ? amigosQueForam[0].name
+      : amigosQueForam.length === 2
+      ? `${amigosQueForam[0].name} e ${amigosQueForam[1].name}`
+      : amigosQueForam.length === 3
+      ? `${amigosQueForam[0].name}, ${amigosQueForam[1].name} e ${amigosQueForam[2].name}`
+      : `${amigosQueForam[0]?.name}, ${amigosQueForam[1]?.name} e mais ${amigosQueForam.length - 2}`;
+
+  const botaoFoto =
+    'w-10 h-10 rounded-full bg-[#111119]/55 text-white flex items-center justify-center hover:bg-[#111119]/75 transition-colors cursor-pointer';
+
   return (
-    <div className="flex-1 min-h-screen bg-[var(--bg)] text-[var(--ink)] pb-24">
-      {/* Toast Feedback */}
+    <div className="flex-1 min-h-screen bg-bg text-ink pb-28">
+      {/* Aviso curto de confirmação */}
       {toastMsg && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 rounded-full bg-[var(--s1)] text-[var(--ink)] px-5 py-2.5 text-xs font-semibold shadow-2xl flex items-center gap-2 border border-[var(--line)] animate-in fade-in slide-in-from-top-4">
-          <Check size={14} className="text-[var(--star)]" />
+        <div
+          role="status"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-bg shadow-lg animate-in slide-in-from-top-2"
+        >
+          <Check size={15} strokeWidth={2.4} />
           <span>{toastMsg}</span>
         </div>
       )}
 
-      {/* =========================================================================
-          1. HERO com foto, voltar, compartilhar, nome e categoria
-         ========================================================================= */}
-      <div className="relative aspect-[16/10] sm:aspect-[21/9] w-full max-h-[420px] bg-[var(--s2)] overflow-hidden">
-        {place.photoUrl ? (
-          <img
-            src={place.photoUrl}
-            alt={place.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-[var(--muted)]">
-            <MapPin size={48} className="opacity-40" />
-          </div>
-        )}
-
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/40" />
-
-        {/* Botões do topo: Voltar e Compartilhar */}
-        <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10 max-w-4xl mx-auto">
-          <button
-            type="button"
-            onClick={onVoltar}
-            aria-label="Voltar para a tela anterior"
-            className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white shadow-md hover:bg-black/80 transition cursor-pointer min-h-11 min-w-11"
-          >
-            <ArrowLeft size={18} strokeWidth={2.2} />
+      {/* Foto do lugar */}
+      <div className="relative w-full max-w-4xl mx-auto">
+        <PlaceImage
+          src={place.photoUrl}
+          name={place.name}
+          loading="eager"
+          className="aspect-[16/11] sm:aspect-[21/9] max-h-[380px] w-full"
+        />
+        <div className="absolute top-0 inset-x-0 flex items-center justify-between p-4">
+          <button type="button" onClick={onVoltar} aria-label="Voltar" className={botaoFoto}>
+            <ArrowLeft size={19} strokeWidth={2} />
           </button>
-
-          <button
-            type="button"
-            onClick={handleShare}
-            aria-label="Compartilhar restaurante"
-            className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white shadow-md hover:bg-black/80 transition cursor-pointer min-h-11 min-w-11"
-          >
-            <Share2 size={17} />
+          <button type="button" onClick={handleShare} aria-label="Compartilhar lugar" className={botaoFoto}>
+            <Share2 size={17} strokeWidth={2} />
           </button>
-        </div>
-
-        {/* Nome e categoria sobre a base da imagem */}
-        <div className="absolute bottom-4 left-4 right-4 max-w-4xl mx-auto space-y-1 text-white">
-          <span className="inline-block text-[12px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-white border border-white/20">
-            {place.tipo || 'Gastronomia'}
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-md">
-            {place.name}
-          </h1>
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 pt-4 space-y-6">
-        {/* =========================================================================
-            2. AÇÕES: Avaliar (primário) e Quero ir (secundário) + 3 ícones em linha
-           ========================================================================= */}
-        <section className="bg-[var(--s1)] rounded-2xl p-4 border border-[var(--line)] shadow-2xs space-y-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-            {/* Avaliar (Primário) */}
-            <button
-              type="button"
-              onClick={() => onAvaliar(place)}
-              className="flex-1 min-h-11 px-5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-bold text-sm flex items-center justify-center gap-2 transition active:scale-98 shadow-xs cursor-pointer"
-            >
-              <Plus size={18} strokeWidth={2.4} />
-              <span>Avaliar</span>
-            </button>
+      <main className="max-w-4xl mx-auto px-4">
+        {/* Nome, categoria e nota em resumo */}
+        <header className="pt-5">
+          <h1 className="t-display text-ink">{place.name}</h1>
+          {meta.length > 0 && <p className="mt-1 text-sm text-muted">{meta.join(' · ')}</p>}
 
-            {/* Quero ir (Secundário) */}
-            <button
-              type="button"
-              onClick={handleToggleQueroIr}
-              className={`flex-1 min-h-11 px-5 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer ${
-                isQueroIr
-                  ? 'bg-[var(--primary)] border-[var(--primary)] text-[var(--on-primary)]'
-                  : 'bg-[var(--s2)] border-[var(--line)] text-[var(--ink)] hover:border-[var(--primary)]'
-              }`}
-            >
-              <Bookmark size={17} className={isQueroIr ? 'fill-current' : ''} />
-              <span>{isQueroIr ? 'Quero ir (Salvo)' : 'Quero ir'}</span>
-            </button>
-          </div>
-
-          {/* Três ícones em linha: Já fui, Favorito, Salvar */}
-          <div className="flex items-center justify-around pt-2 border-t border-[var(--line)]">
-            <button
-              type="button"
-              onClick={handleToggleJaFui}
-              aria-label="Marcar como Já fui"
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer min-h-11 ${
-                isJaFui
-                  ? 'text-[var(--primary)] font-bold'
-                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              <Check size={18} strokeWidth={isJaFui ? 2.5 : 2} className={isJaFui ? 'text-[var(--primary)]' : ''} />
-              <span>{isJaFui ? 'Já fui' : 'Marcar Já fui'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleToggleFavorito}
-              aria-label="Salvar nos Favoritos"
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer min-h-11 ${
-                isFavorito
-                  ? 'text-rose-500 font-bold'
-                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              <Heart size={18} className={isFavorito ? 'fill-rose-500 text-rose-500' : ''} />
-              <span>{isFavorito ? 'Favorito' : 'Favoritar'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleToggleQueroIr}
-              aria-label="Salvar em Quero ir"
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer min-h-11 ${
-                isQueroIr
-                  ? 'text-[var(--primary)] font-bold'
-                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              <Bookmark size={18} className={isQueroIr ? 'fill-[var(--primary)] text-[var(--primary)]' : ''} />
-              <span>Salvar</span>
-            </button>
-          </div>
-        </section>
-
-        {/* =========================================================================
-            3. COMO CHEGAR: endereço + distância + Rotas e Ver no mapa
-           ========================================================================= */}
-        <section className="bg-[var(--s1)] rounded-2xl p-4 border border-[var(--line)] shadow-2xs space-y-3">
-          <div className="flex items-start gap-3">
-            <MapPin size={18} className="text-[var(--star)] shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-bold text-[var(--ink)] mb-0.5">Como chegar</h2>
-              <p className="text-xs sm:text-sm text-[var(--muted)] leading-relaxed">
-                {place.address || 'Endereço disponível no mapa'}
-              </p>
-              {place.bairro && (
-                <span className="inline-block mt-1 text-[12px] font-medium text-[var(--muted)]">
-                  Bairro: {place.bairro}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 pt-1">
-            <a
-              href={rotasUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 min-h-11 px-4 rounded-xl bg-[var(--s2)] border border-[var(--line)] hover:border-[var(--primary)] text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 text-[var(--ink)] transition"
-            >
-              <NavigationIcon size={16} className="text-[var(--primary)]" />
-              <span>Rotas</span>
-            </a>
-
-            <a
-              href={googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 min-h-11 px-4 rounded-xl bg-[var(--s2)] border border-[var(--line)] hover:border-[var(--primary)] text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 text-[var(--ink)] transition"
-            >
-              <MapIcon size={16} className="text-[var(--primary)]" />
-              <span>Ver no mapa</span>
-            </a>
-          </div>
-        </section>
-
-        {/* =========================================================================
-            4. FOTOS: até 8 miniaturas em grade de 4 colunas + "Ver todas"
-           ========================================================================= */}
-        {todasFotos.length > 0 && (
-          <section className="bg-[var(--s1)] rounded-2xl p-4 border border-[var(--line)] shadow-2xs space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Images size={16} className="text-[var(--primary)]" />
-                <h2 className="text-sm font-bold text-[var(--ink)]">
-                  Fotos ({todasFotos.length})
-                </h2>
+          {(scoreInfo.vimoDesbloqueado || notaGoogle) && (
+            <div className="mt-4 flex items-center gap-3">
+              <span className="t-rating text-4xl text-ink">
+                {nota(scoreInfo.vimoDesbloqueado ? scoreInfo.vimoRating || 0 : notaGoogle || 0)}
+              </span>
+              <div>
+                <StarRating value={scoreInfo.vimoDesbloqueado ? scoreInfo.vimoRating || 0 : notaGoogle || 0} size={15} />
+                <p className="t-meta mt-0.5">
+                  {scoreInfo.vimoDesbloqueado
+                    ? `${reviews.length} avaliações no VIMO`
+                    : `${qtdGoogle.toLocaleString('pt-BR')} avaliações no Google`}
+                </p>
               </div>
+            </div>
+          )}
+        </header>
+
+        {/* Ações */}
+        <section aria-label="Ações" className="mt-5">
+          <button type="button" onClick={() => onAvaliar(place)} className={`${btn.primary} w-full`}>
+            <Plus size={18} strokeWidth={2.2} />
+            Registrar ida
+          </button>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {toggles.map(({ key, ativo, onClick, Icon, label, cor }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={onClick}
+                aria-pressed={ativo}
+                className={`flex h-14 flex-col items-center justify-center gap-1 rounded-lg bg-s1 text-xs font-semibold transition-colors hover:bg-s2 cursor-pointer ${
+                  ativo ? cor : 'text-muted'
+                }`}
+              >
+                <Icon size={18} strokeWidth={ativo ? 2.4 : 1.8} className={ativo && key !== 'jafui' ? 'fill-current' : ''} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Como chegar */}
+        <section aria-labelledby="titulo-chegar" className="mt-8">
+          <h2 id="titulo-chegar" className="t-section text-ink">Como chegar</h2>
+          <p className="mt-1 text-sm text-ink-2">{place.address || 'Endereço disponível no mapa'}</p>
+          <div className="mt-3 flex gap-2">
+            <a href={rotasUrl} target="_blank" rel="noopener noreferrer" className={`${btn.secondary} h-10 flex-1`}>
+              <NavigationIcon size={15} strokeWidth={2} />
+              Rotas
+            </a>
+            <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className={`${btn.secondary} h-10 flex-1`}>
+              <MapIcon size={15} strokeWidth={2} />
+              Ver no mapa
+            </a>
+          </div>
+        </section>
+
+        {/* Fotos */}
+        {todasFotos.length > 0 && (
+          <section aria-labelledby="titulo-fotos" className="mt-8">
+            <div className="flex items-baseline justify-between">
+              <h2 id="titulo-fotos" className="t-section text-ink">
+                Fotos <span className="font-medium text-muted tabular">{todasFotos.length}</span>
+              </h2>
               {todasFotos.length > 8 && (
                 <button
                   type="button"
                   onClick={() => setMostrarTodasFotos(!mostrarTodasFotos)}
-                  className="text-xs font-semibold text-[var(--primary)] hover:underline cursor-pointer"
+                  className="text-sm font-medium text-primary cursor-pointer"
                 >
-                  {mostrarTodasFotos ? 'Ver menos' : `Ver todas (${todasFotos.length})`}
+                  {mostrarTodasFotos ? 'Ver menos' : 'Ver todas'}
                 </button>
               )}
             </div>
-
-            <div className="grid grid-cols-4 gap-2">
+            <div className="mt-3 grid grid-cols-4 gap-1.5">
               {fotosExibidas.map((foto, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => setFotoModal(foto)}
                   aria-label={`Ver foto ${idx + 1}`}
-                  className="aspect-square rounded-xl overflow-hidden bg-[var(--s2)] border border-[var(--line)] group relative cursor-pointer"
+                  className="aspect-square overflow-hidden rounded-sm bg-s2 cursor-pointer"
                 >
-                  <img
-                    src={foto}
-                    alt=""
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  />
+                  <PlaceImage src={foto} name="" className="h-full w-full" />
                 </button>
               ))}
             </div>
           </section>
         )}
 
-        {/* =========================================================================
-            5. NOTAS: nota do Vimo em destaque (text-4xl em var(--star)) +
-               histograma de 10 barras; nota do Google abaixo.
-               Se não desbloqueado, mostra só "Em breve" e quanto falta.
-           ========================================================================= */}
-        <section className="bg-[var(--s1)] rounded-2xl p-5 border border-[var(--line)] shadow-2xs space-y-4">
-          <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-            <h2 className="text-sm font-bold text-[var(--ink)]">Notas da comunidade</h2>
-            {scoreInfo.vimoDesbloqueado && (
-              <span className="text-xs font-medium text-[var(--muted)]">
-                {reviews.length} {reviews.length === 1 ? 'avaliação' : 'avaliações'}
-              </span>
-            )}
-          </div>
+        {/* Notas */}
+        <section aria-labelledby="titulo-notas" className="mt-8">
+          <h2 id="titulo-notas" className="t-section text-ink">Notas</h2>
 
           {scoreInfo.vimoDesbloqueado ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl font-black text-[var(--star)] tracking-tight">
-                  {scoreInfo.vimoRating?.toFixed(1).replace('.', ',')}
-                </div>
-                <div>
-                  <StarRating value={scoreInfo.vimoRating || 0} size={20} />
-                  <p className="text-xs text-[var(--muted)] mt-0.5">Nota média do Vimo</p>
-                </div>
+            <div className="mt-3 flex items-end gap-4">
+              <div className="shrink-0">
+                <div className="t-rating text-3xl text-ink">{nota(scoreInfo.vimoRating || 0)}</div>
+                <p className="t-meta">média VIMO</p>
               </div>
-
-              {/* Histograma de 10 barras horizontais */}
-              <div className="space-y-1.5 pt-1">
-                <div className="text-xs font-semibold text-[var(--muted)] mb-1">
-                  Distribuição de notas
-                </div>
-                {histograma.map((item) => (
-                  <div key={item.valor} className="flex items-center gap-2 text-xs">
-                    <span className="w-7 text-right text-[var(--muted)] font-medium">
-                      {item.valor.toFixed(1).replace('.', ',')}
-                    </span>
-                    <div className="flex-1 h-2 rounded-full bg-[var(--s2)] overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-[var(--star)] transition-all duration-300"
-                        style={{ width: `${item.porcentagem}%` }}
-                      />
+              {/* Distribuição: barras verticais de ½ a 5 estrelas */}
+              <div className="flex-1">
+                <div className="flex h-14 items-end gap-[3px]" aria-label="Distribuição das notas">
+                  {histograma.map((h) => (
+                    <div
+                      key={h.valor}
+                      title={`${nota(h.valor)}: ${h.quantidade}`}
+                      className="flex-1 rounded-t-[2px] bg-s3"
+                      style={{ height: `${Math.max(6, (h.quantidade / maxHist) * 100)}%` }}
+                    >
+                      <div className="h-full w-full rounded-t-[2px] bg-primary/70" style={{ opacity: h.quantidade ? 1 : 0 }} />
                     </div>
-                    <span className="w-5 text-left text-[var(--muted)]">
-                      {item.quantidade}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="mt-1 flex justify-between text-2xs text-muted">
+                  <span>½</span>
+                  <span>5</span>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="p-4 rounded-xl bg-[var(--s2)] border border-[var(--line)] space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[var(--star)]/15 text-[var(--star)]">
-                  Em breve
+            <div className="mt-3">
+              <p className="text-sm text-ink-2">
+                A nota VIMO aparece a partir de 5 avaliações.{' '}
+                <span className="text-muted">
+                  {faltam === 1 ? 'Falta 1.' : `Faltam ${faltam}.`}
                 </span>
-                <span className="text-xs font-semibold text-[var(--ink)]">
-                  Nota Vimo em andamento
-                </span>
-              </div>
-              <p className="text-xs text-[var(--muted)] leading-relaxed">
-                Faltam {Math.max(1, 5 - reviews.length)}{' '}
-                {5 - reviews.length === 1 ? 'avaliação' : 'avaliações'} para desbloquear a nota
-                oficial da comunidade Vimo.
               </p>
+              <div className="mt-2 flex gap-1" aria-hidden="true">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <span key={i} className={`h-1 flex-1 rounded-full ${i < reviews.length ? 'bg-primary' : 'bg-s3'}`} />
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Nota do Google em cinza menor abaixo */}
-          <div className="pt-2 border-t border-[var(--line)] flex items-center justify-between text-xs text-[var(--muted)]">
-            <span className="font-medium">Google Maps</span>
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-[var(--ink)]">
-                {(place.googleRating || place.rating || 4.6).toFixed(1).replace('.', ',')}
+          {notaGoogle !== null && (
+            <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-sm">
+              <span className="text-muted">Google</span>
+              <span className="flex items-center gap-2">
+                <span className="t-rating text-ink">{nota(notaGoogle)}</span>
+                <StarRating value={notaGoogle} size={12} />
+                <span className="text-muted tabular">({qtdGoogle.toLocaleString('pt-BR')})</span>
               </span>
-              <Star size={12} className="fill-[var(--star)] text-[var(--star)]" />
-              <span>({place.googleUserRatingCount || place.reviewsCount || 0} avaliações)</span>
             </div>
-          </div>
+          )}
         </section>
 
-        {/* =========================================================================
-            6. AMIGOS QUE JÁ FORAM: até 5 avatares sobrepostos + "Ana, Bruno e mais 1"
-           ========================================================================= */}
-        <section className="bg-[var(--s1)] rounded-2xl p-4 border border-[var(--line)] shadow-2xs space-y-2">
-          <h2 className="text-sm font-bold text-[var(--ink)]">Amigos que já foram</h2>
+        {/* Amigos que já foram */}
+        <section aria-labelledby="titulo-amigos" className="mt-8">
+          <h2 id="titulo-amigos" className="t-section text-ink">Amigos que já foram</h2>
           {amigosQueForam.length > 0 ? (
-            <div className="flex items-center gap-3 pt-1">
-              {/* Avatares sobrepostos */}
-              <div className="flex items-center -space-x-2">
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex -space-x-2">
                 {amigosQueForam.slice(0, 5).map((amigo) => (
                   <button
                     key={amigo.uid}
                     type="button"
                     onClick={() => onAbrirPerfil(amigo.uid)}
                     aria-label={`Ver perfil de ${amigo.name}`}
-                    className="w-8 h-8 rounded-full border-2 border-[var(--s1)] overflow-hidden transition hover:scale-110 cursor-pointer"
+                    className="rounded-full ring-2 ring-bg cursor-pointer"
                   >
-                    <img
-                      src={amigo.photo}
-                      alt={amigo.name}
-                      className="w-full h-full object-cover"
-                    />
+                    <Avatar src={amigo.photo} name={amigo.name} size={30} />
                   </button>
                 ))}
               </div>
-
-              {/* Rótulo textual: "Ana, Bruno e mais 1" */}
-              <div className="text-xs sm:text-sm text-[var(--muted)] truncate">
-                {amigosQueForam.length === 1
-                  ? amigosQueForam[0].name
-                  : amigosQueForam.length === 2
-                  ? `${amigosQueForam[0].name} e ${amigosQueForam[1].name}`
-                  : amigosQueForam.length === 3
-                  ? `${amigosQueForam[0].name}, ${amigosQueForam[1].name} e ${amigosQueForam[2].name}`
-                  : `${amigosQueForam[0].name}, ${amigosQueForam[1].name} e mais ${
-                      amigosQueForam.length - 2
-                    }`}
-              </div>
+              <p className="truncate text-sm text-ink-2">{nomesAmigos}</p>
             </div>
           ) : (
-            <div className="flex items-center gap-3 py-3">
-              <img src="/mascot/vimo_social.png" alt="" aria-hidden="true" width={48} height={48} className="object-contain" />
-              <p className="text-xs text-[var(--muted)]">Nenhum amigo visitou ainda. Seja o primeiro a registrar!</p>
-            </div>
+            <p className="mt-1 text-sm text-muted">Nenhum amigo registrou ida aqui ainda.</p>
           )}
         </section>
 
-        {/* =========================================================================
-            7. AVALIAÇÕES: cartões de review (texto, pratos, fotos)
-           ========================================================================= */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-[var(--ink)]">
-              Avaliações ({reviews.length})
+        {/* Avaliações */}
+        <section aria-labelledby="titulo-avaliacoes" className="mt-8">
+          <div className="flex items-baseline justify-between">
+            <h2 id="titulo-avaliacoes" className="t-section text-ink">
+              Avaliações <span className="font-medium text-muted tabular">{reviews.length}</span>
             </h2>
-            <button
-              type="button"
-              onClick={() => onAvaliar(place)}
-              className="text-xs font-semibold text-[var(--primary)] hover:underline cursor-pointer"
-            >
-              Adicionar avaliação
-            </button>
           </div>
 
           {reviews.length === 0 ? (
-            <div className="bg-[var(--s1)] rounded-2xl border border-[var(--line)]">
-              <MascotMessage
-                reaction="comendo"
-                title="Seja o primeiro a avaliar!"
-                subtitle="Conte como foi sua experiência e ajude outros a descobrir este lugar."
-                ctaLabel="Escrever avaliação"
-                onCta={() => onAvaliar(place)}
-                size={100}
-              />
-            </div>
+            <MascotMessage
+              reaction="incentivando"
+              title="Ninguém avaliou ainda"
+              subtitle="Conte como foi e ajude quem está decidindo onde comer."
+              ctaLabel="Avaliar este lugar"
+              onCta={() => onAvaliar(place)}
+            />
           ) : (
-            <div className="space-y-3">
+            <div className="mt-1 divide-y divide-line">
               {reviews.map((rev) => {
                 const isLiked = !!likedReviews[rev.id];
                 const likesCount = reviewLikesCount[rev.id] ?? (rev.likesCount || 0);
+                const detalhes = [
+                  rev.voltaria
+                    ? `Voltaria: ${rev.voltaria === 'com_certeza' ? 'com certeza' : rev.voltaria === 'talvez' ? 'talvez' : 'não'}`
+                    : null,
+                  rev.precoPercepcao ? `Preço: ${rev.precoPercepcao}` : null,
+                ].filter(Boolean);
 
                 return (
-                  <article
-                    key={rev.id}
-                    className="bg-[var(--s1)] rounded-2xl p-4 sm:p-5 border border-[var(--line)] space-y-3 shadow-2xs"
-                  >
-                    {/* Cabeçalho da review */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <button
-                          type="button"
-                          onClick={() => onAbrirPerfil(rev.uid)}
-                          aria-label={`Ver perfil de ${rev.authorName}`}
-                          className="w-10 h-10 rounded-full overflow-hidden border border-[var(--line)] cursor-pointer"
-                        >
-                          <img
-                            src={rev.authorPhoto}
-                            alt={rev.authorName}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() => onAbrirPerfil(rev.uid)}
-                            className="text-xs sm:text-sm font-bold text-[var(--ink)] hover:underline cursor-pointer block text-left"
-                          >
-                            {rev.authorName}
-                          </button>
-                          <span className="text-xs text-[var(--muted)] block">
-                            {rev.authorHandle}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Nota geral calculada da review */}
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--s2)] border border-[var(--line)]">
-                        <Star size={13} className="fill-[var(--star)] text-[var(--star)]" />
-                        <span className="text-xs font-bold text-[var(--star)]">
-                          {(rev.overall || 0).toFixed(1).replace('.', ',')}
+                  <article key={rev.id} className="py-5">
+                    <header className="flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onAbrirPerfil(rev.uid)}
+                        className="flex min-w-0 items-center gap-2.5 text-left cursor-pointer"
+                      >
+                        <Avatar src={rev.authorPhoto} name={rev.authorName} size={32} />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-ink">{rev.authorName}</span>
+                          {rev.authorHandle && <span className="block t-meta">{rev.authorHandle}</span>}
                         </span>
-                      </div>
-                    </div>
+                      </button>
+                      <StarRating value={rev.overall || 0} size={13} />
+                    </header>
 
-                    {/* Título e Texto da crítica */}
-                    {rev.tituloReview && (
-                      <h3 className="font-bold text-sm sm:text-base text-[var(--ink)] leading-snug">
-                        {rev.tituloReview}
-                      </h3>
-                    )}
-                    {rev.text && (
-                      <p className="text-xs sm:text-sm text-[var(--ink)] leading-relaxed whitespace-pre-line">
-                        {rev.text}
+                    {rev.tituloReview && <h3 className="mt-3 text-base font-semibold text-ink">{rev.tituloReview}</h3>}
+                    {rev.text && <p className="mt-2 t-body text-ink-2 whitespace-pre-line">{rev.text}</p>}
+
+                    {rev.pratoDestaque && (
+                      <p className="mt-2 text-sm text-muted">
+                        Prato destaque: <span className="font-medium text-ink">{rev.pratoDestaque}</span>
                       </p>
                     )}
+                    {detalhes.length > 0 && <p className="mt-1 text-sm text-muted">{detalhes.join(' · ')}</p>}
 
-                    {/* Prato destaque e detalhes adicionais */}
-                    {(rev.pratoDestaque || rev.voltaria || rev.precoPercepcao) && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {rev.pratoDestaque && (
-                          <span className="px-2.5 py-1 rounded-lg bg-[var(--s2)] border border-[var(--line)] text-xs text-[var(--ink)]">
-                            Prato destaque: <strong>{rev.pratoDestaque}</strong>
-                          </span>
-                        )}
-                        {rev.voltaria && (
-                          <span className="px-2.5 py-1 rounded-lg bg-[var(--s2)] border border-[var(--line)] text-xs text-[var(--ink)]">
-                            Voltaria:{' '}
-                            <strong>
-                              {rev.voltaria === 'com_certeza'
-                                ? 'Com certeza'
-                                : rev.voltaria === 'talvez'
-                                ? 'Talvez'
-                                : 'Não'}
-                            </strong>
-                          </span>
-                        )}
-                        {rev.precoPercepcao && (
-                          <span className="px-2.5 py-1 rounded-lg bg-[var(--s2)] border border-[var(--line)] text-xs text-[var(--ink)]">
-                            Preço: <strong>{rev.precoPercepcao}</strong>
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Fotos da Review */}
                     {rev.photos && rev.photos.length > 0 && (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
+                      <div className="mt-3 flex gap-1.5 overflow-x-auto no-scrollbar">
                         {rev.photos.map((fotoUrl, idx) => (
                           <button
                             key={idx}
                             type="button"
                             onClick={() => setFotoModal(fotoUrl)}
                             aria-label={`Ver foto ${idx + 1} da avaliação`}
-                            className="aspect-square rounded-xl overflow-hidden bg-[var(--s2)] border border-[var(--line)] cursor-pointer"
+                            className="h-20 w-20 shrink-0 overflow-hidden rounded-sm bg-s2 cursor-pointer"
                           >
-                            <img
-                              src={fotoUrl}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
+                            <PlaceImage src={fotoUrl} name="" className="h-full w-full" />
                           </button>
                         ))}
                       </div>
                     )}
 
-                    {/* Rodapé da Review: Curtidas e Comentários */}
-                    <div className="flex items-center gap-4 pt-2 border-t border-[var(--line)] text-xs text-[var(--muted)]">
+                    <div className="mt-2 flex items-center gap-5 text-sm text-muted">
                       <button
                         type="button"
                         onClick={() => handleToggleLike(rev.id, rev.likesCount || 0)}
-                        aria-label="Curtir avaliação"
-                        className={`flex items-center gap-1.5 transition cursor-pointer min-h-11 ${
-                          isLiked ? 'text-[var(--star)] font-bold' : 'hover:text-[var(--ink)]'
+                        aria-pressed={isLiked}
+                        aria-label={`Curtir. ${likesCount} curtidas`}
+                        className={`flex min-h-11 items-center gap-1.5 tabular transition-colors cursor-pointer ${
+                          isLiked ? 'text-star' : 'hover:text-ink'
                         }`}
                       >
-                        <ThumbsUp size={14} className={isLiked ? 'fill-current' : ''} />
-                        <span>{likesCount}</span>
+                        <Heart size={17} strokeWidth={1.8} className={isLiked ? 'fill-star' : ''} />
+                        {likesCount}
                       </button>
-
-                      <div className="flex items-center gap-1.5">
-                        <MessageSquare size={14} />
-                        <span>{rev.commentsCount || 0}</span>
-                      </div>
+                      <span className="flex items-center gap-1.5 tabular">
+                        <MessageCircle size={17} strokeWidth={1.8} />
+                        {rev.commentsCount || 0}
+                      </span>
                     </div>
                   </article>
                 );
@@ -766,25 +588,21 @@ export default function PlaceDetailScreen({
         </section>
       </main>
 
-      {/* Modal de foto em tela cheia */}
+      {/* Foto em tela cheia */}
       {fotoModal && (
         <div
           onClick={() => setFotoModal(null)}
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 animate-in"
         >
           <button
             type="button"
             onClick={() => setFotoModal(null)}
-            aria-label="Fechar foto ampliada"
-            className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition cursor-pointer min-h-11 min-w-11"
+            aria-label="Fechar foto"
+            className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>
-          <img
-            src={fotoModal}
-            alt=""
-            className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl"
-          />
+          <img src={fotoModal} alt="" className="max-h-[85vh] max-w-full rounded-md object-contain" />
         </div>
       )}
     </div>

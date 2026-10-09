@@ -28,16 +28,12 @@ export default function NotificationBell({
     <button
       type="button"
       onClick={onClick}
-      className={
-        className ||
-        "relative w-9 h-9 rounded-full bg-white dark:bg-[#18181B] shadow-xs border border-gray-200/80 dark:border-neutral-800 flex items-center justify-center text-gray-700 dark:text-gray-200 hover:border-[var(--star)] transition"
-      }
-      aria-label={`Notificações ${naoLidas > 0 ? `(${naoLidas} novas)` : ''}`}
-      title="Notificações"
+      className={`relative ${className || 'inline-flex items-center justify-center w-10 h-10 rounded-full text-muted hover:text-ink hover:bg-s2 transition-colors cursor-pointer'}`}
+      aria-label={naoLidas > 0 ? `Notificações, ${naoLidas} novas` : 'Notificações'}
     >
-      <Bell size={18} className={naoLidas > 0 ? 'text-[var(--star)]' : ''} />
+      <Bell size={19} strokeWidth={1.8} />
       {naoLidas > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--star)] px-1 text-[12px] font-bold text-white shadow-md ring-2 ring-white dark:ring-neutral-900">
+        <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-star px-1 text-[10px] font-bold leading-none text-white ring-2 ring-bg tabular">
           {naoLidas > 9 ? '9+' : naoLidas}
         </span>
       )}

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { searchPlaces, SAMPLE_PLACES } from '../lib/places';
 import MascotMessage from './MascotMessage';
+import { Spinner } from './ui';
 import { SUGGESTED_FRIENDS } from '../screens/ComunidadeScreen';
 import type { Place } from '../types';
 
@@ -98,18 +99,18 @@ export default function SearchModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-3 sm:pt-10"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-3 sm:pt-10"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-[var(--line)] bg-[var(--bg)] shadow-2xl flex flex-col overflow-hidden max-h-[88vh]"
+        className="w-full max-w-lg rounded-2xl bg-bg shadow-2xl flex flex-col overflow-hidden max-h-[88vh] animate-in slide-in-from-top-2"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header de Busca */}
         <div className="bg-[var(--s1)] text-[var(--ink)] p-4 border-b border-[var(--line)] space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-medium uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-sm font-medium text-ink-2">
                 Buscar no Vimo
               </span>
             </div>
@@ -207,7 +208,7 @@ export default function SearchModal({
             {/* Sugestões Populares quando a busca está vazia */}
             {!query && (
               <div className="pt-2">
-                <p className="text-[12px] font-medium text-[var(--muted)] uppercase tracking-wider mb-1.5">
+                <p className="text-sm font-medium text-ink-2 mb-1.5">
                   Termos em Alta
                 </p>
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -216,7 +217,7 @@ export default function SearchModal({
                       key={sugestao}
                       type="button"
                       onClick={() => handleQueryChange(sugestao)}
-                      className="min-h-9 px-3 rounded-xl bg-[var(--s1)] text-[12px] font-medium text-[var(--muted)] border border-[var(--line)] hover:text-[var(--primary)] transition shrink-0 cursor-pointer"
+                      className="min-h-9 px-3 rounded-xl bg-[var(--s1)] text-sm font-medium text-ink-2 border border-[var(--line)] hover:text-[var(--primary)] transition shrink-0 cursor-pointer"
                     >
                       {sugestao}
                     </button>
@@ -231,16 +232,12 @@ export default function SearchModal({
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5 no-scrollbar">
           {abaPrincipal === 'lugares' ? (
             carregando && lugares.length === 0 ? (
-              <div className="py-8 flex flex-col items-center justify-center text-[var(--muted)] space-y-2">
-                <img src="/mascot/vimo_carregando.png" alt="" aria-hidden="true" width={72} height={72} className="object-contain animate-pulse" />
-                <p className="text-[13px]">Buscando lugares...</p>
-              </div>
+              <Spinner label="Buscando lugares" />
             ) : lugares.length === 0 ? (
               <MascotMessage
-                reaction="explorando"
+                reaction="confuso"
                 title="Nenhum lugar encontrado"
-                subtitle="Tente buscar por outro termo, culinária ou bairro."
-                size={90}
+                subtitle="Tente outro nome, culinária ou bairro."
               />
             ) : (
               lugares.map((p) => (
@@ -251,7 +248,7 @@ export default function SearchModal({
                     onAbrirLugar(p);
                     onClose();
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-[var(--s1)] border border-[var(--line)] hover:border-[var(--primary)] text-left transition group cursor-pointer"
+                  className="w-full flex items-center justify-between px-2 py-2.5 rounded-lg hover:bg-s1 text-left transition-colors group cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-12 h-14 rounded-lg bg-[var(--s2)] overflow-hidden shrink-0 border border-[var(--line)]">
@@ -298,8 +295,7 @@ export default function SearchModal({
               <MascotMessage
                 reaction="social"
                 title="Nenhum usuário encontrado"
-                subtitle={`Não encontramos ninguém com "${query}".`}
-                size={80}
+                subtitle={`Ninguém encontrado para "${query}".`}
               />
             ) : (
               amigosFiltrados.map((f: any) => (
@@ -310,7 +306,7 @@ export default function SearchModal({
                     onAbrirPerfil(f.uid);
                     onClose();
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-[var(--s1)] border border-[var(--line)] hover:border-[var(--primary)] text-left transition group cursor-pointer"
+                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-s1 text-left transition-colors group cursor-pointer"
                 >
                   <img
                     src={f.photo}

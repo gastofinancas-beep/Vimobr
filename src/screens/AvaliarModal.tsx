@@ -91,7 +91,7 @@ function FotoPicker({
               type="button"
               onClick={() => remover(i)}
               aria-label="Remover foto"
-              className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-rose-400 cursor-pointer"
+              className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-white cursor-pointer"
             >
               <Trash2 size={16} />
             </button>
@@ -365,37 +365,43 @@ export default function AvaliarModal({
   // Tela de sucesso após publicar
   if (publicado) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
-        <div className="w-full max-w-sm rounded-2xl bg-[var(--s1)] border border-[var(--line)] shadow-2xl p-8 text-center animate-in zoom-in-95 duration-300">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in">
+        <div role="status" className="w-full max-w-sm rounded-2xl bg-s1 px-6 py-8 text-center shadow-2xl animate-in zoom-in-95">
           <img
             src="/mascot/vimo_comemorando.png"
-            alt="Mascote comemorando"
-            width={120}
-            height={120}
-            className="mx-auto object-contain drop-shadow-lg animate-bounce"
+            alt=""
+            aria-hidden="true"
+            width={72}
+            height={75}
+            className="mx-auto object-contain"
           />
-          <h2 className="text-xl font-bold text-[var(--ink)] mt-4">
-            Ida publicada!
-          </h2>
-          <p className="text-sm text-[var(--muted)] mt-2 leading-relaxed">
-            Sua experiência em <span className="font-medium text-[var(--ink)]">{lugar?.displayName?.text || 'este lugar'}</span> foi registrada com sucesso.
+          <h2 className="mt-4 t-title text-ink">Ida publicada</h2>
+          <p className="mt-1.5 text-sm text-muted">
+            {lugar?.name ? (
+              <>
+                Sua ida ao <span className="font-medium text-ink">{lugar.name}</span> já está no seu diário.
+              </>
+            ) : (
+              'Sua ida já está no seu diário.'
+            )}
           </p>
-          <div className="flex items-center justify-center gap-1.5 mt-4 text-[var(--star)]">
-            <img src="/mascot/vimo_joinha.png" alt="" aria-hidden="true" width={24} height={24} className="object-contain" />
-            <span className="text-xs font-medium">Obrigado por compartilhar!</span>
-          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-2xl bg-[var(--s1)] border border-[var(--line)] shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-[var(--ink)]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 animate-in">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Registrar ida"
+        className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-s1 shadow-2xl flex flex-col h-[94dvh] sm:h-auto sm:max-h-[90vh] overflow-hidden text-ink animate-in slide-in-from-bottom"
+      >
         {/* Barra de progresso no topo */}
-        <div className="w-full h-[3px] bg-[var(--s2)] relative">
+        <div className="w-full h-[3px] bg-s2 relative">
           <div
-            className="h-full bg-[var(--star)] transition-all duration-300"
+            className="h-full bg-primary transition-[width] duration-300"
             style={{ width: `${progressoPct}%` }}
           />
         </div>
@@ -413,8 +419,8 @@ export default function AvaliarModal({
                 <ArrowLeft size={18} />
               </button>
             )}
-            <span className="text-xs font-semibold text-[var(--muted)] truncate">
-              Passo {passoIndex + 1} de {totalPassos} · {passoAtual.titulo}
+            <span className="text-sm text-muted truncate tabular">
+              <span className="font-semibold text-ink">{passoAtual.titulo}</span> · {passoIndex + 1} de {totalPassos}
             </span>
           </div>
 
@@ -442,7 +448,7 @@ export default function AvaliarModal({
 
         {/* Mensagem de Erro de Validação */}
         {erroValidacao && (
-          <div className="mx-4 mt-3 px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-medium flex items-center gap-2 shrink-0">
+          <div role="alert" className="mx-4 mt-3 px-3 py-2.5 rounded-lg bg-danger/10 text-danger text-sm font-medium flex items-center gap-2 shrink-0">
             <AlertCircle size={15} className="shrink-0" />
             <span>{erroValidacao}</span>
           </div>
@@ -456,8 +462,8 @@ export default function AvaliarModal({
           {passoAtual.tipo === 'lugar' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold text-[var(--ink)]">Onde você comeu?</h2>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
+                <h2 className="t-title text-ink">Onde você comeu?</h2>
+                <p className="text-sm text-muted mt-1">
                   Escolha o restaurante, cafeteria, padaria ou bar visitado.
                 </p>
               </div>
@@ -561,25 +567,23 @@ export default function AvaliarModal({
           {passoAtual.tipo === 'data' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold text-[var(--ink)]">Quando você foi?</h2>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
-                  Informe o dia da sua visita gastronômica.
+                <h2 className="t-title text-ink">Quando você foi?</h2>
+                <p className="text-sm text-muted mt-1">
+                  O dia da visita.
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[var(--s2)] border border-[var(--line)] space-y-3">
-                <label className="block text-xs font-semibold text-[var(--muted)]">
-                  Data da visita:
-                </label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-ink-2">Data da visita</label>
                 <div className="flex items-center gap-3">
-                  <Calendar size={18} className="text-[var(--star)] shrink-0" />
+                  <Calendar size={18} className="text-muted shrink-0" />
                   <input
                     type="date"
                     max={hojeISO()}
                     value={dataVisita}
                     onChange={(e) => setDataVisita(e.target.value)}
                     aria-label="Data da visita"
-                    className="flex-1 h-11 px-3 rounded-xl bg-[var(--s1)] border border-[var(--line)] text-sm text-[var(--ink)] focus:outline-none focus:border-[var(--primary)]"
+                    className="flex-1 h-11 px-3 rounded-lg bg-s2 text-base text-ink outline-none ring-1 ring-transparent focus:ring-primary"
                   />
                 </div>
               </div>
@@ -594,19 +598,17 @@ export default function AvaliarModal({
               {/* Badge do tipoNome apenas no primeiro critério */}
               {passoAtual.criterioIndex === 0 && (
                 <div className="flex justify-center">
-                  <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-xs">
-                    {criteriosObj.tipoNome}
-                  </span>
+                  <span className="text-sm text-muted">{criteriosObj.tipoNome}</span>
                 </div>
               )}
 
               {/* Título e Dica do Critério */}
               <div className="space-y-1">
-                <h2 className="text-xl font-bold text-[var(--ink)]">
+                <h2 className="t-title text-ink">
                   {criterios[passoAtual.criterioIndex]?.label}
                 </h2>
                 {criterios[passoAtual.criterioIndex]?.dica && (
-                  <p className="text-xs sm:text-sm text-[var(--muted)] max-w-sm mx-auto">
+                  <p className="text-sm text-muted max-w-sm mx-auto">
                     {criterios[passoAtual.criterioIndex].dica}
                   </p>
                 )}
@@ -626,7 +628,13 @@ export default function AvaliarModal({
                   size={36}
                 />
 
-                <span className="text-lg font-black text-[var(--star)]">
+                <span
+                  className={
+                    (notasCriterios[criterios[passoAtual.criterioIndex]?.key] || 0) > 0
+                      ? 't-rating text-2xl text-ink'
+                      : 'text-sm text-muted'
+                  }
+                >
                   {(
                     notasCriterios[criterios[passoAtual.criterioIndex]?.key] || 0
                   ) > 0
@@ -638,8 +646,8 @@ export default function AvaliarModal({
               </div>
 
               {/* Texto explicativo obrigatório */}
-              <p className="text-xs text-[var(--muted)] italic">
-                Sua nota geral será a média destas notas.
+              <p className="text-sm text-muted">
+                A nota geral é a média destas notas.
               </p>
             </div>
           )}
@@ -650,8 +658,8 @@ export default function AvaliarModal({
           {passoAtual.tipo === 'voltaria_preco' && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-base font-bold text-[var(--ink)]">Voltaria e Preço</h2>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
+                <h2 className="t-title text-ink">Voltaria e Preço</h2>
+                <p className="text-sm text-muted mt-1">
                   Compartilhe sua percepção sobre retorno e custo-benefício.
                 </p>
               </div>
@@ -718,8 +726,8 @@ export default function AvaliarModal({
           {passoAtual.tipo === 'destaque' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold text-[var(--ink)]">Prato destaque</h2>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
+                <h2 className="t-title text-ink">Prato destaque</h2>
+                <p className="text-sm text-muted mt-1">
                   Qual prato, doce ou bebida foi o ponto alto da sua ida?
                 </p>
               </div>
@@ -747,8 +755,8 @@ export default function AvaliarModal({
           {passoAtual.tipo === 'comentario' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold text-[var(--ink)]">Seu comentário</h2>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
+                <h2 className="t-title text-ink">Seu comentário</h2>
+                <p className="text-sm text-muted mt-1">
                   Conte sobre a experiência, pratos marcantes, atendimento e atmosfera.
                 </p>
               </div>
@@ -776,8 +784,8 @@ export default function AvaliarModal({
           {passoAtual.tipo === 'fotos' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold text-[var(--ink)]">Fotos da visita</h2>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
+                <h2 className="t-title text-ink">Fotos da visita</h2>
+                <p className="text-sm text-muted mt-1">
                   Adicione fotos para registrar sua memória gastronômica.
                 </p>
               </div>
@@ -814,8 +822,8 @@ export default function AvaliarModal({
           {passoAtual.tipo === 'amigos' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold text-[var(--ink)]">Quem estava com você?</h2>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
+                <h2 className="t-title text-ink">Quem estava com você?</h2>
+                <p className="text-sm text-muted mt-1">
                   Marque amigos que dividiram esta mesa com você (até 5).
                 </p>
               </div>
@@ -902,16 +910,16 @@ export default function AvaliarModal({
           {passoAtual.tipo === 'resumo' && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold text-[var(--ink)]">Resumo da sua ida</h2>
-                <p className="text-xs text-[var(--muted)] mt-0.5">
-                  Revise os detalhes antes de registrar no seu diário Vimo.
+                <h2 className="t-title text-ink">Resumo da sua ida</h2>
+                <p className="text-sm text-muted mt-1">
+                  Confira antes de publicar no seu diário.
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-[var(--s2)] border border-[var(--line)] space-y-3.5">
                 {/* Nome do lugar */}
                 <div>
-                  <h3 className="text-lg font-black text-[var(--ink)]">{lugar?.name}</h3>
+                  <h3 className="text-lg font-semibold text-ink">{lugar?.name}</h3>
                   <p className="text-xs text-[var(--muted)]">
                     {lugar?.address || lugar?.bairro}
                   </p>
@@ -919,7 +927,7 @@ export default function AvaliarModal({
 
                 {/* Nota geral calculada em meia estrela com valor em var(--star) */}
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--s1)] border border-[var(--line)]">
-                  <div className="text-3xl font-black text-[var(--star)]">
+                  <div className="t-rating text-4xl text-ink">
                     {notaGeralCalculada.toFixed(1).replace('.', ',')}
                   </div>
                   <div>
@@ -932,7 +940,7 @@ export default function AvaliarModal({
 
                 {/* Chips com cada nota de critério dada */}
                 <div className="space-y-1.5">
-                  <div className="text-xs font-bold text-[var(--muted)]">Critérios avaliados:</div>
+                  <div className="text-sm font-medium text-ink-2">Critérios</div>
                   <div className="flex flex-wrap gap-1.5">
                     {notasDadas.map(([k, val]) => {
                       const crit = criterios.find((c) => c.key === k);
@@ -942,7 +950,7 @@ export default function AvaliarModal({
                           className="px-2.5 py-1 rounded-lg bg-[var(--s1)] border border-[var(--line)] text-xs text-[var(--ink)] font-medium flex items-center gap-1"
                         >
                           <span>{crit?.label || k}:</span>
-                          <strong className="text-[var(--star)]">
+                          <strong className="text-ink tabular">
                             {val.toFixed(1).replace('.', ',')} ★
                           </strong>
                         </span>
@@ -998,7 +1006,7 @@ export default function AvaliarModal({
                   </div>
                 )}
                 {comentario && (
-                  <p className="text-xs text-[var(--ink)] italic bg-[var(--s1)] p-2.5 rounded-lg border border-[var(--line)]">
+                  <p className="text-sm text-ink-2 bg-s1 p-3 rounded-lg">
                     "{comentario}"
                   </p>
                 )}

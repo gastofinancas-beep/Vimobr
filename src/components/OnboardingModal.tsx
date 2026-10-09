@@ -71,27 +71,26 @@ export default function OnboardingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div
-        className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--s1)] p-6 shadow-2xl space-y-5"
+        className="w-full max-w-md rounded-2xl bg-s1 p-6 shadow-2xl space-y-5 animate-in zoom-in-95"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center space-y-1">
           <img
             src="/mascot/vimo_bem_vindo.png"
-            alt="Mascote dando boas-vindas"
-            width={80}
-            height={80}
-            className="mx-auto object-contain drop-shadow-md mb-1"
+            alt=""
+            aria-hidden="true"
+            width={72}
+            height={75}
+            className="mx-auto object-contain mb-1"
           />
-          <h2 className="text-xl font-semibold text-[var(--ink)]">Bem-vindo ao Vimo!</h2>
-          <p className="text-[13px] text-[var(--muted)]">
-            Configure seu perfil gastronômico para começar
-          </p>
+          <h2 className="t-title text-ink">Boas-vindas ao VIMO</h2>
+          <p className="text-sm text-muted">Monte seu perfil para começar.</p>
         </div>
 
         {erro && (
-          <div className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-[13px] text-red-500">
+          <div role="alert" className="flex items-center gap-2 rounded-lg bg-danger/10 p-3 text-sm text-danger">
             <AlertCircle size={16} className="shrink-0" />
             <span>{erro}</span>
           </div>
@@ -100,41 +99,40 @@ export default function OnboardingModal({
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
           {/* Nome */}
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-[var(--muted)] uppercase tracking-wider">
-              Nome de Exibição
+            <label className="text-sm font-medium text-ink-2">
+              Nome
             </label>
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Ex: Clara Mendes"
-              className="min-h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--bg)] px-4 text-sm text-[var(--ink)] focus:border-[var(--primary)] focus:outline-none"
+              className="w-full h-11 rounded-lg bg-s2 px-3.5 text-base text-ink placeholder:text-muted outline-none ring-1 ring-transparent focus:ring-primary transition"
             />
           </div>
 
           {/* @usuário */}
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-[var(--muted)] uppercase tracking-wider">
-              @usuário (identificador único)
+            <label className="text-sm font-medium text-ink-2">
+              Nome de usuário
             </label>
             <input
               value={handle}
               onChange={(e) => handleHandleChange(e.target.value)}
               placeholder="@claramendes"
-              className="min-h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--bg)] px-4 text-sm font-medium text-[var(--primary)] focus:border-[var(--primary)] focus:outline-none"
+              className="w-full h-11 rounded-lg bg-s2 px-3.5 text-base text-ink placeholder:text-muted outline-none ring-1 ring-transparent focus:ring-primary transition"
             />
           </div>
 
           {/* Cidade com Autocomplete */}
           <div className="space-y-1.5 relative">
-            <label className="text-[12px] font-medium text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">
-              <MapPin size={13} className="text-[var(--star)]" />
-              Sua Cidade Base
+            <label className="text-sm font-medium text-ink-2 flex items-center gap-1.5">
+              Cidade
             </label>
             <input
               value={cidadeTexto}
               onChange={(e) => handleCidadeInput(e.target.value)}
               placeholder="Ex: São Paulo - SP"
-              className="min-h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--bg)] px-4 text-sm text-[var(--ink)] focus:border-[var(--primary)] focus:outline-none"
+              className="w-full h-11 rounded-lg bg-s2 px-3.5 text-base text-ink placeholder:text-muted outline-none ring-1 ring-transparent focus:ring-primary transition"
             />
 
             {sugestoesCidade.length > 0 && (
@@ -159,21 +157,21 @@ export default function OnboardingModal({
 
           {/* Bio */}
           <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-[var(--muted)] uppercase tracking-wider">
-              Bio Gastronômica
+            <label className="text-sm font-medium text-ink-2">
+              Bio
             </label>
             <textarea
               rows={2}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Conte seus pratos favoritos e cafés prediletos..."
-              className="w-full rounded-xl border border-[var(--line)] bg-[var(--bg)] p-3 text-[13px] text-[var(--ink)] focus:border-[var(--primary)] focus:outline-none leading-relaxed"
+              placeholder="O que você mais gosta de comer?"
+              className="w-full rounded-lg bg-s2 px-3.5 py-3 text-base text-ink placeholder:text-muted outline-none ring-1 ring-transparent focus:ring-primary transition"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full min-h-12 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-medium text-sm transition flex items-center justify-center gap-2 mt-2 cursor-pointer shadow-2xs"
+            className="w-full h-11 rounded-lg bg-primary text-on-primary font-semibold text-sm transition-colors hover:bg-primary-hover flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             <Check size={18} />
             <span>Salvar Perfil</span>

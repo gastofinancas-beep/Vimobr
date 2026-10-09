@@ -17,7 +17,7 @@ const CAMPO =
   'h-[52px] w-full rounded-[15px] border border-[var(--line)] bg-[var(--s1)] pl-[43px] pr-[14px] text-[15px] text-[var(--ink)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--star)] focus:shadow-[0_0_0_3px_rgba(247,121,71,0.16)]';
 const CAMPO_SENHA = CAMPO.replace('pr-[14px]', 'pr-[50px]');
 const SOCIAL =
-  'flex min-h-[54px] items-center justify-center gap-[9px] rounded-[15px] border border-[var(--line)] bg-[var(--s1)] px-2 text-left text-[13.5px] font-medium leading-[1.2] text-[var(--ink)] transition active:scale-[0.98] disabled:opacity-60';
+  'flex min-h-[54px] items-center justify-center gap-[9px] rounded-[15px] border border-[var(--line)] bg-[var(--s1)] px-2 text-left text-sm font-medium leading-[1.2] text-[var(--ink)] transition active:scale-[0.98] disabled:opacity-60';
 
 export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginScreenProps) {
   const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar');
@@ -233,7 +233,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
             {erro && (
               <div
                 role="alert"
-                className="mb-3 rounded-xl border border-red-200 bg-red-50 p-2.5 text-center text-[13px] font-medium text-red-700"
+                className="mb-3 rounded-lg bg-danger/10 p-2.5 text-center text-sm font-medium text-danger"
               >
                 {erro}
               </div>
@@ -333,7 +333,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
               </button>
             </div>
 
-            <div className="mt-[15px] text-center text-[13.5px] text-[var(--muted)]">
+            <div className="mt-[15px] text-center text-sm text-[var(--muted)]">
               {modo === 'entrar' ? (
                 <p className="m-0">
                   Ainda não tem uma conta?{' '}

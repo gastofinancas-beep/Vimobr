@@ -100,7 +100,7 @@ export default function CommentsSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
@@ -151,9 +151,9 @@ export default function CommentsSheet({
             </div>
           ) : comentarios.length === 0 ? (
             <div className="py-8 flex flex-col items-center text-center gap-2">
-              <img src="/mascot/vimo_timido.png" alt="" aria-hidden="true" width={80} height={80} className="object-contain" />
-              <p className="font-medium text-sm text-[var(--ink)]">Nenhum comentário ainda</p>
-              <p className="text-xs text-[var(--muted)]">Seja o primeiro a compartilhar sua opinião!</p>
+              <img src="/mascot/vimo_timido.png" alt="" aria-hidden="true" width={64} height={67} className="object-contain" />
+              <p className="font-semibold text-base text-ink mt-2">Nenhum comentário ainda</p>
+              <p className="text-sm text-muted">Comece a conversa.</p>
             </div>
           ) : (
             raiz.map((c) => {
@@ -190,10 +190,10 @@ export default function CommentsSheet({
                     <button
                       onClick={() => alternarCurtidaComentario(c.id)}
                       className={`flex flex-col items-center p-1 text-[11px] transition shrink-0 ${
-                        curtido ? 'text-red-500 font-bold' : 'text-muted hover:text-ink'
+                        curtido ? 'text-star font-bold' : 'text-muted hover:text-ink'
                       }`}
                     >
-                      <Heart size={14} className={curtido ? 'fill-red-500' : ''} />
+                      <Heart size={14} className={curtido ? 'fill-star' : ''} />
                       <span>{c.likesCount || 0}</span>
                     </button>
                   </div>
@@ -221,10 +221,10 @@ export default function CommentsSheet({
                             <button
                               onClick={() => alternarCurtidaComentario(r.id)}
                               className={`flex flex-col items-center p-0.5 text-[12px] shrink-0 ${
-                                curtidoR ? 'text-red-500 font-bold' : 'text-muted hover:text-ink'
+                                curtidoR ? 'text-star font-bold' : 'text-muted hover:text-ink'
                               }`}
                             >
-                              <Heart size={12} className={curtidoR ? 'fill-red-500' : ''} />
+                              <Heart size={12} className={curtidoR ? 'fill-star' : ''} />
                               <span>{r.likesCount || 0}</span>
                             </button>
                           </div>
@@ -240,7 +240,7 @@ export default function CommentsSheet({
         </div>
 
         {/* Rodapé Fixo */}
-        <div className="p-3 border-t border-line bg-s1/95 backdrop-blur shrink-0">
+        <div className="p-3 border-t border-line bg-s1/95 shrink-0">
           {respondendoA && (
             <div className="flex items-center justify-between pb-2 px-1 text-xs text-accent">
               <span>Respondendo a <strong>{respondendoA.handle}</strong></span>

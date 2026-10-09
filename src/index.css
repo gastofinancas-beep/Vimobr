@@ -1,72 +1,237 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
-@theme {
-  --color-bg: #111119;
-  --color-s1: #181A24;
-  --color-s2: #222536;
-  --color-line: #2B2F42;
-  --color-ink: #F7F3EE;
-  --color-muted: #9CA0B3;
-  --color-primary: #77ACFC;
-  --color-primary-hover: #5F94E6;
-  --color-on-primary: #111119;
-  --color-star: #F77947;
+/* ==========================================================================
+   VIMO — design system
+   Fonte única de cores, tipografia, raios, elevação e movimento.
+   Os tokens apontam para variáveis CSS, então todas as classes
+   (bg-bg, text-ink, text-accent, border-line…) respeitam o tema claro/escuro.
+   ========================================================================== */
 
-  --font-display: "Inter", sans-serif;
-  --font-sans: "Inter", sans-serif;
+@theme inline {
+  /* Cores da identidade (mapeadas para o tema ativo) */
+  --color-bg: var(--bg);
+  --color-s1: var(--s1);
+  --color-s2: var(--s2);
+  --color-s3: var(--s3);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--primary);
+  --color-star: var(--star);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
+  /* Tipografia: Inter com eixo óptico (títulos usam o desenho Display) */
+  --font-sans: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Escala tipográfica única (tamanho / altura de linha) */
+  --text-2xs: 0.6875rem;          /* 11 — menor tamanho permitido */
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;             /* 12 — metadados */
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem;           /* 13 — texto secundário, botões pequenos */
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.9375rem;         /* 15 — texto de leitura */
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.0625rem;           /* 17 — títulos de seção */
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.25rem;             /* 20 — títulos de tela */
+  --text-xl--line-height: 1.625rem;
+  --text-2xl: 1.5rem;             /* 24 */
+  --text-2xl--line-height: 1.875rem;
+  --text-3xl: 1.75rem;            /* 28 — nome do lugar */
+  --text-3xl--line-height: 2.125rem;
+  --text-4xl: 2.25rem;            /* 36 — nota em destaque */
+  --text-4xl--line-height: 2.5rem;
+
+  /* Pesos mais contidos: nada de preto pesado */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 650;
+  --font-weight-extrabold: 700;
+  --font-weight-black: 720;
+
+  /* Raios: 3 níveis com propósito (controle, card, folha) */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 14px;
+  --radius-3xl: 20px;
+
+  /* Elevação: só modais e elementos flutuantes usam sombra */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.12);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.16);
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.22);
+  --shadow-xl: 0 12px 32px rgb(0 0 0 / 0.28);
+  --shadow-2xl: 0 20px 48px rgb(0 0 0 / 0.36);
 }
 
-:root { /* tema claro */
+/* --------------------------------------------------------------------------
+   Temas
+   -------------------------------------------------------------------------- */
+
+:root { /* claro: creme da identidade */
   --bg: #F9F4F1;
   --s1: #FFFFFF;
   --s2: #F1EAE4;
-  --line: #E8DFD8;
+  --s3: #E8DFD8;
+  --line: #E6DDD5;
   --ink: #111119;
-  --muted: #56545E;
-  --primary: #1F3163;        /* azul-marinho da identidade */
+  --ink-2: #33323B;
+  --muted: #6A6873;
+  --primary: #1F3163;        /* azul-marinho */
   --primary-hover: #152450;
   --on-primary: #F7E9DC;     /* creme */
-  --star: #F77947;           /* laranja do ponto do logo e do pino */
+  --star: #E8642F;           /* laranja do ponto do logo, um tom acima para contraste no claro */
+  --danger: #C2410C;
+  --success: #2F7D4F;
+  color-scheme: light;
 }
 
-html.dark { /* tema padrão */
+html.dark { /* escuro: padrão */
   --bg: #111119;
   --s1: #181A24;
   --s2: #222536;
-  --line: #2B2F42;
+  --s3: #2B2F42;
+  --line: #262A3B;
   --ink: #F7F3EE;
+  --ink-2: #D9D6DF;
   --muted: #9CA0B3;
-  --primary: #77ACFC;        /* azul claro da identidade */
-  --primary-hover: #5F94E6;
+  --primary: #77ACFC;        /* azul claro */
+  --primary-hover: #8FBBFD;
   --on-primary: #111119;
   --star: #F77947;
+  --danger: #F2785C;
+  --success: #6BC491;
+  color-scheme: dark;
 }
 
-* {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
+/* --------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
 
 @layer base {
   html, body {
     background-color: var(--bg);
     color: var(--ink);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-sans);
+    font-optical-sizing: auto;          /* títulos grandes usam o desenho Display da Inter */
+    font-feature-settings: "cv11", "ss03"; /* "a" de um andar e "1" com base: mais legível em telas */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+
+  p { text-wrap: pretty; }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 28%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+/* --------------------------------------------------------------------------
+   Utilitários de tipografia semântica
+   -------------------------------------------------------------------------- */
+
+@utility t-display {   /* títulos de tela e nome do lugar */
+  font-size: var(--text-3xl);
+  line-height: var(--text-3xl--line-height);
+  font-weight: 700;
+  letter-spacing: -0.022em;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+@utility t-title {     /* título de tela compacto */
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
+  font-weight: 650;
+  letter-spacing: -0.016em;
 }
-::-webkit-scrollbar-thumb {
-  background: var(--line);
-  border-radius: 9999px;
+@utility t-section {   /* título de seção */
+  font-size: var(--text-lg);
+  line-height: var(--text-lg--line-height);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+@utility t-body {      /* texto de leitura (reviews, descrições) */
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  font-weight: 400;
+}
+@utility t-meta {      /* metadados: bairro, data, contagens */
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 500;
+  color: var(--muted);
+}
+@utility t-rating {    /* notas: números alinhados */
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+@utility tabular { font-variant-numeric: tabular-nums; }
+
+/* --------------------------------------------------------------------------
+   Utilitários usados pelo app que não existiam
+   -------------------------------------------------------------------------- */
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }
 
+/* Entrada de modais e folhas (resposta a uma ação do usuário).
+   Compatível com as classes animate-in / fade-in / slide-in-* / zoom-in-* já usadas. */
+@keyframes vimo-enter {
+  from {
+    opacity: var(--enter-opacity, 0);
+    transform: translate3d(0, var(--enter-y, 0), 0) scale(var(--enter-scale, 1));
+  }
+}
+@utility animate-in { animation: vimo-enter 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@utility fade-in { --enter-opacity: 0; }
+@utility slide-in-from-bottom { --enter-y: 24px; }
+@utility slide-in-from-bottom-2 { --enter-y: 8px; }
+@utility slide-in-from-top-2 { --enter-y: -8px; }
+@utility slide-in-from-top-4 { --enter-y: -16px; }
+@utility zoom-in-95 { --enter-scale: 0.97; }
+
+/* Troca de aba: só um fade curto, sem deslocamento */
+@keyframes vimo-fade { from { opacity: 0; } }
+/* sem fill-mode: ao terminar não deixa contexto de empilhamento (modais ficam acima da barra) */
+@utility animate-tab-content { animation: vimo-fade 140ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* Barra de rolagem discreta */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 9999px; }

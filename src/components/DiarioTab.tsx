@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import StarRating from './StarRating';
-import PlacePlaceholder from './PlacePlaceholder';
+import { PlaceImage } from './ui';
 import MascotMessage from './MascotMessage';
 import { photoUrl } from '../lib/places';
 import { NOMES_MESES } from '../lib/diario';
@@ -62,9 +62,13 @@ export default function DiarioTab({
   if (reviews.length === 0) {
     return (
       <MascotMessage
-        reaction="comendo"
-        title="Nenhuma ida registrada ainda"
-        subtitle="Registre seus restaurantes favoritos e construa seu diário gastronômico!"
+        reaction={somenteLeitura ? 'explorando' : 'incentivando'}
+        title={somenteLeitura ? 'Nenhuma ida registrada' : 'Seu diário começa aqui'}
+        subtitle={
+          somenteLeitura
+            ? 'Quando esta pessoa registrar idas, elas aparecem aqui.'
+            : 'Cada lugar que você registrar entra aqui, organizado por mês.'
+        }
         ctaLabel={onNovaIda && !somenteLeitura ? 'Registrar primeira ida' : undefined}
         onCta={onNovaIda && !somenteLeitura ? onNovaIda : undefined}
       />
@@ -72,19 +76,19 @@ export default function DiarioTab({
   }
 
   return (
-    <div className="space-y-4 pt-1">
+    <div className="space-y-5">
       {/* Campo de Busca */}
       <div className="relative">
-        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--muted)]">
-          <Search size={15} />
+        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
+          <Search size={16} strokeWidth={1.8} />
         </span>
         <input
           type="text"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar no diário..."
+          placeholder="Buscar no diário"
           aria-label="Buscar no diário"
-          className="w-full h-11 pl-10 pr-9 rounded-xl bg-[var(--s1)] border border-[var(--line)] text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
+          className="w-full h-10 pl-9 pr-9 rounded-lg bg-s2 text-base text-ink placeholder:text-muted outline-none ring-1 ring-transparent focus:ring-primary transition"
         />
         {busca && (
           <button
@@ -99,18 +103,14 @@ export default function DiarioTab({
       </div>
 
       {grupos.length === 0 ? (
-        <div className="py-10 text-center text-[13px] text-[var(--muted)]">
-          Nenhuma resenha encontrada para "{busca}".
-        </div>
+        <p className="py-10 text-center text-sm text-muted">Nada no diário para "{busca}".</p>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {grupos.map((g) => (
-            <section key={g.titulo} className="space-y-1">
-              <div className="text-[12px] font-medium text-[var(--muted)] pb-1">
-                {g.titulo}
-              </div>
+            <section key={g.titulo}>
+              <h3 className="text-sm font-semibold text-ink pb-1">{g.titulo}</h3>
 
-              <div className="bg-[var(--s1)] border border-[var(--line)] rounded-xl overflow-hidden divide-y divide-[var(--line)]">
+              <div className="divide-y divide-line">
                 {g.itens.map((r) => {
                   const d = new Date(r.visitedAt);
                   const dia = String(d.getDate()).padStart(2, '0');
@@ -122,39 +122,20 @@ export default function DiarioTab({
                       type="button"
                       onClick={() => onAbrirLugar(r.placeId)}
                       aria-label={`Ver avaliação de ${r.placeName}`}
-                      className="w-full flex items-center gap-3 p-2.5 text-left hover:bg-[var(--s2)] transition cursor-pointer"
+                      className="w-full flex items-center gap-3 py-2.5 text-left transition-colors hover:bg-s1 cursor-pointer"
                     >
-                      {/* Dia em 18px font-medium var(--muted), largura 26px */}
-                      <span className="w-[26px] text-right text-[18px] font-medium text-[var(--muted)] shrink-0">
-                        {dia}
-                      </span>
+                      {/* Dia */}
+                      <span className="w-7 text-right text-lg font-semibold tabular text-muted shrink-0">{dia}</span>
 
-                      {/* Pôster 40x54 px */}
-                      <div className="w-[40px] h-[54px] rounded-md overflow-hidden bg-[var(--s2)] border border-[var(--line)] shrink-0">
-                        {foto ? (
-                          <img
-                            src={foto}
-                            alt=""
-                            loading="lazy"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <PlacePlaceholder name={r.placeName} className="w-full h-full" />
-                        )}
-                      </div>
+                      {/* Pôster */}
+                      <PlaceImage src={foto} name={r.placeName} className="h-[54px] w-10 shrink-0 rounded-sm" />
 
-                      {/* Nome do lugar (14px font-medium) e estrelas (13px em var(--star)) */}
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <div className="text-[14px] font-medium text-[var(--ink)] truncate">
-                          {r.placeName}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <StarRating value={r.overall || 0} size={13} />
-                          {r.text && (
-                            <span className="text-[12px] text-[var(--muted)] truncate max-w-[180px]">
-                              {r.text}
-                            </span>
-                          )}
+                      {/* Lugar, nota e trecho */}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[15px] font-semibold text-ink">{r.placeName}</div>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <StarRating value={r.overall || 0} size={12} />
+                          {r.text && <span className="truncate text-sm text-muted">{r.text}</span>}
                         </div>
                       </div>
                     </button>

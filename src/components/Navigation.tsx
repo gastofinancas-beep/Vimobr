@@ -5,7 +5,7 @@ export type TabKey = 'explorar' | 'mapa' | 'amigos' | 'perfil';
 
 const tabClass = (ativa: boolean) =>
   `flex-1 h-full flex flex-col items-center justify-center gap-1 pt-2 transition-colors cursor-pointer min-h-11 ${
-    ativa ? 'text-[var(--primary)]' : 'text-[#6F7390] hover:text-[var(--ink)]'
+    ativa ? 'text-primary' : 'text-muted hover:text-ink'
   }`;
 
 export default function Navigation({
@@ -18,7 +18,7 @@ export default function Navigation({
   onAbrirAvaliar: () => void;
 }) {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-[var(--s1)] border-t border-[var(--s2)] h-[76px] pb-[env(safe-area-inset-bottom,0px)]">
+    <nav className="fixed bottom-0 inset-x-0 z-40 bg-s1 border-t border-line h-[76px] pb-[env(safe-area-inset-bottom,0px)]">
       <div className="w-full max-w-lg mx-auto flex items-start h-full px-1.5">
         {/* 1. Explorar */}
         <button
@@ -29,7 +29,7 @@ export default function Navigation({
           className={tabClass(tabAtiva === 'explorar')}
         >
           <Compass size={24} strokeWidth={1.8} />
-          <span className="text-[10px] font-semibold leading-none">Explorar</span>
+          <span className="text-2xs font-semibold leading-none">Explorar</span>
         </button>
 
         {/* 2. Mapa */}
@@ -41,7 +41,7 @@ export default function Navigation({
           className={tabClass(tabAtiva === 'mapa')}
         >
           <Map size={24} strokeWidth={1.8} />
-          <span className="text-[10px] font-semibold leading-none">Mapa</span>
+          <span className="text-2xs font-semibold leading-none">Mapa</span>
         </button>
 
         {/* 3. Botão central de avaliar, elevado sobre a barra */}
@@ -65,7 +65,7 @@ export default function Navigation({
           className={tabClass(tabAtiva === 'amigos')}
         >
           <Users size={24} strokeWidth={1.8} />
-          <span className="text-[10px] font-semibold leading-none">Amigos</span>
+          <span className="text-2xs font-semibold leading-none">Amigos</span>
         </button>
 
         {/* 5. Perfil */}
@@ -77,7 +77,7 @@ export default function Navigation({
           className={tabClass(tabAtiva === 'perfil')}
         >
           <User size={24} strokeWidth={1.8} />
-          <span className="text-[10px] font-semibold leading-none">Perfil</span>
+          <span className="text-2xs font-semibold leading-none">Perfil</span>
         </button>
       </div>
     </nav>
