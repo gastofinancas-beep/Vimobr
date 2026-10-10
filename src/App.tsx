@@ -17,6 +17,7 @@ import PerfilScreen from './screens/PerfilScreen';
 import PlaceDetailScreen from './screens/PlaceDetailScreen';
 import AvaliarModal from './screens/AvaliarModal';
 import OnboardingModal from './components/OnboardingModal';
+import EditarPerfilModal from './components/EditarPerfilModal';
 import SearchModal from './components/SearchModal';
 import TutorialModal, { tutorialJaVisto } from './components/TutorialModal';
 
@@ -97,6 +98,7 @@ export default function App() {
   });
 
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
+  const [mostrarEditarPerfil, setMostrarEditarPerfil] = useState(false);
   const [lugarDetalheId, setLugarDetalheId] = useState<string | null>(null);
   const [lugarDetalheObjeto, setLugarDetalheObjeto] = useState<Place | null>(null);
   const [perfilVisualizadoUid, setPerfilVisualizadoUid] = useState<string | null>(null);
@@ -325,7 +327,7 @@ export default function App() {
                 uid={currentUser.uid}
                 currentUser={currentUser}
                 onAbrirLugar={handleAbrirLugar}
-                onEditarPerfil={() => setMostrarOnboarding(true)}
+                onEditarPerfil={() => setMostrarEditarPerfil(true)}
                 onAvaliarLugar={handleAbrirAvaliarComLugar}
                 onNovaAvaliacao={() => {
                   setLugarParaAvaliar(null);
@@ -398,11 +400,20 @@ export default function App() {
         />
       )}
 
-      {/* Modal de Onboarding / Edição de Perfil */}
+      {/* Modal de Onboarding (primeiro acesso) */}
       {mostrarOnboarding && (
         <OnboardingModal
           initialUser={currentUser}
           onSalvar={handleSalvarPerfil}
+        />
+      )}
+
+      {/* Modal de Edição de Perfil */}
+      {mostrarEditarPerfil && (
+        <EditarPerfilModal
+          usuario={currentUser}
+          onSalvar={handleSalvarPerfil}
+          onFechar={() => setMostrarEditarPerfil(false)}
         />
       )}
     </div>
