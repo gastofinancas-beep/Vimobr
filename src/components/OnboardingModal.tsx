@@ -3,6 +3,7 @@ import { MapPin, Check, AlertCircle } from 'lucide-react';
 import { autocompleteCidade, slug } from '../lib/places';
 import type { UserProfile } from '../types';
 
+import { Mascote } from './Mascote';
 export default function OnboardingModal({
   initialUser,
   onSalvar,
@@ -77,14 +78,7 @@ export default function OnboardingModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center space-y-1">
-          <img
-            src="/mascot/vimo_bem_vindo.png"
-            alt=""
-            aria-hidden="true"
-            width={72}
-            height={75}
-            className="mx-auto object-contain mb-1"
-          />
+          <Mascote reacao="boas-vindas" tamanho={88} className="mx-auto mb-1" />
           <h2 className="t-title text-ink">Boas-vindas ao VIMO</h2>
           <p className="text-sm text-muted">Monte seu perfil para começar.</p>
         </div>

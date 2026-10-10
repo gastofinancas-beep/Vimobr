@@ -18,6 +18,7 @@ import {
 import { obterResumoConquistas, type Badge, type BadgeTier } from '../lib/badges';
 import type { Review } from '../types';
 
+import { Mascote } from './Mascote';
 function renderBadgeIcon(icone: string, desbloqueada: boolean) {
   const size = 20;
   const className = desbloqueada ? 'text-[var(--star)]' : 'text-[var(--muted)]';
@@ -85,14 +86,7 @@ export default function ConquistasTab({ reviews }: { reviews: Review[] }) {
     <div className="space-y-5">
       {/* Resumo com o mascote: conquistas são um momento de celebração */}
       <div className="flex items-center gap-4">
-        <img
-          src={`/mascot/vimo_${desbloqueadas.length > 0 ? 'orgulhoso' : 'incentivando'}.png`}
-          alt=""
-          aria-hidden="true"
-          width={56}
-          height={58}
-          className={`mascote shrink-0 object-contain ${desbloqueadas.length > 0 ? 'mascote-orgulho' : 'mascote-flutuar'}`}
-        />
+        <Mascote reacao={desbloqueadas.length > 0 ? 'impressionado' : 'animado'} tamanho={64} />
         <div className="min-w-0 flex-1">
           <p className="text-base font-semibold text-ink tabular">
             {desbloqueadas.length} de {badges.length} conquistas

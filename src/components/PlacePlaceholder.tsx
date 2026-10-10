@@ -20,7 +20,7 @@ export default function PlacePlaceholder({
       style={{ backgroundColor: corDoLugar(name) }}
     >
       {name && (
-        <span className="w-full p-3 text-sm font-semibold leading-snug text-[#F7F3EE] line-clamp-2">
+        <span className="w-full p-3 text-sm font-semibold leading-snug text-white line-clamp-2">
           {name}
         </span>
       )}

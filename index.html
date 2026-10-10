@@ -9,22 +9,22 @@
     <meta property="og:description" content="Vimo — Diário Gastronômico. Registre onde você comeu, dê sua nota e descubra os lugares dos seus amigos." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#111119" />
+    <meta name="theme-color" content="#F7F8FA" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Vimo" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Inter variável (peso + tamanho óptico) em uma única requisição -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
     <script>
-      // Aplica o tema salvo antes do primeiro paint (evita piscar claro/escuro)
+      // Aplica o tema salvo antes do primeiro paint (padrão: claro, como a identidade)
       try {
-        if (localStorage.getItem('vimo_theme_mode_v2') !== 'light') document.documentElement.classList.add('dark');
-      } catch (e) { document.documentElement.classList.add('dark'); }
+        if (localStorage.getItem('vimo_tema_v3') === 'dark') document.documentElement.classList.add('dark');
+      } catch (e) {}
     </script>
   </head>
   <body>

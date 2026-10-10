@@ -123,7 +123,7 @@ export default function WishlistTab({
         <div className="rounded-3xl border border-[var(--line)] bg-[var(--s1)] my-4">
           <div className="flex flex-col items-center justify-center gap-2 px-6 py-8 text-center">
             <img
-              src={items.length === 0 ? '/mascot/vimo_explorando.png' : '/mascot/vimo_pensando.png'}
+              src={items.length === 0 ? '/mascote/explorando.png' : '/mascote/pensativo.png'}
               alt="" aria-hidden="true" width={100} height={100} className="object-contain drop-shadow-lg"
             />
             <h3 className="mt-2 text-[15px] font-semibold text-[var(--ink)]">

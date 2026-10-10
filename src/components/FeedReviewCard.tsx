@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Bookmark, Heart, MessageCircle, Share2 } from 'lucide-react';
-import StarRating from './StarRating';
-import { Avatar, PlaceImage } from './ui';
+import { Avatar, PlaceImage, RatingBadge, card } from './ui';
 import { alternarCurtida, verificarCurtida } from '../lib/reviews';
 import { photoUrl } from '../lib/places';
 import type { Review, UserProfile } from '../types';
@@ -70,8 +69,11 @@ export default function FeedReviewCard({
     alternarCurtida(review.id, currentUser.uid).catch((err) => console.warn('Falha ao curtir:', err));
   };
 
+  const quando = tempoRelativo(review.visitedAt || review.createdAt || Date.now());
+  const cidade = review.cityName ? review.cityName.replace(/\s*-\s*[A-Z]{2}$/, '') : '';
+
   return (
-    <article className="py-5">
+    <article className={`${card} p-3.5`}>
       {/* Quem avaliou */}
       <header className="flex items-center justify-between gap-3">
         <button
@@ -79,12 +81,10 @@ export default function FeedReviewCard({
           onClick={() => onAbrirPerfil(review.uid)}
           className="flex min-w-0 items-center gap-2.5 text-left cursor-pointer"
         >
-          <Avatar src={review.authorPhoto} name={review.authorName} size={32} />
+          <Avatar src={review.authorPhoto} name={review.authorName} size={38} />
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-ink">{review.authorName}</span>
-            <span className="block t-meta">
-              {tempoRelativo(review.visitedAt || review.createdAt || Date.now())}
-            </span>
+            <span className="block truncate text-[15px] font-semibold text-ink">{review.authorName}</span>
+            <span className="block t-meta">{[quando, cidade].filter(Boolean).join(' · ')}</span>
           </span>
         </button>
 
@@ -92,55 +92,49 @@ export default function FeedReviewCard({
           <button
             type="button"
             onClick={() => onSeguir(review.uid)}
-            className="h-8 shrink-0 rounded-full px-3.5 text-sm font-semibold text-primary ring-1 ring-inset ring-line hover:ring-primary transition cursor-pointer"
+            className="h-8 shrink-0 rounded-full bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary-hover transition-colors cursor-pointer"
           >
             Seguir
           </button>
         )}
       </header>
 
-      {/* Foto do lugar */}
+      {/* Foto do lugar com a nota */}
       <button
         type="button"
         onClick={() => onAbrirLugar(review.placeId)}
         aria-label={`Ver ${review.placeName}`}
-        className="mt-3 block w-full overflow-hidden rounded-md cursor-pointer"
+        className="relative mt-3 block w-full overflow-hidden rounded-xl cursor-pointer"
       >
         <PlaceImage src={foto} name={review.placeName} className="aspect-[16/10] w-full" />
+        {review.overall > 0 && <RatingBadge nota={review.overall} className="absolute right-3 top-3" />}
       </button>
 
-      {/* Lugar e nota */}
+      {/* Lugar e texto */}
       <button
         type="button"
         onClick={() => onAbrirLugar(review.placeId)}
-        className="mt-3 flex w-full items-center justify-between gap-3 text-left cursor-pointer"
+        className="mt-3 block w-full text-left cursor-pointer"
       >
-        <h3 className="min-w-0 truncate text-lg font-semibold tracking-tight text-ink">{review.placeName}</h3>
-        <span className="flex shrink-0 items-center gap-1.5">
-          <StarRating value={review.overall || 0} size={14} />
-        </span>
+        <h3 className="truncate text-[17px] font-semibold tracking-tight text-ink">{review.placeName}</h3>
       </button>
-
-      {review.text && (
-        <p className="mt-2 t-body text-ink-2 line-clamp-4">{review.text}</p>
-      )}
-
+      {review.text && <p className="mt-1 text-[15px] leading-relaxed text-ink-2 line-clamp-3">{review.text}</p>}
       {review.pratoDestaque && (
-        <p className="mt-2 text-sm text-muted truncate">
+        <p className="mt-1.5 truncate text-sm text-muted">
           Prato destaque: <span className="font-medium text-ink">{review.pratoDestaque}</span>
         </p>
       )}
 
       {/* Ações */}
-      <div className="mt-2 flex items-center gap-5">
+      <div className="mt-2 flex items-center gap-4">
         <button
           type="button"
           onClick={curtir}
           aria-pressed={curtido}
           aria-label={`Curtir. ${curtidas} curtidas`}
-          className={`${acao} ${curtido ? 'text-star' : 'text-muted hover:text-ink'}`}
+          className={`${acao} ${curtido ? 'text-like' : 'text-ink-2 hover:text-ink'}`}
         >
-          <Heart size={18} strokeWidth={1.8} className={curtido ? 'fill-star' : ''} />
+          <Heart size={20} strokeWidth={1.9} className={`transition-transform ${curtido ? 'fill-like scale-110' : ''}`} />
           <span>{curtidas}</span>
         </button>
 
@@ -148,10 +142,19 @@ export default function FeedReviewCard({
           type="button"
           onClick={() => onComentarios(review)}
           aria-label={`Comentar. ${review.commentsCount || 0} comentários`}
-          className={`${acao} text-muted hover:text-ink`}
+          className={`${acao} text-ink-2 hover:text-ink`}
         >
-          <MessageCircle size={18} strokeWidth={1.8} />
+          <MessageCircle size={20} strokeWidth={1.9} />
           <span>{review.commentsCount || 0}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onCompartilhar(review)}
+          aria-label="Compartilhar avaliação"
+          className={`${acao} text-ink-2 hover:text-ink`}
+        >
+          <Share2 size={19} strokeWidth={1.9} />
         </button>
 
         <button
@@ -159,19 +162,9 @@ export default function FeedReviewCard({
           onClick={() => onSalvar(review)}
           aria-pressed={salvo}
           aria-label={salvo ? 'Salvo em Quero ir' : 'Salvar em Quero ir'}
-          className={`${acao} ${salvo ? 'text-primary' : 'text-muted hover:text-ink'}`}
+          className={`${acao} ml-auto ${salvo ? 'text-primary' : 'text-ink-2 hover:text-ink'}`}
         >
-          <Bookmark size={18} strokeWidth={1.8} className={salvo ? 'fill-primary' : ''} />
-          <span>{salvo ? 'Salvo' : 'Quero ir'}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onCompartilhar(review)}
-          aria-label="Compartilhar avaliação"
-          className={`${acao} ml-auto text-muted hover:text-ink`}
-        >
-          <Share2 size={18} strokeWidth={1.8} />
+          <Bookmark size={20} strokeWidth={1.9} className={salvo ? 'fill-primary' : ''} />
         </button>
       </div>
     </article>

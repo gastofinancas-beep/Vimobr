@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Download, Share2, Copy, Sparkles, Check, RefreshCw, Wand2, Image as ImageIcon } from 'lucide-react';
+import { X, Download, Share2, Copy, Check, RefreshCw, Wand2, Image as ImageIcon } from 'lucide-react';
+import { useEscape } from '../hooks/useEscape';
 import type { Review } from '../types';
 import { photoUrl } from '../lib/places';
 
@@ -20,235 +21,183 @@ export default function ShareReviewModal({
   const [copiado, setCopiado] = useState(false);
   const [compartilhado, setCompartilhado] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  useEscape(onClose);
 
-  // Renderiza o card social no Canvas de alta resolução (1080 x 1350 px)
+  // Renderiza o card social no Canvas (1080 x 1350 px) na identidade VIMO.
+  // Canvas não entende variáveis CSS: as cores da marca ficam em constantes.
+  const COR = {
+    fundo: '#F7F8FA',
+    cartao: '#FFFFFF',
+    tinta: '#0B0F1A',
+    tinta2: '#2B3243',
+    suave: '#687083',
+    azul: '#2563FF',
+    linha: '#E6E9EF',
+    trilho: '#E9ECF2',
+  };
+  const FONTE = 'Inter, ui-sans-serif, system-ui, sans-serif';
+
+  const carregarImagem = (src: string) =>
+    new Promise<HTMLImageElement | null>((resolve) => {
+      if (!src) return resolve(null);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+
   const renderizarCard = async (fundoUrl: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    try {
+      await document.fonts?.ready;
+    } catch {}
 
     const width = 1080;
     const height = 1350;
     canvas.width = width;
     canvas.height = height;
+    const M = 64; // margem
 
-    // 1. Fundo Escuro com Gradiente Nobre
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
-    bgGrad.addColorStop(0, '#14110E');
-    bgGrad.addColorStop(0.5, '#0F0D0B');
-    bgGrad.addColorStop(1, '#080706');
-    ctx.fillStyle = bgGrad;
+    // 1. Fundo off-white e cartão branco
+    ctx.fillStyle = COR.fundo;
     ctx.fillRect(0, 0, width, height);
-
-    // Efeito de iluminação âmbar sutil no topo
-    const glow = ctx.createRadialGradient(width / 2, 0, 10, width / 2, 0, 600);
-    glow.addColorStop(0, 'rgba(245, 165, 36, 0.18)');
-    glow.addColorStop(1, 'rgba(245, 165, 36, 0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, width, height);
-
-    // 2. Header do Card: Logo "Vimo" + "DIÁRIO GASTRONÔMICO"
-    ctx.fillStyle = 'var(--star)';
-    ctx.font = 'bold 44px Fraunces, serif';
-    ctx.fillText('Vimo', 70, 95);
-
-    ctx.fillStyle = '#A39A8B';
-    ctx.font = 'bold 15px "DM Sans", sans-serif';
-    ctx.letterSpacing = '3px';
-    ctx.fillText('DIÁRIO GASTRONÔMICO', 205, 90);
-    ctx.letterSpacing = '0px';
-
-    // Linha divisória superior
-    ctx.strokeStyle = '#2E2821';
-    ctx.lineWidth = 2;
+    ctx.save();
+    ctx.shadowColor = 'rgba(11,15,26,0.08)';
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetY = 12;
+    ctx.fillStyle = COR.cartao;
     ctx.beginPath();
-    ctx.moveTo(70, 125);
-    ctx.lineTo(width - 70, 125);
-    ctx.stroke();
+    ctx.roundRect(M - 24, 150, width - 2 * (M - 24), height - 150 - 60, 44);
+    ctx.fill();
+    ctx.restore();
 
-    // 3. Imagem do Estabelecimento / Arte da IA (Pôster 940 x 520 px)
-    const imgX = 70;
-    const imgY = 160;
-    const imgW = 940;
-    const imgH = 500;
-    const radius = 32;
+    // 2. Logo oficial + legenda
+    const logo = await carregarImagem('/brand/vimo-logo-escuro.png');
+    if (logo) ctx.drawImage(logo, M, 52, 170, (170 * logo.height) / logo.width);
+    ctx.fillStyle = COR.suave;
+    ctx.font = `500 24px ${FONTE}`;
+    ctx.textAlign = 'right';
+    ctx.fillText('Descubra · Coma · Compartilhe', width - M, 98);
+    ctx.textAlign = 'left';
 
-    // Desenhar container arredondado
+    // 3. Foto do lugar com cantos arredondados
+    const imgX = M;
+    const imgY = 190;
+    const imgW = width - 2 * M;
+    const imgH = 540;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(imgX, imgY, imgW, imgH, radius);
+    ctx.roundRect(imgX, imgY, imgW, imgH, 32);
     ctx.clip();
-
-    // Carregar e desenhar a imagem
-    if (fundoUrl) {
-      try {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = () => {
-            // Em caso de falha de CORS da imagem original, usamos fallback gráfico
-            resolve(null);
-          };
-          img.src = fundoUrl;
-        });
-
-        if (img.width > 0) {
-          // Cover crop
-          const scale = Math.max(imgW / img.width, imgH / img.height);
-          const nw = img.width * scale;
-          const nh = img.height * scale;
-          const nx = imgX + (imgW - nw) / 2;
-          const ny = imgY + (imgH - nh) / 2;
-          ctx.drawImage(img, nx, ny, nw, nh);
-        } else {
-          desenharFundoAbstrato(ctx, imgX, imgY, imgW, imgH, review.placeName);
-        }
-      } catch {
-        desenharFundoAbstrato(ctx, imgX, imgY, imgW, imgH, review.placeName);
-      }
+    const foto = await carregarImagem(fundoUrl);
+    if (foto) {
+      const esc = Math.max(imgW / foto.width, imgH / foto.height);
+      const nw = foto.width * esc;
+      const nh = foto.height * esc;
+      ctx.drawImage(foto, imgX + (imgW - nw) / 2, imgY + (imgH - nh) / 2, nw, nh);
     } else {
       desenharFundoAbstrato(ctx, imgX, imgY, imgW, imgH, review.placeName);
     }
-
-    // Gradiente escuro sobreposto para legibilidade do texto
-    const overlayGrad = ctx.createLinearGradient(0, imgY + imgH * 0.4, 0, imgY + imgH);
-    overlayGrad.addColorStop(0, 'rgba(0,0,0,0)');
-    overlayGrad.addColorStop(1, 'rgba(0,0,0,0.85)');
-    ctx.fillStyle = overlayGrad;
-    ctx.fillRect(imgX, imgY, imgW, imgH);
-
     ctx.restore();
 
-    // Selo de Nota Geral sobreposto à foto (topo direito)
-    const badgeW = 150;
-    const badgeH = 56;
-    const badgeX = imgX + imgW - badgeW - 20;
-    const badgeY = imgY + 20;
-
+    // Selo de nota (branco, estrela azul), como no app
+    const notaTxt = review.overall.toFixed(1).replace('.', ',');
+    ctx.font = `700 34px ${FONTE}`;
+    const bw = ctx.measureText(notaTxt).width + 92;
+    const bx = imgX + imgW - bw - 24;
+    const by = imgY + 24;
     ctx.save();
-    ctx.fillStyle = 'rgba(15, 13, 11, 0.88)';
-    ctx.strokeStyle = 'var(--star)';
-    ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(11,15,26,0.18)';
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 18);
+    ctx.roundRect(bx, by, bw, 64, 32);
     ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = 'var(--star)';
-    ctx.font = 'bold 30px Fraunces, serif';
-    ctx.fillText(`★ ${review.overall.toFixed(1).replace('.', ',')}`, badgeX + 22, badgeY + 40);
     ctx.restore();
+    ctx.fillStyle = COR.azul;
+    ctx.font = `700 34px ${FONTE}`;
+    ctx.fillText('★', bx + 22, by + 44);
+    ctx.fillStyle = COR.tinta;
+    ctx.fillText(notaTxt, bx + 62, by + 44);
 
-    // 4. Seção do Estabelecimento
-    ctx.fillStyle = '#F5EFE6';
-    ctx.font = 'bold 46px Fraunces, serif';
-    ctx.fillText(review.placeName, 70, 720);
+    // 4. Lugar e quem avaliou
+    ctx.fillStyle = COR.tinta;
+    ctx.font = `700 52px ${FONTE}`;
+    wrapText(ctx, review.placeName, M + 8, 812, imgW - 16, 60, 1);
+    ctx.fillStyle = COR.suave;
+    ctx.font = `500 26px ${FONTE}`;
+    ctx.fillText([review.cityName?.replace(/\s*-\s*[A-Z]{2}$/, ''), `por ${review.authorName}`].filter(Boolean).join(' · '), M + 8, 856);
 
-    ctx.fillStyle = '#A39A8B';
-    ctx.font = '500 22px "DM Sans", sans-serif';
-    ctx.fillText(`${review.cityName} · Visitado por ${review.authorName}`, 70, 760);
+    // 5. Trecho da avaliação
+    if (review.text) {
+      ctx.fillStyle = COR.tinta2;
+      ctx.font = `400 32px ${FONTE}`;
+      wrapText(ctx, `“${review.text}”`, M + 8, 924, imgW - 16, 46, 3);
+    }
 
-    // 5. Citação da Review (Itálico Fraunces)
-    ctx.fillStyle = '#DDD3C4';
-    ctx.font = 'italic 30px Fraunces, serif';
-    const quote = `“${review.text}”`;
-    wrapText(ctx, quote, 70, 825, 940, 44, 3);
-
-    // 6. Barras dos 4 Critérios (Ambiente, Comida, Atendimento, Custo-benefício)
+    // 6. Critérios em barras azuis
     const criterios = [
-      { label: 'Ambiente', val: review.ratings?.ambiente || review.overall },
       { label: 'Comida', val: review.ratings?.comida || review.overall },
+      { label: 'Ambiente', val: review.ratings?.ambiente || review.overall },
       { label: 'Atendimento', val: review.ratings?.atendimento || review.overall },
       { label: 'Custo-benefício', val: review.ratings?.custoBeneficio || review.overall },
     ];
-
-    const gridY = 980;
-    const colW = 445;
+    const gridY = 1080;
+    const colW = (imgW - 16 - 48) / 2;
     criterios.forEach((c, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const cx = 70 + col * (colW + 50);
-      const cy = gridY + row * 80;
-
-      ctx.fillStyle = '#F5EFE6';
-      ctx.font = '600 20px "DM Sans", sans-serif';
+      const cx = M + 8 + (i % 2) * (colW + 48);
+      const cy = gridY + Math.floor(i / 2) * 78;
+      ctx.fillStyle = COR.tinta2;
+      ctx.font = `600 24px ${FONTE}`;
       ctx.fillText(c.label, cx, cy);
-
-      ctx.fillStyle = 'var(--star)';
-      ctx.font = 'bold 20px "DM Sans", sans-serif';
-      ctx.fillText(c.val.toFixed(1).replace('.', ','), cx + colW - 40, cy);
-
-      // Barra de progresso de fundo
-      ctx.fillStyle = '#231F1A';
+      ctx.fillStyle = COR.tinta;
+      ctx.font = `700 24px ${FONTE}`;
+      ctx.textAlign = 'right';
+      ctx.fillText(c.val.toFixed(1).replace('.', ','), cx + colW, cy);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = COR.trilho;
       ctx.beginPath();
-      ctx.roundRect(cx, cy + 12, colW, 10, 5);
+      ctx.roundRect(cx, cy + 14, colW, 10, 5);
       ctx.fill();
-
-      // Barra de progresso preenchida em âmbar
-      const pct = (c.val / 5) * colW;
-      ctx.fillStyle = 'var(--star)';
+      ctx.fillStyle = COR.azul;
       ctx.beginPath();
-      ctx.roundRect(cx, cy + 12, pct, 10, 5);
+      ctx.roundRect(cx, cy + 14, Math.max(10, (c.val / 5) * colW), 10, 5);
       ctx.fill();
     });
 
-    // 7. Footer: Autor + Selo de autenticidade Garfo
-    const footY = 1240;
-    ctx.strokeStyle = '#2E2821';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(70, footY - 35);
-    ctx.lineTo(width - 70, footY - 35);
-    ctx.stroke();
-
-    // Avatar do Autor (redondo)
+    // 7. Rodapé: autor e o mascote avaliando
+    const footY = 1238;
+    const avatar = await carregarImagem(review.authorPhoto);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(105, footY + 5, 32, 0, Math.PI * 2);
+    ctx.arc(M + 40, footY, 32, 0, Math.PI * 2);
     ctx.clip();
-    try {
-      const avatarImg = new Image();
-      avatarImg.crossOrigin = 'anonymous';
-      await new Promise((resolve) => {
-        avatarImg.onload = resolve;
-        avatarImg.onerror = resolve;
-        avatarImg.src = review.authorPhoto;
-      });
-      if (avatarImg.width > 0) {
-        ctx.drawImage(avatarImg, 73, footY - 27, 64, 64);
-      } else {
-        ctx.fillStyle = 'var(--star)';
-        ctx.fill();
-      }
-    } catch {
-      ctx.fillStyle = 'var(--star)';
+    if (avatar) {
+      ctx.drawImage(avatar, M + 8, footY - 32, 64, 64);
+    } else {
+      ctx.fillStyle = COR.trilho;
       ctx.fill();
+      ctx.fillStyle = COR.tinta2;
+      ctx.font = `700 28px ${FONTE}`;
+      ctx.textAlign = 'center';
+      ctx.fillText((review.authorName || '?').charAt(0).toUpperCase(), M + 40, footY + 10);
+      ctx.textAlign = 'left';
     }
     ctx.restore();
+    ctx.fillStyle = COR.tinta;
+    ctx.font = `700 26px ${FONTE}`;
+    ctx.fillText(review.authorName, M + 88, footY - 4);
+    ctx.fillStyle = COR.suave;
+    ctx.font = `500 22px ${FONTE}`;
+    ctx.fillText(`${review.authorHandle} no VIMO`, M + 88, footY + 26);
 
-    // Anel âmbar no avatar
-    ctx.strokeStyle = 'var(--star)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(105, footY + 5, 33, 0, Math.PI * 2);
-    ctx.stroke();
+    const mascote = await carregarImagem('/mascote/avaliando.png');
+    if (mascote) ctx.drawImage(mascote, width - M - 120, footY - 92, 128, 128);
 
-    ctx.fillStyle = '#F5EFE6';
-    ctx.font = 'bold 22px "DM Sans", sans-serif';
-    ctx.fillText(review.authorName, 155, footY - 2);
-
-    ctx.fillStyle = '#A39A8B';
-    ctx.font = '500 18px "DM Sans", sans-serif';
-    ctx.fillText(`${review.authorHandle} no Vimo`, 155, footY + 24);
-
-    // Selo "vimo.app"
-    ctx.fillStyle = '#A39A8B';
-    ctx.font = '600 18px "DM Sans", sans-serif';
-    ctx.fillText('vimo.app', width - 165, footY + 12);
-
-    // Salvar dataURL para download
     setImagemGeradaUrl(canvas.toDataURL('image/png'));
   };
 
@@ -293,7 +242,7 @@ export default function ShareReviewModal({
     }
   }
 
-  // Fallback artístico com CSS/Canvas para quando não há foto
+  // Lugar sem foto: bloco na cor da marca com o nome
   function desenharFundoAbstrato(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -302,32 +251,17 @@ export default function ShareReviewModal({
     h: number,
     nome: string
   ) {
-    const grad = ctx.createLinearGradient(x, y, x + w, y + h);
-    grad.addColorStop(0, '#2D1B11');
-    grad.addColorStop(0.5, '#422415');
-    grad.addColorStop(1, '#1A120B');
-    ctx.fillStyle = grad;
+    ctx.fillStyle = '#0B0F1A';
     ctx.fillRect(x, y, w, h);
-
-    // Prato artístico estilizado
-    ctx.strokeStyle = 'rgba(245, 165, 36, 0.4)';
-    ctx.lineWidth = 4;
+    ctx.fillStyle = '#2563FF';
     ctx.beginPath();
-    ctx.arc(x + w / 2, y + h / 2, 140, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(245, 165, 36, 0.2)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x + w / 2, y + h / 2, 90, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = 'var(--star)';
-    ctx.font = 'bold 36px Fraunces, serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(nome, x + w / 2, y + h / 2 + 12);
-    ctx.textAlign = 'left';
+    ctx.arc(x + w - 120, y + 110, 150, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#F7F8FA';
+    ctx.font = `700 48px ${FONTE}`;
+    wrapText(ctx, nome, x + 48, y + h - 60, w - 96, 56, 2);
   }
+
 
   // Gera imagem personalizada usando a API Gemini
   const handleGerarComIA = async () => {
@@ -437,70 +371,55 @@ export default function ShareReviewModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:p-4" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-3xl border border-line bg-s1 p-5 shadow-2xl flex flex-col space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-compartilhar"
+        className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl bg-s1 px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-3 shadow-2xl flex flex-col gap-4 max-h-[94dvh] overflow-y-auto no-scrollbar animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-line pb-3">
+        <div className="mx-auto h-1 w-9 shrink-0 rounded-full bg-s3 sm:hidden" />
+
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="font-display text-lg font-bold text-ink">
-              Compartilhar Avaliação
-            </h3>
-            <p className="text-xs text-muted">
-              Card social personalizado no estilo Letterboxd
-            </p>
+            <h3 id="titulo-compartilhar" className="t-title text-ink">Compartilhar avaliação</h3>
+            <p className="text-sm text-muted">Um cartão pronto para os stories e as conversas.</p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full text-muted hover:text-ink hover:bg-s2 transition"
+            aria-label="Fechar"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-s2 hover:text-ink transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Notificação Flutuante de Status */}
         {statusMsg && (
-          <div className="rounded-2xl bg-accent/20 border border-accent/40 p-2.5 text-xs text-accent font-medium flex items-center gap-2">
-            <Sparkles size={15} />
-            <span>{statusMsg}</span>
+          <div role="status" className="rounded-xl bg-primary/10 px-3 py-2.5 text-sm font-medium text-primary">
+            {statusMsg}
           </div>
         )}
 
-        {/* Pré-visualização do Card Social */}
-        <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden border border-line bg-black shadow-2xl flex items-center justify-center">
-          <canvas
-            ref={canvasRef}
-            className="h-full w-full object-contain"
-          />
-
+        {/* Pré-visualização do cartão */}
+        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-s2 ring-1 ring-line">
+          <canvas ref={canvasRef} className="h-full w-full object-contain" />
           {gerandoIA && (
-            <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
-              <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-              <p className="font-display text-sm text-accent">
-                Gerando arte com IA...
-              </p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-s1/85">
+              <RefreshCw size={22} className="animate-spin text-primary" />
+              <p className="text-sm font-medium text-ink">Gerando o fundo…</p>
             </div>
           )}
         </div>
 
-        {/* Personalização com API de Imagens Gemini */}
-        <div className="rounded-2xl border border-line bg-s2/60 p-3.5 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-ink flex items-center gap-1.5">
-              <Wand2 size={14} className="text-accent" />
-              Estilo da Arte com IA (Gemini)
-            </span>
-            <span className="text-[12px] uppercase font-bold text-accent px-1.5 py-0.5 rounded bg-accent/15">
-              Social Card
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+        {/* Fundo gerado com IA (opcional) */}
+        <div className="space-y-2.5">
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+            <Wand2 size={15} className="text-primary" />
+            Fundo com IA
+          </span>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {[
               { id: 'editorial', label: 'Editorial' },
               { id: 'watercolor', label: 'Aquarela' },
@@ -511,59 +430,51 @@ export default function ShareReviewModal({
                 key={st.id}
                 type="button"
                 onClick={() => setEstiloIA(st.id as any)}
-                className={`py-1.5 px-2 rounded-xl font-medium transition ${
-                  estiloIA === st.id
-                    ? 'bg-accent text-bg font-bold shadow'
-                    : 'bg-s1 text-muted hover:text-ink border border-line'
+                aria-pressed={estiloIA === st.id}
+                className={`h-9 shrink-0 rounded-full px-4 text-sm transition-colors cursor-pointer ${
+                  estiloIA === st.id ? 'bg-primary text-on-primary font-semibold' : 'bg-s2 text-ink-2 hover:text-ink'
                 }`}
               >
                 {st.label}
               </button>
             ))}
           </div>
-
           <button
             type="button"
             disabled={gerandoIA}
             onClick={handleGerarComIA}
-            className="w-full py-2.5 rounded-xl border border-accent/40 bg-accent/15 text-accent text-xs font-bold flex items-center justify-center gap-2 hover:bg-accent hover:text-bg transition disabled:opacity-50"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-s2 text-sm font-semibold text-ink hover:bg-s3 transition-colors disabled:opacity-50 cursor-pointer"
           >
-            {gerandoIA ? (
-              <RefreshCw size={14} className="animate-spin" />
-            ) : (
-              <Sparkles size={14} />
-            )}
-            <span>Gerar Fundo Personalizado com IA</span>
+            {gerandoIA ? <RefreshCw size={15} className="animate-spin" /> : <ImageIcon size={15} />}
+            Gerar fundo
           </button>
         </div>
 
-        {/* Botões de Ação Principal: Baixar, Compartilhar, Copiar */}
-        <div className="grid grid-cols-3 gap-2 pt-1">
+        {/* Ações */}
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={handleDownload}
-            className="py-3 rounded-2xl bg-accent text-bg text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-accent/20 hover:brightness-110 active:scale-95 transition"
+            className="flex h-12 items-center justify-center gap-1.5 rounded-full bg-cta text-sm font-semibold text-on-cta transition active:scale-95 hover:opacity-90 cursor-pointer"
           >
-            <Download size={16} />
-            <span>Salvar</span>
+            <Download size={17} />
+            Salvar
           </button>
-
           <button
             type="button"
             onClick={handleCompartilhar}
-            className="py-3 rounded-2xl border border-line bg-s2 text-ink text-xs font-semibold flex items-center justify-center gap-1.5 hover:border-accent transition active:scale-95"
+            className="flex h-12 items-center justify-center gap-1.5 rounded-full bg-s1 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition active:scale-95 hover:bg-s2 cursor-pointer"
           >
-            {compartilhado ? <Check size={16} className="text-green-400" /> : <Share2 size={16} />}
-            <span>Postar</span>
+            {compartilhado ? <Check size={17} className="text-success" /> : <Share2 size={17} />}
+            Postar
           </button>
-
           <button
             type="button"
             onClick={handleCopiarImagem}
-            className="py-3 rounded-2xl border border-line bg-s2 text-ink text-xs font-semibold flex items-center justify-center gap-1.5 hover:border-accent transition active:scale-95"
+            className="flex h-12 items-center justify-center gap-1.5 rounded-full bg-s1 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition active:scale-95 hover:bg-s2 cursor-pointer"
           >
-            {copiado ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
-            <span>Copiar</span>
+            {copiado ? <Check size={17} className="text-success" /> : <Copy size={17} />}
+            Copiar
           </button>
         </div>
       </div>

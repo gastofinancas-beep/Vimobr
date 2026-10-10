@@ -15,14 +15,14 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'],
+        includeAssets: ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png'],
         manifest: {
           id: '/',
           name: 'Vimo — Diário Gastronômico',
           short_name: 'Vimo',
           description: 'Diário e rede social de avaliações gastronômicas no estilo Letterboxd.',
-          theme_color: '#111119',
-          background_color: '#111119',
+          theme_color: '#F7F8FA',
+          background_color: '#F7F8FA',
           display: 'standalone',
           start_url: '/',
           scope: '/',

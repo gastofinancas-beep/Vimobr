@@ -5,7 +5,7 @@ export type TabKey = 'explorar' | 'mapa' | 'amigos' | 'perfil';
 
 const tabClass = (ativa: boolean) =>
   `flex-1 h-full flex flex-col items-center justify-center gap-1 pt-2 transition-colors cursor-pointer min-h-11 ${
-    ativa ? 'text-primary' : 'text-muted hover:text-ink'
+    ativa ? 'text-ink [&_span]:font-bold' : 'text-muted hover:text-ink'
   }`;
 
 export default function Navigation({
@@ -18,7 +18,7 @@ export default function Navigation({
   onAbrirAvaliar: () => void;
 }) {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 bg-s1 border-t border-line h-[76px] pb-[env(safe-area-inset-bottom,0px)]">
+    <nav className="fixed bottom-0 inset-x-0 z-40 bg-s1/95 backdrop-blur-md border-t border-line h-[76px] pb-[env(safe-area-inset-bottom,0px)]">
       <div className="w-full max-w-lg mx-auto flex items-start h-full px-1.5">
         {/* 1. Explorar */}
         <button
@@ -50,7 +50,7 @@ export default function Navigation({
             type="button"
             onClick={onAbrirAvaliar}
             aria-label="Nova avaliação gastronômica"
-            className="-mt-5 w-14 h-14 rounded-full bg-[var(--primary)] text-[var(--on-primary)] flex items-center justify-center border-[5px] border-[var(--bg)] shadow-md transition-transform active:scale-95 cursor-pointer"
+            className="-mt-4 w-14 h-14 rounded-full bg-primary text-on-primary flex items-center justify-center ring-4 ring-bg shadow-[0_6px_18px_rgb(37_99_255_/_0.35)] transition-transform active:scale-90 hover:bg-primary-hover cursor-pointer"
           >
             <Plus size={24} strokeWidth={2.4} />
           </button>

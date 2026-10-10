@@ -1,71 +1,70 @@
 import React from 'react';
 import { btn } from './ui';
+import { Mascote, type Reacao, type MascoteAnimacao } from './Mascote';
 
 /**
- * Mascote em momentos com propósito: estados vazios, busca sem resultado,
- * sucesso de uma ação e erro recuperável. Nunca em carregamentos ou ao lado de botões.
- *
- * Guia de expressões (arquivos em /public/mascot/):
- *  explorando   → nada por perto, lista "Quero ir" vazia, pedir localização
- *  confuso      → busca sem resultado, lugar não encontrado
- *  incentivando → primeira avaliação, diário vazio
- *  social       → ainda não segue ninguém / feed de amigos vazio
- *  timido       → sem comentários ainda
- *  dormindo     → sem notificações
- *  comemorando  → avaliação publicada
- *  orgulhoso    → conquistas
- *  analisando   → paladar sem dados suficientes
- *  preocupado   → erro recuperável (falha ao carregar, sem conexão)
- *  bem_vindo    → boas-vindas / onboarding
+ * Estado com mascote: vazio, sem resultado, sucesso e erro recuperável.
+ * Aceita as reações novas e também os nomes antigos (convertidos para a pose
+ * equivalente da identidade atual), para não quebrar telas existentes.
  */
 export type MascotReaction =
-  | 'explorando'
+  | Reacao
+  // nomes antigos → convertidos abaixo
   | 'confuso'
   | 'incentivando'
   | 'social'
   | 'timido'
   | 'dormindo'
-  | 'comemorando'
   | 'orgulhoso'
   | 'analisando'
   | 'preocupado'
   | 'bem_vindo'
-  // expressões mantidas por compatibilidade
-  | 'pensando'
   | 'triste'
   | 'amor'
   | 'comendo'
-  | 'curioso'
   | 'apontando'
   | 'feliz'
   | 'muito_feliz'
   | 'ideia'
   | 'bebendo'
-  | 'sucesso'
-  | 'tchau'
   | 'carregando'
   | 'joinha'
-  | 'surpreso'
   | 'duvida'
-  | 'erro'
   | 'alerta'
   | 'vitoria'
   | 'foco'
   | 'lendo'
   | 'agradecendo';
 
-export type MascotAnimacao = 'flutuar' | 'respirar' | 'pular' | 'inclinar' | 'orgulho' | 'entrar' | 'nenhuma';
-
-/** Movimento padrão de cada expressão: o gesto combina com o que o mascote está "sentindo". */
-const ANIMACAO_PADRAO: Partial<Record<MascotReaction, MascotAnimacao>> = {
-  dormindo: 'respirar',
-  comemorando: 'pular',
-  sucesso: 'pular',
-  confuso: 'inclinar',
-  duvida: 'inclinar',
-  orgulhoso: 'orgulho',
-  vitoria: 'orgulho',
+const EQUIVALENTE: Record<string, Reacao> = {
+  confuso: 'pensativo',
+  duvida: 'pensativo',
+  analisando: 'buscando',
+  ideia: 'pensativo',
+  lendo: 'pensativo',
+  incentivando: 'animado',
+  muito_feliz: 'animado',
+  feliz: 'feliz',
+  joinha: 'confiante',
+  apontando: 'explorando',
+  social: 'socializando',
+  timido: 'curioso',
+  foco: 'curioso',
+  carregando: 'carregando',
+  dormindo: 'tranquilo',
+  orgulhoso: 'impressionado',
+  vitoria: 'impressionado',
+  preocupado: 'decepcionado',
+  triste: 'decepcionado',
+  alerta: 'surpreso',
+  bem_vindo: 'boas-vindas',
+  amor: 'apaixonado',
+  agradecendo: 'apaixonado',
+  comendo: 'degustando',
+  bebendo: 'degustando',
 };
+
+export type MascotAnimacao = MascoteAnimacao;
 
 interface MascotMessageProps {
   reaction: MascotReaction;
@@ -73,9 +72,9 @@ interface MascotMessageProps {
   subtitle?: string;
   ctaLabel?: string;
   onCta?: () => void;
-  /** Tamanho em px. Limitado a 72 para manter o PNG nítido. */
+  /** Tamanho em px (padrão 88). */
   size?: number;
-  /** Movimento do mascote. Padrão: definido pela expressão (ou flutuar). */
+  /** Movimento do mascote. Padrão: definido pela reação. */
   animacao?: MascotAnimacao;
   className?: string;
 }
@@ -86,33 +85,21 @@ export default function MascotMessage({
   subtitle,
   ctaLabel,
   onCta,
-  size = 72,
+  size = 88,
   className = '',
   animacao,
 }: MascotMessageProps) {
-  const px = Math.min(size, 72);
-  const movimento = animacao ?? ANIMACAO_PADRAO[reaction] ?? 'flutuar';
+  const reacao = (EQUIVALENTE[reaction] ?? reaction) as Reacao;
   return (
     <div className={`flex flex-col items-center justify-center px-6 py-10 text-center ${className}`}>
-      <img
-        src={`/mascot/vimo_${reaction}.png`}
-        alt=""
-        aria-hidden="true"
-        width={px}
-        height={Math.round(px * 1.045)}
-        className={`mascote object-contain select-none ${movimento !== 'nenhuma' ? `mascote-${movimento}` : ''}`}
-        loading="lazy"
-        draggable={false}
-      />
+      <Mascote reacao={reacao} tamanho={Math.min(size, 96)} animacao={animacao} />
 
-      <h3 className="mt-4 text-base font-semibold text-ink">{title}</h3>
+      <h3 className="mt-4 text-lg font-semibold tracking-tight text-ink">{title}</h3>
 
-      {subtitle && (
-        <p className="mt-1.5 max-w-[280px] text-sm text-muted">{subtitle}</p>
-      )}
+      {subtitle && <p className="mt-1.5 max-w-[280px] text-sm text-muted">{subtitle}</p>}
 
       {ctaLabel && onCta && (
-        <button type="button" onClick={onCta} className={`${btn.primary} mt-5`}>
+        <button type="button" onClick={onCta} className={`${btn.primary} mt-6`}>
           {ctaLabel}
         </button>
       )}

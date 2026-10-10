@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, Moon, Sun, Plus, LogOut } from 'lucide-react';
+import { Bell, Moon, Sun, Plus, LogOut, HelpCircle } from 'lucide-react';
 import { carregarReviewsDoUsuario, obterListasUsuario, reviewsLocaisDoUsuario } from '../lib/reviews';
 import { photoUrl, SAMPLE_PLACES } from '../lib/places';
 import DiarioTab from '../components/DiarioTab';
 import ResumoPaladar from '../components/ResumoPaladar';
 import ConquistasTab from '../components/ConquistasTab';
 import NotificationsModal from '../components/NotificationsModal';
-import { Avatar, PlaceImage, Spinner, btn, corDoLugar } from '../components/ui';
+import { Avatar, PlaceImage, Spinner, btn, card } from '../components/ui';
 import type { Place, Review, UserProfile } from '../types';
 
 interface PerfilScreenProps {
@@ -21,6 +21,7 @@ interface PerfilScreenProps {
   tema?: 'dark' | 'light';
   onToggleTema?: () => void;
   onLogout?: () => void;
+  onAbrirTutorial?: () => void;
 }
 
 type PerfilTab = 'diario' | 'paladar' | 'conquistas';
@@ -43,6 +44,7 @@ export default function PerfilScreen({
   tema = 'dark',
   onToggleTema,
   onLogout,
+  onAbrirTutorial,
 }: PerfilScreenProps) {
   const isMeuPerfil = uid === currentUser.uid;
 
@@ -134,7 +136,6 @@ export default function PerfilScreen({
   }, [listas.favoritos, reviews]);
 
   const abasVisiveis = ABAS.filter((a) => !a.soDono || isMeuPerfil);
-  const capa = reviews[0] ? fotoCard(reviews[0]) : null;
 
   const numeros: { valor: number; rotulo: string }[] = [
     { valor: reviews.length, rotulo: reviews.length === 1 ? 'ida' : 'idas' },
@@ -151,6 +152,11 @@ export default function PerfilScreen({
           <header className="flex items-center justify-between px-4 pt-4 pb-3">
             <h1 className="t-title text-ink">Perfil</h1>
             <div className="flex items-center gap-1">
+              {onAbrirTutorial && (
+                <button type="button" onClick={onAbrirTutorial} aria-label="Como funciona o VIMO" className={btn.icon}>
+                  <HelpCircle size={19} strokeWidth={1.8} />
+                </button>
+              )}
               {onToggleTema && (
                 <button
                   type="button"
@@ -173,48 +179,36 @@ export default function PerfilScreen({
           </header>
         )}
 
-        {/* Capa (foto da ida mais recente) com a foto do perfil sobreposta */}
+        {/* Identidade: foto, nome e ação principal */}
         <div className="px-4">
-          <div className="relative h-28 overflow-hidden rounded-lg" style={{ backgroundColor: corDoLugar(usuario.displayName) }}>
-            {capa && <PlaceImage src={capa} name="" className="h-full w-full opacity-70" />}
-          </div>
-          <div className="relative z-10 -mt-10 px-1">
-            <Avatar
-              src={usuario.photoURL}
-              name={usuario.displayName}
-              size={80}
-              className="ring-4 ring-bg text-2xl"
-            />
-          </div>
-
-          <div className="mt-3 px-1">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-2xl font-bold tracking-tight text-ink">{usuario.displayName}</h2>
-                <p className="t-meta mt-0.5">
-                  {usuario.handle}
-                  {usuario.homeCityName ? ` · ${usuario.homeCityName}` : ''}
-                </p>
-              </div>
-              {isMeuPerfil && (
-                <button type="button" onClick={onEditarPerfil} className={`${btn.secondary} h-8 shrink-0 px-3.5 text-sm`}>
-                  Editar perfil
-                </button>
-              )}
+          <div className="flex items-center gap-4">
+            <Avatar src={usuario.photoURL} name={usuario.displayName} size={76} className="text-2xl ring-4 ring-s1 shadow-sm" />
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-[22px] font-bold tracking-tight text-ink">{usuario.displayName}</h2>
+              <p className="truncate text-sm text-muted">
+                {usuario.handle}
+                {usuario.homeCityName ? ` · ${usuario.homeCityName}` : ''}
+              </p>
             </div>
-            {usuario.bio && <p className="mt-3 t-body text-ink-2">{usuario.bio}</p>}
-
-            {/* Números reais em uma linha */}
-            <dl className="mt-4 flex flex-wrap gap-x-5 gap-y-1">
-              {numeros.map((n) => (
-                <div key={n.rotulo} className="flex items-baseline gap-1.5">
-                  <dt className="sr-only">{n.rotulo}</dt>
-                  <dd className="t-rating text-base text-ink">{n.valor}</dd>
-                  <span className="text-sm text-muted">{n.rotulo}</span>
-                </div>
-              ))}
-            </dl>
           </div>
+
+          {/* Números reais em destaque */}
+          <dl className={`mt-5 grid grid-cols-4 ${card} py-3`}>
+            {numeros.map((n, k) => (
+              <div key={n.rotulo} className={`flex flex-col items-center ${k > 0 ? 'border-l border-line' : ''}`}>
+                <dd className="t-rating text-xl text-ink">{n.valor}</dd>
+                <dt className="text-xs text-muted">{n.rotulo}</dt>
+              </div>
+            ))}
+          </dl>
+
+          {usuario.bio && <p className="mt-4 t-body text-ink-2">{usuario.bio}</p>}
+
+          {isMeuPerfil && (
+            <button type="button" onClick={onEditarPerfil} className={`${btn.outline} mt-4 h-10 w-full`}>
+              Editar perfil
+            </button>
+          )}
         </div>
 
         {/* 4 favoritos */}
@@ -254,7 +248,7 @@ export default function PerfilScreen({
         </section>
 
         {/* Abas */}
-        <div role="tablist" aria-label="Seções do perfil" className="mt-7 flex gap-6 border-b border-line px-4">
+        <div role="tablist" aria-label="Seções do perfil" className="mx-4 mt-7 flex gap-6 border-b border-line">
           {abasVisiveis.map((a) => (
             <button
               key={a.key}

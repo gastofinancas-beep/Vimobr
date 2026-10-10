@@ -18,6 +18,7 @@ import PlaceDetailScreen from './screens/PlaceDetailScreen';
 import AvaliarModal from './screens/AvaliarModal';
 import OnboardingModal from './components/OnboardingModal';
 import SearchModal from './components/SearchModal';
+import TutorialModal, { tutorialJaVisto } from './components/TutorialModal';
 
 const DEFAULT_CURRENT_USER: UserProfile = {
   uid: 'user-me',
@@ -58,10 +59,9 @@ export default function App() {
 
   const [tema, setTema] = useState<'dark' | 'light'>(() => {
     try {
-      const saved = localStorage.getItem('vimo_theme_mode_v2');
-      return saved === 'light' ? 'light' : 'dark';
+      return localStorage.getItem('vimo_tema_v3') === 'dark' ? 'dark' : 'light';
     } catch {
-      return 'dark';
+      return 'light';
     }
   });
 
@@ -73,7 +73,10 @@ export default function App() {
       document.documentElement.classList.remove('dark');
       document.documentElement.classList.add('light');
     }
-    localStorage.setItem('vimo_theme_mode_v2', tema);
+    try {
+      localStorage.setItem('vimo_tema_v3', tema);
+    } catch {}
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tema === 'dark' ? '#0B0F1A' : '#F7F8FA');
   }, [tema]);
 
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
@@ -100,6 +103,12 @@ export default function App() {
   const [mostrarModalAvaliar, setMostrarModalAvaliar] = useState(false);
   const [lugarParaAvaliar, setLugarParaAvaliar] = useState<Place | null>(null);
   const [mostrarBusca, setMostrarBusca] = useState(false);
+  const [mostrarTutorial, setMostrarTutorial] = useState(false);
+
+  // Tutorial curto na primeira vez (depois do login e do cadastro do perfil)
+  useEffect(() => {
+    if (isAutenticado && !mostrarOnboarding && !tutorialJaVisto()) setMostrarTutorial(true);
+  }, [isAutenticado, mostrarOnboarding]);
 
   // Monitorar Firebase Auth se configurado
   useEffect(() => {
@@ -324,6 +333,7 @@ export default function App() {
                 }}
                 onExplorar={() => setTabAtiva('explorar')}
                 onMudarTab={(tab) => setTabAtiva(tab)}
+                onAbrirTutorial={() => setMostrarTutorial(true)}
                 tema={tema}
                 onToggleTema={() => setTema((t) => (t === 'dark' ? 'light' : 'dark'))}
                 onLogout={handleLogout}
@@ -368,6 +378,23 @@ export default function App() {
           onClose={() => setMostrarBusca(false)}
           onAbrirLugar={handleAbrirLugar}
           onAbrirPerfil={handleAbrirPerfil}
+        />
+      )}
+
+      {/* Tutorial inicial */}
+      {mostrarTutorial && (
+        <TutorialModal
+          onPular={() => setMostrarTutorial(false)}
+          onConcluir={(destino) => {
+            setMostrarTutorial(false);
+            setLugarDetalheId(null);
+            setPerfilVisualizadoUid(null);
+            setTabAtiva('explorar');
+            if (destino === 'avaliar') {
+              setLugarParaAvaliar(null);
+              setMostrarModalAvaliar(true);
+            }
+          }}
         />
       )}
 

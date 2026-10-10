@@ -18,6 +18,8 @@ import { autocomplete, getPlace, photoUrl, SAMPLE_PLACES } from '../lib/places';
 import { salvarAvaliacao } from '../lib/reviews';
 import { buscarUsuariosParaMarcar } from '../lib/companions';
 import { obterCriteriosParaLugar } from '../lib/criteriosEstabelecimento';
+import { Mascote } from '../components/Mascote';
+import { btn } from '../components/ui';
 import type {
   Place,
   PrecoPercepcao,
@@ -367,14 +369,7 @@ export default function AvaliarModal({
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in">
         <div role="status" className="w-full max-w-sm rounded-2xl bg-s1 px-6 py-8 text-center shadow-2xl animate-in zoom-in-95">
-          <img
-            src="/mascot/vimo_comemorando.png"
-            alt=""
-            aria-hidden="true"
-            width={72}
-            height={75}
-            className="mascote mascote-pular mx-auto object-contain"
-          />
+          <Mascote reacao="comemorando" tamanho={104} animacao="pular" className="mx-auto" />
           <h2 className="mt-4 t-title text-ink">Ida publicada</h2>
           <p className="mt-1.5 text-sm text-muted">
             {lugar?.name ? (
@@ -595,6 +590,9 @@ export default function AvaliarModal({
              ========================================================================= */}
           {passoAtual.tipo === 'criterio' && (
             <div className="space-y-5 text-center py-2">
+              {/* O mascote avalia junto */}
+              <Mascote key={passoAtual.criterioIndex} reacao="avaliando" tamanho={84} className="mx-auto" />
+
               {/* Badge do tipoNome apenas no primeiro critério */}
               {passoAtual.criterioIndex === 0 && (
                 <div className="flex justify-center">
@@ -679,10 +677,10 @@ export default function AvaliarModal({
                       key={item.val}
                       type="button"
                       onClick={() => setVoltaria(item.val as VoltariaOpcao)}
-                      className={`min-h-11 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                      className={`h-11 rounded-full text-sm font-semibold transition cursor-pointer ${
                         voltaria === item.val
-                          ? 'bg-[var(--primary)] border-[var(--primary)] text-[var(--on-primary)] shadow-xs'
-                          : 'bg-[var(--s2)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]'
+                          ? 'bg-primary text-on-primary shadow-sm'
+                          : 'bg-s2 text-ink-2 hover:text-ink'
                       }`}
                     >
                       {item.label}
@@ -706,10 +704,10 @@ export default function AvaliarModal({
                       key={item.val}
                       type="button"
                       onClick={() => setPreco(item.val as PrecoPercepcao)}
-                      className={`min-h-11 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                      className={`h-11 rounded-full text-sm font-semibold transition cursor-pointer ${
                         preco === item.val
-                          ? 'bg-[var(--primary)] border-[var(--primary)] text-[var(--on-primary)] shadow-xs'
-                          : 'bg-[var(--s2)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)]'
+                          ? 'bg-primary text-on-primary shadow-sm'
+                          : 'bg-s2 text-ink-2 hover:text-ink'
                       }`}
                     >
                       {item.label}
@@ -783,11 +781,14 @@ export default function AvaliarModal({
              ========================================================================= */}
           {passoAtual.tipo === 'fotos' && (
             <div className="space-y-4">
-              <div>
+              <div className="flex items-center gap-3">
+                <Mascote reacao="registrando" tamanho={60} />
+                <div className="min-w-0">
                 <h2 className="t-title text-ink">Fotos da visita</h2>
                 <p className="text-sm text-muted mt-1">
                   Adicione fotos para registrar sua memória gastronômica.
                 </p>
+                </div>
               </div>
 
               <FotoPicker
@@ -1034,7 +1035,7 @@ export default function AvaliarModal({
               type="button"
               disabled={salvando}
               onClick={handlePublicar}
-              className="w-full min-h-11 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-bold text-sm flex items-center justify-center gap-2 transition active:scale-98 shadow-xs cursor-pointer disabled:opacity-50"
+              className={`${btn.primary} w-full`}
             >
               {salvando ? (
                 <span>Publicando ida...</span>
@@ -1049,7 +1050,7 @@ export default function AvaliarModal({
             <button
               type="button"
               onClick={handleAvancar}
-              className="w-full min-h-11 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-bold text-sm flex items-center justify-center gap-2 transition active:scale-98 shadow-xs cursor-pointer"
+              className={`${btn.primary} w-full`}
             >
               <span>Continuar</span>
             </button>

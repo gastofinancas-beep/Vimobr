@@ -20,7 +20,8 @@ import {
 } from '../lib/reviews';
 import StarRating from '../components/StarRating';
 import MascotMessage from '../components/MascotMessage';
-import { Avatar, PlaceImage, Spinner, btn } from '../components/ui';
+import { Avatar, PlaceImage, RatingBadge, Spinner, btn, card } from '../components/ui';
+import { Mascote, type Reacao } from '../components/Mascote';
 import { useEscape } from '../hooks/useEscape';
 
 const TIPOS: Record<string, string> = {
@@ -66,6 +67,7 @@ export default function PlaceDetailScreen({
   }>({ queroIr: [], jaFui: [], favoritos: [] });
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toastReacao, setToastReacao] = useState<Reacao>('sucesso');
   useEscape(() => setFotoModal(null), !!fotoModal);
 
   // Carrega dados do estabelecimento e avaliações reais
@@ -110,27 +112,28 @@ export default function PlaceDetailScreen({
     };
   }, [placeId, currentUser.uid]);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, reacao: Reacao = 'sucesso') => {
     setToastMsg(msg);
+    setToastReacao(reacao);
     setTimeout(() => setToastMsg(null), 2500);
   };
 
   const handleToggleFavorito = () => {
     const added = alternarListaUsuario(currentUser.uid, 'favoritos', placeId);
     setListas(obterListasUsuario(currentUser.uid));
-    showToast(added ? 'Adicionado aos favoritos' : 'Removido dos favoritos');
+    showToast(added ? 'Adicionado aos favoritos' : 'Removido dos favoritos', added ? 'apaixonado' : 'decepcionado');
   };
 
   const handleToggleQueroIr = () => {
     const added = alternarListaUsuario(currentUser.uid, 'queroIr', placeId);
     setListas(obterListasUsuario(currentUser.uid));
-    showToast(added ? 'Salvo em Quero ir' : 'Removido de Quero ir');
+    showToast(added ? 'Salvo em Quero ir' : 'Removido de Quero ir', added ? 'salvando' : 'decepcionado');
   };
 
   const handleToggleJaFui = () => {
     const added = alternarListaUsuario(currentUser.uid, 'jaFui', placeId);
     setListas(obterListasUsuario(currentUser.uid));
-    showToast(added ? 'Marcado como Já fui' : 'Removido de Já fui');
+    showToast(added ? 'Marcado como Já fui' : 'Removido de Já fui', added ? 'confiante' : 'decepcionado');
   };
 
   const handleShare = () => {
@@ -142,7 +145,7 @@ export default function PlaceDetailScreen({
       }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(window.location.href);
-      showToast('Link copiado');
+      showToast('Link copiado', 'compartilhando');
     }
   };
 
@@ -281,7 +284,7 @@ export default function PlaceDetailScreen({
       : `${amigosQueForam[0]?.name}, ${amigosQueForam[1]?.name} e mais ${amigosQueForam.length - 2}`;
 
   const botaoFoto =
-    'w-10 h-10 rounded-full bg-[#111119]/55 text-white flex items-center justify-center hover:bg-[#111119]/75 transition-colors cursor-pointer';
+    'w-10 h-10 rounded-full bg-white/95 text-[#0B0F1A] shadow-md flex items-center justify-center hover:bg-white transition-colors cursor-pointer';
 
   return (
     <div className="flex-1 min-h-screen bg-bg text-ink pb-28">
@@ -289,9 +292,9 @@ export default function PlaceDetailScreen({
       {toastMsg && (
         <div
           role="status"
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-bg shadow-lg animate-in slide-in-from-top-2"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 rounded-full bg-s1 py-1.5 pl-1.5 pr-4 text-sm font-semibold text-ink shadow-lg ring-1 ring-line animate-in slide-in-from-top-2"
         >
-          <Check size={15} strokeWidth={2.4} />
+          <Mascote key={toastMsg} reacao={toastReacao} tamanho={36} animacao="pular" className="bg-s2!" />
           <span>{toastMsg}</span>
         </div>
       )}
@@ -302,8 +305,11 @@ export default function PlaceDetailScreen({
           src={place.photoUrl}
           name={place.name}
           loading="eager"
-          className="aspect-[16/11] sm:aspect-[21/9] max-h-[380px] w-full"
+          className="aspect-[4/3] sm:aspect-[21/9] max-h-[420px] w-full"
         />
+        {notaGoogle !== null && !scoreInfo.vimoDesbloqueado && (
+          <RatingBadge nota={notaGoogle} className="absolute bottom-10 right-4" />
+        )}
         <div className="absolute top-0 inset-x-0 flex items-center justify-between p-4">
           <button type="button" onClick={onVoltar} aria-label="Voltar" className={botaoFoto}>
             <ArrowLeft size={19} strokeWidth={2} />
@@ -314,9 +320,9 @@ export default function PlaceDetailScreen({
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4">
+      <main className="relative -mt-6 max-w-4xl mx-auto rounded-t-3xl bg-bg px-4">
         {/* Nome, categoria e nota em resumo */}
-        <header className="pt-5">
+        <header className="pt-6">
           <h1 className="t-display text-ink">{place.name}</h1>
           {meta.length > 0 && <p className="mt-1 text-sm text-muted">{meta.join(' · ')}</p>}
 
@@ -343,26 +349,41 @@ export default function PlaceDetailScreen({
             <Plus size={18} strokeWidth={2.2} />
             Registrar ida
           </button>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {toggles.map(({ key, ativo, onClick, Icon, label, cor }) => (
+          <div className="mt-4 grid grid-cols-4 gap-1">
+            {toggles.map(({ key, ativo, onClick, Icon, label }) => (
               <button
                 key={key}
                 type="button"
                 onClick={onClick}
                 aria-pressed={ativo}
-                className={`flex h-14 flex-col items-center justify-center gap-1 rounded-lg bg-s1 text-xs font-semibold transition-colors hover:bg-s2 cursor-pointer ${
-                  ativo ? cor : 'text-muted'
-                }`}
+                className="group flex flex-col items-center gap-1.5 py-1 text-xs font-semibold text-ink-2 cursor-pointer"
               >
-                <Icon size={18} strokeWidth={ativo ? 2.4 : 1.8} className={ativo && key !== 'jafui' ? 'fill-current' : ''} />
+                <span
+                  className={`flex h-12 w-12 items-center justify-center rounded-full transition-all group-active:scale-90 ${
+                    ativo ? (key === 'favorito' ? 'bg-like text-white' : 'bg-primary text-on-primary') : 'bg-s1 text-ink shadow-sm ring-1 ring-line'
+                  }`}
+                >
+                  <Icon size={20} strokeWidth={ativo ? 2.4 : 1.9} className={ativo && key !== 'jafui' ? 'fill-current' : ''} />
+                </span>
                 {label}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={handleShare}
+              aria-label="Compartilhar"
+              className="group flex flex-col items-center gap-1.5 py-1 text-xs font-semibold text-ink-2 cursor-pointer"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-s1 text-ink shadow-sm ring-1 ring-line transition-transform group-active:scale-90">
+                <Share2 size={19} strokeWidth={1.9} />
+              </span>
+              Compartilhar
+            </button>
           </div>
         </section>
 
         {/* Como chegar */}
-        <section aria-labelledby="titulo-chegar" className="mt-8">
+        <section aria-labelledby="titulo-chegar" className={`mt-4 ${card} p-4`}>
           <h2 id="titulo-chegar" className="t-section text-ink">Como chegar</h2>
           <p className="mt-1 text-sm text-ink-2">{place.address || 'Endereço disponível no mapa'}</p>
           <div className="mt-3 flex gap-2">
@@ -379,7 +400,7 @@ export default function PlaceDetailScreen({
 
         {/* Fotos */}
         {todasFotos.length > 0 && (
-          <section aria-labelledby="titulo-fotos" className="mt-8">
+          <section aria-labelledby="titulo-fotos" className={`mt-4 ${card} p-4`}>
             <div className="flex items-baseline justify-between">
               <h2 id="titulo-fotos" className="t-section text-ink">
                 Fotos <span className="font-medium text-muted tabular">{todasFotos.length}</span>
@@ -411,7 +432,7 @@ export default function PlaceDetailScreen({
         )}
 
         {/* Notas */}
-        <section aria-labelledby="titulo-notas" className="mt-8">
+        <section aria-labelledby="titulo-notas" className={`mt-4 ${card} p-4`}>
           <h2 id="titulo-notas" className="t-section text-ink">Notas</h2>
 
           {scoreInfo.vimoDesbloqueado ? (
@@ -441,7 +462,9 @@ export default function PlaceDetailScreen({
               </div>
             </div>
           ) : (
-            <div className="mt-3">
+            <div className="mt-3 flex items-center gap-3">
+              <Mascote reacao="pensativo" tamanho={52} />
+              <div className="min-w-0 flex-1">
               <p className="text-sm text-ink-2">
                 A nota VIMO aparece a partir de 5 avaliações.{' '}
                 <span className="text-muted">
@@ -450,8 +473,9 @@ export default function PlaceDetailScreen({
               </p>
               <div className="mt-2 flex gap-1" aria-hidden="true">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <span key={i} className={`h-1 flex-1 rounded-full ${i < reviews.length ? 'bg-primary' : 'bg-s3'}`} />
+                  <span key={i} className={`h-1.5 flex-1 rounded-full ${i < reviews.length ? 'bg-primary' : 'bg-s3'}`} />
                 ))}
+              </div>
               </div>
             </div>
           )}
@@ -469,7 +493,7 @@ export default function PlaceDetailScreen({
         </section>
 
         {/* Amigos que já foram */}
-        <section aria-labelledby="titulo-amigos" className="mt-8">
+        <section aria-labelledby="titulo-amigos" className={`mt-4 ${card} p-4`}>
           <h2 id="titulo-amigos" className="t-section text-ink">Amigos que já foram</h2>
           {amigosQueForam.length > 0 ? (
             <div className="mt-3 flex items-center gap-3">
@@ -494,7 +518,7 @@ export default function PlaceDetailScreen({
         </section>
 
         {/* Avaliações */}
-        <section aria-labelledby="titulo-avaliacoes" className="mt-8">
+        <section aria-labelledby="titulo-avaliacoes" className={`mt-4 ${card} p-4`}>
           <div className="flex items-baseline justify-between">
             <h2 id="titulo-avaliacoes" className="t-section text-ink">
               Avaliações <span className="font-medium text-muted tabular">{reviews.length}</span>

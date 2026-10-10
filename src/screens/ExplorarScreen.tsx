@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { Search, ChevronDown, MapPin, X } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
-import { SAMPLE_PLACES, autocompleteCidade } from '../lib/places';
+import { SAMPLE_PLACES, autocompleteCidade, formatarPrecoLabel } from '../lib/places';
 import type { Place, UserProfile } from '../types';
 import MascotMessage from '../components/MascotMessage';
-import { PlaceImage, btn } from '../components/ui';
+import { PlaceImage, RatingBadge, Logo, btn, chip, card } from '../components/ui';
+import { Mascote } from '../components/Mascote';
 import { useEscape } from '../hooks/useEscape';
 
 type TipoRestauranteFiltro =
@@ -120,42 +121,46 @@ export default function ExplorarScreen({
     setBuscaTermo('');
   };
 
+  const TIPOS: Record<string, string> = { restaurant: 'Restaurante', cafe: 'Café', bakery: 'Padaria', bar: 'Bar' };
+  const metaDe = (p: Place) =>
+    [p.cuisine || (p.tipo ? TIPOS[p.tipo] || p.tipo : null), p.bairro, p.priceLevel ? formatarPrecoLabel(p.priceLevel) : null]
+      .filter(Boolean)
+      .join(' · ');
+
   return (
     <div className="flex-1 w-full bg-bg text-ink min-h-screen pb-28">
       {/* Cabeçalho: marca, cidade e notificações */}
-      <header className="sticky top-0 z-30 bg-bg">
-        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 pt-4 pb-3">
-          <div className="flex items-baseline gap-3 min-w-0">
-            <span className="text-[22px] font-extrabold tracking-[-0.045em] text-ink select-none">
-              VIMO<span className="text-star">.</span>
-            </span>
+      <header className="sticky top-0 z-30 bg-bg/95 backdrop-blur-md">
+        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 pt-4 pb-2">
+          <Logo altura={24} />
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setCidadeModalAberta(true)}
               aria-label={`Cidade: ${cidadeAtual.nome}. Trocar cidade`}
-              className="flex min-w-0 items-center gap-0.5 text-sm font-medium text-muted hover:text-ink transition-colors cursor-pointer"
+              className="flex h-9 min-w-0 items-center gap-1 rounded-full bg-s2 pl-3 pr-2.5 text-sm font-semibold text-ink-2 hover:text-ink transition-colors cursor-pointer"
             >
-              <span className="truncate max-w-[150px]">{cidadeCurta}</span>
+              <MapPin size={14} strokeWidth={2} className="shrink-0 text-primary" />
+              <span className="truncate max-w-[120px]">{cidadeCurta}</span>
               <ChevronDown size={14} className="shrink-0" />
             </button>
+            <NotificationBell
+              currentUserUid={currentUser.uid}
+              onClick={() => setMostrarNotificacoes(true)}
+              className={btn.icon}
+            />
           </div>
-
-          <NotificationBell
-            currentUserUid={currentUser.uid}
-            onClick={() => setMostrarNotificacoes(true)}
-            className={btn.icon}
-          />
         </div>
 
-        <div className="max-w-4xl mx-auto px-4">
+        <div className="max-w-4xl mx-auto px-4 pb-3">
           {/* Busca */}
-          <label className="flex h-11 items-center gap-2.5 rounded-lg bg-s2 px-3 ring-1 ring-transparent focus-within:ring-primary transition">
-            <Search size={17} strokeWidth={1.8} className="shrink-0 text-muted" />
+          <label className="flex h-12 items-center gap-2.5 rounded-xl bg-s1 px-4 shadow-xs ring-1 ring-inset ring-line focus-within:ring-2 focus-within:ring-primary transition">
+            <Search size={18} strokeWidth={1.9} className="shrink-0 text-muted" />
             <input
               type="search"
               value={buscaTermo}
               onChange={(e) => setBuscaTermo(e.target.value)}
-              placeholder="Buscar lugar, bairro ou culinária"
+              placeholder="Buscar restaurantes, cozinhas…"
               aria-label="Buscar restaurantes"
               className="w-full bg-transparent text-base text-ink placeholder:text-muted outline-none [&::-webkit-search-cancel-button]:hidden"
             />
@@ -171,65 +176,75 @@ export default function ExplorarScreen({
             )}
           </label>
 
-          {/* Filtros por tipo: texto, o ativo fica sublinhado */}
-          <div className="mt-3 flex gap-5 overflow-x-auto no-scrollbar border-b border-line">
-            {chips.map((chip) => {
-              const ativo = filtroTipo === chip.id;
-              return (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => setFiltroTipo(chip.id)}
-                  aria-pressed={ativo}
-                  className={`-mb-px shrink-0 border-b-2 pb-2.5 text-sm transition-colors cursor-pointer ${
-                    ativo ? 'border-primary font-semibold text-ink' : 'border-transparent text-muted hover:text-ink'
-                  }`}
-                >
-                  {chip.label}
-                </button>
-              );
-            })}
+          {/* Filtros em pílula */}
+          <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto no-scrollbar px-4">
+            {chips.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setFiltroTipo(c.id)}
+                aria-pressed={filtroTipo === c.id}
+                className={chip(filtroTipo === c.id)}
+              >
+                {c.label}
+              </button>
+            ))}
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 pt-4">
+      <main className="max-w-4xl mx-auto px-4 pt-1">
         {lugaresFiltrados.length === 0 ? (
           <MascotMessage
-            reaction="confuso"
+            reaction="pensativo"
             title={buscaTermo ? `Nada encontrado para "${buscaTermo.trim()}"` : 'Nenhum lugar neste filtro'}
-            subtitle="Tente outro nome, bairro ou culinária."
+            subtitle="Tente outro nome, bairro ou cozinha."
             ctaLabel="Limpar filtros"
             onCta={limparFiltros}
           />
         ) : (
           <>
-            <p className="t-meta mb-3 tabular">
-              {lugaresFiltrados.length} {lugaresFiltrados.length === 1 ? 'lugar' : 'lugares'} em {cidadeCurta}
-            </p>
-            {/* Grade de pôsteres 3:4 com o nome dentro */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-3">
-              {lugaresFiltrados.map((place) => (
-                <button
-                  key={place.id}
-                  type="button"
-                  onClick={() => onAbrirLugar(place)}
-                  aria-label={place.name}
-                  className="group relative block aspect-[3/4] w-full overflow-hidden rounded-md text-left cursor-pointer"
-                >
-                  <PlaceImage src={place.photoUrl} name={place.name} className="absolute inset-0 h-full w-full" />
-                  {/* Faixa sólida com o nome (legível sobre qualquer foto) */}
-                  <span className="absolute inset-x-0 bottom-0 bg-[#111119]/80 px-2.5 py-2">
-                    <span className="block text-[13px] font-semibold leading-snug text-[#F7F3EE] line-clamp-2">
-                      {place.name}
-                    </span>
-                    {place.bairro && (
-                      <span className="mt-0.5 block truncate text-2xs text-[#F7F3EE]/65">{place.bairro}</span>
-                    )}
-                  </span>
-                  <span className="pointer-events-none absolute inset-0 rounded-md ring-1 ring-inset ring-white/5 group-hover:ring-primary/60 transition" />
-                </button>
-              ))}
+            {/* Saudação: o mascote curioso convida a descobrir */}
+            {!buscaTermo && filtroTipo === 'todos' && (
+              <div className="mb-4 flex items-center gap-3">
+                <Mascote reacao="curioso" tamanho={52} />
+                <div className="min-w-0">
+                  <h1 className="text-xl font-bold tracking-tight text-ink">Onde vamos comer hoje?</h1>
+                  <p className="text-sm text-muted tabular">
+                    {lugaresFiltrados.length} lugares para descobrir em {cidadeCurta}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Cartões com foto em destaque */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {lugaresFiltrados.map((place) => {
+                const nota = place.googleRating ?? place.rating ?? null;
+                const meta = metaDe(place);
+                return (
+                  <button
+                    key={place.id}
+                    type="button"
+                    onClick={() => onAbrirLugar(place)}
+                    aria-label={place.name}
+                    className={`${card} group overflow-hidden text-left transition-transform active:scale-[0.99] cursor-pointer`}
+                  >
+                    <div className="relative overflow-hidden">
+                      <PlaceImage
+                        src={place.photoUrl}
+                        name={place.name}
+                        className="aspect-[16/10] w-full transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                      />
+                      {nota !== null && <RatingBadge nota={nota} className="absolute right-3 top-3" />}
+                    </div>
+                    <div className="px-4 pb-4 pt-3">
+                      <h3 className="truncate text-[17px] font-semibold tracking-tight text-ink">{place.name}</h3>
+                      {meta && <p className="mt-0.5 truncate text-sm text-muted">{meta}</p>}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </>
         )}

@@ -367,7 +367,7 @@ export default function EmAltaPertoSection({ onAbrirLugar }: EmAltaPertoSectionP
       {/* ESTADO 5: Nenhum Estabelecimento Encontrado */}
       {!carregando && statusErro === 'sem_resultados' && (
         <div className="mx-4 my-2 p-5 rounded-3xl bg-[var(--s1)] border border-[var(--line)] text-center">
-          <img src="/mascot/vimo_explorando.png" alt="" aria-hidden="true" width={72} height={72} className="mx-auto object-contain mb-2" />
+          <img src="/mascote/explorando.png" alt="" aria-hidden="true" width={72} height={72} className="mx-auto object-contain mb-2" />
           <p className="text-xs font-bold text-[var(--ink)]">
             Nenhum estabelecimento gastronômico encontrado
           </p>

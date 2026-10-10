@@ -12,7 +12,7 @@ import {
   seguir,
 } from '../lib/reviews';
 import MascotMessage from '../components/MascotMessage';
-import { Spinner, btn } from '../components/ui';
+import { Spinner, btn, chip, inputClass } from '../components/ui';
 import type { FeedMode, Review, UserProfile } from '../types';
 
 interface AmigosScreenProps {
@@ -114,8 +114,8 @@ export default function AmigosScreen({
           </button>
         </header>
 
-        {/* Abas "Quem eu sigo" / "Descobrir" com sublinhado */}
-        <div role="tablist" aria-label="Tipo de feed" className="flex gap-6 border-b border-line">
+        {/* Seletor segmentado "Quem eu sigo" / "Descobrir" */}
+        <div role="tablist" aria-label="Tipo de feed" className="grid grid-cols-2 rounded-full bg-s2 p-1">
           {(['seguindo', 'descobrir'] as Aba[]).map((a) => (
             <button
               key={a}
@@ -123,10 +123,8 @@ export default function AmigosScreen({
               role="tab"
               aria-selected={aba === a}
               onClick={() => setAba(a)}
-              className={`-mb-px border-b-2 pb-2.5 pt-1 text-[15px] transition-colors cursor-pointer ${
-                aba === a
-                  ? 'border-primary text-ink font-semibold'
-                  : 'border-transparent text-muted hover:text-ink'
+              className={`h-10 rounded-full text-sm transition-all cursor-pointer ${
+                aba === a ? 'bg-primary text-on-primary font-semibold shadow-sm' : 'text-ink-2 font-medium hover:text-ink'
               }`}
             >
               {a === 'seguindo' ? 'Quem eu sigo' : 'Descobrir'}
@@ -144,11 +142,7 @@ export default function AmigosScreen({
                   type="button"
                   aria-pressed={filtro === f.key}
                   onClick={() => setFiltro(f.key)}
-                  className={`h-9 px-3.5 rounded-full text-sm whitespace-nowrap cursor-pointer transition-colors ${
-                    filtro === f.key
-                      ? 'bg-ink text-bg font-semibold'
-                      : 'text-muted ring-1 ring-inset ring-line hover:text-ink'
-                  }`}
+                  className={chip(filtro === f.key)}
                 >
                   {f.label}
                 </button>
@@ -164,7 +158,7 @@ export default function AmigosScreen({
                   id="cidade-outra"
                   value={cidadeOutra}
                   onChange={(e) => setCidadeOutra(e.target.value)}
-                  className="w-full h-11 rounded-lg bg-s2 px-3.5 text-base text-ink outline-none ring-1 ring-transparent focus:ring-primary transition"
+                  className={inputClass}
                 >
                   <option value="">Escolha uma cidade</option>
                   {cidades.map((c) => (
@@ -179,7 +173,7 @@ export default function AmigosScreen({
         )}
 
         {/* Feed de avaliações */}
-        <div className="divide-y divide-line">
+        <div className="mt-4 space-y-4">
           {carregando ? (
             <Spinner label="Carregando avaliações" />
           ) : reviews.length === 0 ? (

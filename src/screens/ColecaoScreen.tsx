@@ -293,7 +293,7 @@ export default function ColecaoScreen({
       <div className="space-y-4">
         {carregando ? (
           <div className="py-16 text-center flex flex-col items-center gap-2">
-            <img src="/mascot/vimo_carregando.png" alt="" aria-hidden="true" width={80} height={80} className="object-contain animate-pulse" />
+            <img src="/mascote/curioso.png" alt="" aria-hidden="true" width={80} height={80} className="object-contain animate-pulse" />
             <p className="text-[13px] text-[var(--muted)]">Carregando sua coleção...</p>
           </div>
         ) : (

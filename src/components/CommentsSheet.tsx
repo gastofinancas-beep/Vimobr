@@ -4,6 +4,7 @@ import type { Comment, Review, UserProfile } from '../types';
 import { carregarComentarios, comentar } from '../lib/reviews';
 import { useEscape } from '../hooks/useEscape';
 
+import { Mascote } from './Mascote';
 export default function CommentsSheet({
   review,
   currentUser,
@@ -166,7 +167,7 @@ export default function CommentsSheet({
             </div>
           ) : comentarios.length === 0 ? (
             <div className="py-8 flex flex-col items-center text-center gap-2">
-              <img src="/mascot/vimo_timido.png" alt="" aria-hidden="true" width={64} height={67} className="mascote mascote-flutuar object-contain" />
+              <Mascote reacao="curioso" tamanho={80} />
               <p className="font-semibold text-base text-ink mt-2">Nenhum comentário ainda</p>
               <p className="text-sm text-muted">Comece a conversa.</p>
             </div>
@@ -189,7 +190,7 @@ export default function CommentsSheet({
                         <span className="text-[11px] text-muted">{c.authorHandle}</span>
                         <span className="text-[12px] text-muted/70">· {tempoFormat(c.createdAt)}</span>
                       </div>
-                      <p className="text-sm text-[#E2DACB] mt-0.5 leading-relaxed">{c.text}</p>
+                      <p className="text-[15px] text-ink-2 mt-0.5 leading-relaxed">{c.text}</p>
                       <div className="flex items-center gap-4 mt-1.5 text-xs text-muted">
                         <button
                           onClick={() => {
@@ -205,10 +206,10 @@ export default function CommentsSheet({
                     <button
                       onClick={() => alternarCurtidaComentario(c.id)}
                       className={`flex flex-col items-center p-1 text-[11px] transition shrink-0 ${
-                        curtido ? 'text-star font-bold' : 'text-muted hover:text-ink'
+                        curtido ? 'text-like font-bold' : 'text-muted hover:text-ink'
                       }`}
                     >
-                      <Heart size={14} className={curtido ? 'fill-star' : ''} />
+                      <Heart size={14} className={curtido ? 'fill-like' : ''} />
                       <span>{c.likesCount || 0}</span>
                     </button>
                   </div>
@@ -231,15 +232,15 @@ export default function CommentsSheet({
                                 <span className="text-[11px] text-muted">{r.authorHandle}</span>
                                 <span className="text-[12px] text-muted/70">· {tempoFormat(r.createdAt)}</span>
                               </div>
-                              <p className="text-xs text-[#E2DACB] mt-0.5 leading-relaxed">{r.text}</p>
+                              <p className="text-sm text-ink-2 mt-0.5 leading-relaxed">{r.text}</p>
                             </div>
                             <button
                               onClick={() => alternarCurtidaComentario(r.id)}
                               className={`flex flex-col items-center p-0.5 text-[12px] shrink-0 ${
-                                curtidoR ? 'text-star font-bold' : 'text-muted hover:text-ink'
+                                curtidoR ? 'text-like font-bold' : 'text-muted hover:text-ink'
                               }`}
                             >
-                              <Heart size={12} className={curtidoR ? 'fill-star' : ''} />
+                              <Heart size={12} className={curtidoR ? 'fill-like' : ''} />
                               <span>{r.likesCount || 0}</span>
                             </button>
                           </div>
@@ -272,19 +273,20 @@ export default function CommentsSheet({
             <img
               src={currentUser.photoURL}
               alt=""
-              className="h-8 w-8 rounded-full border border-accent/60 object-cover shrink-0"
+              className="h-9 w-9 rounded-full object-cover shrink-0 bg-s3"
             />
             <input
               ref={inputRef}
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               placeholder={respondendoA ? `Responder a ${respondendoA.handle}...` : 'Adicione um comentário...'}
-              className="h-10 flex-1 rounded-full border border-line bg-bg px-4 text-xs text-ink placeholder:text-muted/60 focus:border-accent focus:outline-none"
+              className="h-11 flex-1 rounded-full bg-s2 px-4 text-base text-ink placeholder:text-muted outline-none ring-1 ring-transparent focus:ring-primary focus:bg-s1 transition"
             />
             <button
               type="submit"
               disabled={!texto.trim() || enviando}
-              className="h-10 w-10 flex items-center justify-center rounded-full bg-accent text-bg font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 transition shrink-0"
+              aria-label="Enviar comentário"
+              className="h-11 w-11 flex items-center justify-center rounded-full bg-primary text-on-primary disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary-hover transition shrink-0"
             >
               <Send size={16} />
             </button>
