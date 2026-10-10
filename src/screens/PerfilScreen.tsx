@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, Moon, Sun, Plus, LogOut, HelpCircle } from 'lucide-react';
+import { Bell, Moon, Sun, Plus, LogOut, HelpCircle, UserPlus, UserCheck } from 'lucide-react';
+import { estaSeguindo, seguirUsuario, deixarDeSeguir, carregarPerfil } from '../lib/follows';
 import { carregarReviewsDoUsuario, obterListasUsuario, reviewsLocaisDoUsuario } from '../lib/reviews';
 import { photoUrl, SAMPLE_PLACES } from '../lib/places';
 import DiarioTab from '../components/DiarioTab';
@@ -57,6 +58,9 @@ export default function PerfilScreen({
   const [carregando, setCarregando] = useState(true);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
   const [mostrarPro, setMostrarPro] = useState(false);
+  const [seguindo, setSeguindo] = useState(false);
+  const [salvandoFollow, setSalvandoFollow] = useState(false);
+  const [perfilRemoto, setPerfilRemoto] = useState<{ followersCount?: number; followingCount?: number }>({});
   const [listas, setListas] = useState<{ queroIr: string[]; jaFui: string[]; favoritos: string[] }>({
     queroIr: [],
     jaFui: [],
@@ -77,6 +81,15 @@ export default function PerfilScreen({
         setListas(obterListasUsuario(uid));
       })
       .finally(() => ativo && setCarregando(false));
+    if (!isMeuPerfil) {
+      setSeguindo(estaSeguindo(currentUser.uid, uid));
+      carregarPerfil(uid).then((p) => {
+        if (!ativo) return;
+        if (p.followersCount !== undefined || p.followingCount !== undefined) {
+          setPerfilRemoto({ followersCount: p.followersCount, followingCount: p.followingCount });
+        }
+      });
+    }
     return () => {
       ativo = false;
     };
@@ -94,12 +107,38 @@ export default function PerfilScreen({
       bio: '',
       homeCityKey: r?.cityKey ?? '',
       homeCityName: r?.cityName ?? '',
-      followersCount: 0,
-      followingCount: 0,
+      followersCount: perfilRemoto.followersCount ?? 0,
+      followingCount: perfilRemoto.followingCount ?? 0,
     };
-  }, [isMeuPerfil, currentUser, reviews, uid]);
+  }, [isMeuPerfil, currentUser, reviews, uid, perfilRemoto]);
 
   const idasNoAno = reviews.filter((r) => new Date(r.visitedAt).getFullYear() === new Date().getFullYear()).length;
+
+  const toggleSeguir = async () => {
+    if (salvandoFollow) return;
+    setSalvandoFollow(true);
+    const novoEstado = !seguindo;
+    setSeguindo(novoEstado);
+    setPerfilRemoto((prev) => ({
+      ...prev,
+      followersCount: (prev.followersCount ?? usuario.followersCount) + (novoEstado ? 1 : -1),
+    }));
+    try {
+      if (novoEstado) {
+        await seguirUsuario(currentUser.uid, uid);
+      } else {
+        await deixarDeSeguir(currentUser.uid, uid);
+      }
+    } catch {
+      setSeguindo(!novoEstado);
+      setPerfilRemoto((prev) => ({
+        ...prev,
+        followersCount: (prev.followersCount ?? usuario.followersCount) + (novoEstado ? -1 : 1),
+      }));
+    } finally {
+      setSalvandoFollow(false);
+    }
+  };
 
   const favoritos = useMemo(() => {
     const lista: { placeId: string; placeName: string; photoUrl: string }[] = [];
@@ -217,9 +256,26 @@ export default function PerfilScreen({
 
           {usuario.bio && <p className="mt-4 t-body text-ink-2">{usuario.bio}</p>}
 
-          {isMeuPerfil && (
+          {isMeuPerfil ? (
             <button type="button" onClick={onEditarPerfil} className={`${btn.outline} mt-4 h-10 w-full`}>
               Editar perfil
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleSeguir}
+              disabled={salvandoFollow}
+              className={`mt-4 h-10 w-full flex items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer disabled:opacity-60 ${
+                seguindo
+                  ? 'bg-s2 text-ink ring-1 ring-line hover:bg-danger/10 hover:text-danger hover:ring-danger'
+                  : 'bg-primary text-on-primary hover:bg-primary-hover'
+              }`}
+            >
+              {seguindo ? (
+                <><UserCheck size={16} strokeWidth={2} /><span>Seguindo</span></>
+              ) : (
+                <><UserPlus size={16} strokeWidth={2} /><span>Seguir</span></>
+              )}
             </button>
           )}
         </div>
