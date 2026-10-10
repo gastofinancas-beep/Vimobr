@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, User as UserIcon } from 'lucide-react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, type User } from 'firebase/auth';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, User as UserIcon, ArrowLeft, CheckCircle } from 'lucide-react';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, isFirebaseConfigured } from '../lib/firebase';
 import { MascoteHero } from '../components/Mascote';
@@ -20,7 +20,7 @@ const SOCIAL =
   'flex h-12 items-center justify-center gap-2 rounded-full bg-s1 px-3 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition hover:bg-s2 active:scale-[0.98] disabled:opacity-60 cursor-pointer';
 
 export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginScreenProps) {
-  const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar');
+  const [modo, setModo] = useState<'entrar' | 'cadastrar' | 'recuperar'>('entrar');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -28,6 +28,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [senhaFocada, setSenhaFocada] = useState(false);
+  const [emailEnviado, setEmailEnviado] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,6 +178,30 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
     }
   };
 
+  const handleRecuperarSenha = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setErro('Informe seu e-mail para receber o link de redefinição.');
+      return;
+    }
+    setCarregando(true);
+    setErro(null);
+    try {
+      if (isFirebaseConfigured) {
+        await sendPasswordResetEmail(auth, email.trim());
+      }
+      setEmailEnviado(true);
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
+        setErro('E-mail não encontrado. Verifique o endereço e tente novamente.');
+      } else {
+        setErro('Não foi possível enviar o e-mail. Tente novamente.');
+      }
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   const handleAppleLogin = () => {
     setCarregando(true);
     setTimeout(() => {
@@ -197,6 +222,69 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
   };
 
   const cobrindo = senhaFocada && !mostrarSenha;
+
+  /* ── Tela de recuperação de senha ── */
+  if (modo === 'recuperar') {
+    return (
+      <div className="min-h-[100dvh] w-full bg-bg text-ink flex justify-center">
+        <div className="flex w-full max-w-[420px] flex-col px-5 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pt-[calc(env(safe-area-inset-top,0px)+20px)]">
+          <button
+            type="button"
+            onClick={() => { setModo('entrar'); setErro(null); setEmailEnviado(false); }}
+            className="mb-6 flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink transition cursor-pointer"
+          >
+            <ArrowLeft size={16} /> Voltar para o login
+          </button>
+
+          {emailEnviado ? (
+            <div className="flex flex-col items-center text-center gap-4 mt-8">
+              <CheckCircle size={56} className="text-primary" strokeWidth={1.5} />
+              <h2 className="font-display text-[22px] font-bold text-ink">E-mail enviado</h2>
+              <p className="text-[15px] text-muted max-w-[280px]">
+                Verifique sua caixa de entrada. O link de redefinição é válido por 1 hora.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setModo('entrar'); setEmailEnviado(false); }}
+                className={`${btn.primary} mt-4 w-full`}
+              >
+                Voltar ao login
+              </button>
+            </div>
+          ) : (
+            <>
+              <h2 className="font-display text-[26px] font-bold text-ink">Redefinir senha</h2>
+              <p className="mt-2 text-[15px] text-muted">Informe seu e-mail e enviaremos um link para criar uma nova senha.</p>
+
+              {erro && (
+                <div role="alert" className="mt-4 rounded-xl bg-danger/10 px-3 py-2.5 text-sm font-medium text-danger">
+                  {erro}
+                </div>
+              )}
+
+              <form onSubmit={handleRecuperarSenha} className="mt-6 space-y-3">
+                <div className="relative">
+                  <Mail strokeWidth={1.8} className={ICONE} aria-hidden="true" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Seu e-mail"
+                    aria-label="Seu e-mail"
+                    className={CAMPO}
+                  />
+                </div>
+                <button type="submit" disabled={carregando} className={`${btn.primary} w-full`}>
+                  {carregando ? 'Enviando…' : 'Enviar link de redefinição'}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] w-full bg-bg text-ink flex justify-center">
@@ -275,6 +363,18 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
                 {mostrarSenha ? <EyeOff size={18} strokeWidth={1.8} /> : <Eye size={18} strokeWidth={1.8} />}
               </button>
             </div>
+
+            {modo === 'entrar' && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setModo('recuperar'); setErro(null); }}
+                  className="text-sm text-muted hover:text-ink transition cursor-pointer"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            )}
 
             <button type="submit" disabled={carregando} className={`${btn.primary} relative mt-1.5 w-full`}>
               {carregando ? 'Entrando…' : modo === 'entrar' ? 'Entrar' : 'Criar conta'}
