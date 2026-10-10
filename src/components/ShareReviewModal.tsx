@@ -23,19 +23,19 @@ export default function ShareReviewModal({
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   useEscape(onClose);
 
-  // Renderiza o card social no Canvas (1080 x 1350 px) na identidade VIMO.
-  // Canvas não entende variáveis CSS: as cores da marca ficam em constantes.
+  // Renderiza o card social no Canvas (1080 x 1350 px) — estilo poster cinemático.
+  // Canvas não entende variáveis CSS: cores ficam em constantes.
   const COR = {
-    fundo: '#F8F7F4',
-    cartao: '#FFFFFF',
+    fundo: '#101116',
+    branco: '#FFFFFF',
+    creme: '#F8F7F4',
     tinta: '#101116',
-    tinta2: '#3A3B41',
-    suave: '#6E6F74',
+    suave: 'rgba(248,247,244,0.55)',
     azul: '#124BFF',
-    linha: '#D9D9D9',
-    trilho: '#EEEDEA',
+    azulClaro: 'rgba(18,75,255,0.18)',
   };
   const FONTE = 'Inter, ui-sans-serif, system-ui, sans-serif';
+  const FONTE_BOLD = `Plus Jakarta Sans, ${FONTE}`;
 
   const carregarImagem = (src: string) =>
     new Promise<HTMLImageElement | null>((resolve) => {
@@ -52,151 +52,197 @@ export default function ShareReviewModal({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    try {
-      await document.fonts?.ready;
-    } catch {}
+    try { await document.fonts?.ready; } catch {}
 
-    const width = 1080;
-    const height = 1350;
-    canvas.width = width;
-    canvas.height = height;
-    const M = 64; // margem
+    const W = 1080;
+    const H = 1350;
+    canvas.width = W;
+    canvas.height = H;
+    const M = 72;
 
-    // 1. Fundo off-white e cartão branco
+    // 1. Fundo escuro base
     ctx.fillStyle = COR.fundo;
-    ctx.fillRect(0, 0, width, height);
-    ctx.save();
-    ctx.shadowColor = 'rgba(16,17,22,0.08)';
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetY = 12;
-    ctx.fillStyle = COR.cartao;
-    ctx.beginPath();
-    ctx.roundRect(M - 24, 150, width - 2 * (M - 24), height - 150 - 60, 44);
-    ctx.fill();
-    ctx.restore();
+    ctx.fillRect(0, 0, W, H);
 
-    // 2. Logo oficial + legenda
-    const logo = await carregarImagem('/brand/vimo-logo-escuro.png');
-    if (logo) ctx.drawImage(logo, M, 52, 170, (170 * logo.height) / logo.width);
-    ctx.fillStyle = COR.suave;
-    ctx.font = `500 24px ${FONTE}`;
-    ctx.textAlign = 'right';
-    ctx.fillText('Descubra · Coma · Compartilhe', width - M, 98);
-    ctx.textAlign = 'left';
-
-    // 3. Foto do lugar com cantos arredondados
-    const imgX = M;
-    const imgY = 190;
-    const imgW = width - 2 * M;
-    const imgH = 540;
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(imgX, imgY, imgW, imgH, 32);
-    ctx.clip();
+    // 2. Foto full-bleed com gradient overlay — ou fundo abstrato
     const foto = await carregarImagem(fundoUrl);
     if (foto) {
-      const esc = Math.max(imgW / foto.width, imgH / foto.height);
+      const esc = Math.max(W / foto.width, H / foto.height);
       const nw = foto.width * esc;
       const nh = foto.height * esc;
-      ctx.drawImage(foto, imgX + (imgW - nw) / 2, imgY + (imgH - nh) / 2, nw, nh);
+      ctx.drawImage(foto, (W - nw) / 2, (H - nh) / 2, nw, nh);
     } else {
-      desenharFundoAbstrato(ctx, imgX, imgY, imgW, imgH, review.placeName);
+      desenharFundoAbstrato(ctx, 0, 0, W, H, review.placeName);
     }
-    ctx.restore();
 
-    // Selo de nota (branco, estrela azul), como no app
+    // 3. Gradiente escuro sobre a foto (do topo e forte embaixo)
+    const gradTop = ctx.createLinearGradient(0, 0, 0, 420);
+    gradTop.addColorStop(0, 'rgba(16,17,22,0.72)');
+    gradTop.addColorStop(1, 'rgba(16,17,22,0)');
+    ctx.fillStyle = gradTop;
+    ctx.fillRect(0, 0, W, 420);
+
+    const gradBot = ctx.createLinearGradient(0, H - 660, 0, H);
+    gradBot.addColorStop(0, 'rgba(16,17,22,0)');
+    gradBot.addColorStop(0.28, 'rgba(16,17,22,0.82)');
+    gradBot.addColorStop(1, 'rgba(16,17,22,0.98)');
+    ctx.fillStyle = gradBot;
+    ctx.fillRect(0, H - 660, W, 660);
+
+    // 4. Logo VIMO (versão clara) no canto superior esquerdo
+    const logo = await carregarImagem('/brand/vimo-logo-claro.png');
+    if (logo) {
+      const logoH = 38;
+      const logoW = Math.round(logoH * logo.width / logo.height);
+      ctx.drawImage(logo, M, 64, logoW, logoH);
+    } else {
+      ctx.fillStyle = COR.branco;
+      ctx.font = `800 36px ${FONTE_BOLD}`;
+      ctx.fillText('VIMO', M, 96);
+    }
+
+    // 5. Data no canto superior direito
+    const dataAvaliacao = review.visitedAt
+      ? new Date(review.visitedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+      : '';
+    if (dataAvaliacao) {
+      ctx.fillStyle = COR.suave;
+      ctx.font = `500 26px ${FONTE}`;
+      ctx.textAlign = 'right';
+      ctx.fillText(dataAvaliacao, W - M, 96);
+      ctx.textAlign = 'left';
+    }
+
+    // 6. Grande nota hero — círculo branco no centro-alto
     const notaTxt = review.overall.toFixed(1).replace('.', ',');
-    ctx.font = `700 34px ${FONTE}`;
-    const bw = ctx.measureText(notaTxt).width + 92;
-    const bx = imgX + imgW - bw - 24;
-    const by = imgY + 24;
+    const heroX = W / 2;
+    const heroY = 210;
+    const heroR = 96;
     ctx.save();
-    ctx.shadowColor = 'rgba(16,17,22,0.18)';
-    ctx.shadowBlur = 16;
-    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = 'rgba(18,75,255,0.4)';
+    ctx.shadowBlur = 48;
+    ctx.fillStyle = COR.branco;
     ctx.beginPath();
-    ctx.roundRect(bx, by, bw, 64, 32);
+    ctx.arc(heroX, heroY, heroR, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+    // Estrela acima
     ctx.fillStyle = COR.azul;
     ctx.font = `700 34px ${FONTE}`;
-    ctx.fillText('★', bx + 22, by + 44);
+    ctx.textAlign = 'center';
+    ctx.fillText('★', heroX, heroY - 16);
+    // Nota grande
     ctx.fillStyle = COR.tinta;
-    ctx.fillText(notaTxt, bx + 62, by + 44);
+    ctx.font = `800 56px ${FONTE_BOLD}`;
+    ctx.fillText(notaTxt, heroX, heroY + 38);
+    ctx.textAlign = 'left';
 
-    // 4. Lugar e quem avaliou
-    ctx.fillStyle = COR.tinta;
-    ctx.font = `700 52px ${FONTE}`;
-    wrapText(ctx, review.placeName, M + 8, 812, imgW - 16, 60, 1);
-    ctx.fillStyle = COR.suave;
-    ctx.font = `500 26px ${FONTE}`;
-    ctx.fillText([review.cityName?.replace(/\s*-\s*[A-Z]{2}$/, ''), `por ${review.authorName}`].filter(Boolean).join(' · '), M + 8, 856);
+    // 7. Nome do lugar — grande, branco, baixo
+    ctx.fillStyle = COR.branco;
+    ctx.font = `800 76px ${FONTE_BOLD}`;
+    wrapText(ctx, review.placeName, M, 788, W - 2 * M, 86, 2);
 
-    // 5. Trecho da avaliação
-    if (review.text) {
-      ctx.fillStyle = COR.tinta2;
-      ctx.font = `400 32px ${FONTE}`;
-      wrapText(ctx, `“${review.text}”`, M + 8, 924, imgW - 16, 46, 3);
+    // Cidade
+    const cidade = review.cityName?.replace(/\s*-\s*[A-Z]{2}$/, '') || '';
+    if (cidade) {
+      ctx.fillStyle = COR.suave;
+      ctx.font = `500 30px ${FONTE}`;
+      ctx.fillText(cidade.toUpperCase(), M, 856);
     }
 
-    // 6. Critérios em barras azuis
+    // 8. Critérios como pills horizontais compactos
     const criterios = [
-      { label: 'Comida', val: review.ratings?.comida || review.overall },
-      { label: 'Ambiente', val: review.ratings?.ambiente || review.overall },
-      { label: 'Atendimento', val: review.ratings?.atendimento || review.overall },
-      { label: 'Custo-benefício', val: review.ratings?.custoBeneficio || review.overall },
+      { label: 'Comida', val: review.ratings?.comida ?? review.overall },
+      { label: 'Ambiente', val: review.ratings?.ambiente ?? review.overall },
+      { label: 'Serviço', val: review.ratings?.atendimento ?? review.overall },
+      { label: 'Custo', val: review.ratings?.custoBeneficio ?? review.overall },
     ];
-    const gridY = 1080;
-    const colW = (imgW - 16 - 48) / 2;
-    criterios.forEach((c, i) => {
-      const cx = M + 8 + (i % 2) * (colW + 48);
-      const cy = gridY + Math.floor(i / 2) * 78;
-      ctx.fillStyle = COR.tinta2;
-      ctx.font = `600 24px ${FONTE}`;
-      ctx.fillText(c.label, cx, cy);
-      ctx.fillStyle = COR.tinta;
-      ctx.font = `700 24px ${FONTE}`;
-      ctx.textAlign = 'right';
-      ctx.fillText(c.val.toFixed(1).replace('.', ','), cx + colW, cy);
-      ctx.textAlign = 'left';
-      ctx.fillStyle = COR.trilho;
+    let pillX = M;
+    const pillY = 904;
+    const pillH = 52;
+    const pillGap = 16;
+    for (const c of criterios) {
+      const label = `${c.label}  ${c.val.toFixed(1).replace('.', ',')}`;
+      ctx.font = `600 26px ${FONTE}`;
+      const tw = ctx.measureText(label).width;
+      const pw = tw + 36;
+      // Pill glass
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
       ctx.beginPath();
-      ctx.roundRect(cx, cy + 14, colW, 10, 5);
+      ctx.roundRect(pillX, pillY, pw, pillH, pillH / 2);
       ctx.fill();
-      ctx.fillStyle = COR.azul;
-      ctx.beginPath();
-      ctx.roundRect(cx, cy + 14, Math.max(10, (c.val / 5) * colW), 10, 5);
-      ctx.fill();
-    });
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = COR.branco;
+      ctx.fillText(label, pillX + 18, pillY + 34);
+      pillX += pw + pillGap;
+    }
 
-    // 7. Rodapé: autor e o mascote avaliando
-    const footY = 1238;
+    // 9. Trecho da avaliação
+    if (review.text) {
+      ctx.fillStyle = 'rgba(248,247,244,0.75)';
+      ctx.font = `400 italic 32px ${FONTE}`;
+      wrapText(ctx, `”${review.text}”`, M, 1020, W - 2 * M, 46, 3);
+    }
+
+    // 10. Rodapé: linha divisória + avatar + nome
+    const footY = 1260;
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(M, footY - 30);
+    ctx.lineTo(W - M, footY - 30);
+    ctx.stroke();
+
+    // Avatar circular
+    const avatarR = 34;
+    const avatarCX = M + avatarR;
+    const avatarCY = footY + 6;
     const avatar = await carregarImagem(review.authorPhoto);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(M + 40, footY, 32, 0, Math.PI * 2);
+    ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2);
     ctx.clip();
     if (avatar) {
-      ctx.drawImage(avatar, M + 8, footY - 32, 64, 64);
+      ctx.drawImage(avatar, avatarCX - avatarR, avatarCY - avatarR, avatarR * 2, avatarR * 2);
     } else {
-      ctx.fillStyle = COR.trilho;
+      ctx.fillStyle = COR.azul;
       ctx.fill();
-      ctx.fillStyle = COR.tinta2;
-      ctx.font = `700 28px ${FONTE}`;
+      ctx.fillStyle = COR.branco;
+      ctx.font = `700 28px ${FONTE_BOLD}`;
       ctx.textAlign = 'center';
-      ctx.fillText((review.authorName || '?').charAt(0).toUpperCase(), M + 40, footY + 10);
+      ctx.fillText((review.authorName || '?').charAt(0).toUpperCase(), avatarCX, avatarCY + 10);
       ctx.textAlign = 'left';
     }
     ctx.restore();
-    ctx.fillStyle = COR.tinta;
-    ctx.font = `700 26px ${FONTE}`;
-    ctx.fillText(review.authorName, M + 88, footY - 4);
-    ctx.fillStyle = COR.suave;
-    ctx.font = `500 22px ${FONTE}`;
-    ctx.fillText(`${review.authorHandle} no VIMO`, M + 88, footY + 26);
 
-    const mascote = await carregarImagem('/mascote/avaliando.png');
-    if (mascote) ctx.drawImage(mascote, width - M - 120, footY - 92, 128, 128);
+    // Borda no avatar
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(avatarCX, avatarCY, avatarR + 1, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Nome e handle
+    ctx.fillStyle = COR.branco;
+    ctx.font = `700 28px ${FONTE_BOLD}`;
+    ctx.fillText(review.authorName, M + avatarR * 2 + 20, footY - 2);
+    ctx.fillStyle = COR.suave;
+    ctx.font = `500 24px ${FONTE}`;
+    ctx.fillText(`${review.authorHandle} · vimo.app`, M + avatarR * 2 + 20, footY + 28);
+
+    // Mascote pequeno no canto inferior direito
+    const mascote = await carregarImagem('/mascote/confiante.png');
+    if (mascote) {
+      const mH = 100;
+      const mW = Math.round(mH * mascote.width / mascote.height);
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(mascote, W - M - mW, footY - mH / 2 + 8, mW, mH);
+      ctx.globalAlpha = 1;
+    }
 
     setImagemGeradaUrl(canvas.toDataURL('image/png'));
   };
@@ -242,24 +288,43 @@ export default function ShareReviewModal({
     }
   }
 
-  // Lugar sem foto: bloco na cor da marca com o nome
+  // Fundo abstrato cinemático quando não há foto
   function desenharFundoAbstrato(
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
     w: number,
     h: number,
-    nome: string
+    _nome: string
   ) {
-    ctx.fillStyle = '#101116';
+    // Base escura
+    ctx.fillStyle = '#0A0B10';
     ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = '#124BFF';
-    ctx.beginPath();
-    ctx.arc(x + w - 120, y + 110, 150, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#F8F7F4';
-    ctx.font = `700 48px ${FONTE}`;
-    wrapText(ctx, nome, x + 48, y + h - 60, w - 96, 56, 2);
+
+    // Blob azul grande, difuso — topo direito
+    const grad1 = ctx.createRadialGradient(x + w * 0.78, y + h * 0.22, 0, x + w * 0.78, y + h * 0.22, w * 0.55);
+    grad1.addColorStop(0, 'rgba(18,75,255,0.55)');
+    grad1.addColorStop(1, 'rgba(18,75,255,0)');
+    ctx.fillStyle = grad1;
+    ctx.fillRect(x, y, w, h);
+
+    // Segundo blob menor, esverdeado — esquerdo baixo (complementar)
+    const grad2 = ctx.createRadialGradient(x + w * 0.15, y + h * 0.72, 0, x + w * 0.15, y + h * 0.72, w * 0.4);
+    grad2.addColorStop(0, 'rgba(0,180,120,0.22)');
+    grad2.addColorStop(1, 'rgba(0,180,120,0)');
+    ctx.fillStyle = grad2;
+    ctx.fillRect(x, y, w, h);
+
+    // Grade sutil de linhas
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    const step = 80;
+    for (let gx = x; gx <= x + w; gx += step) {
+      ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx, y + h); ctx.stroke();
+    }
+    for (let gy = y; gy <= y + h; gy += step) {
+      ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + w, gy); ctx.stroke();
+    }
   }
 
 
