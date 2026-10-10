@@ -68,36 +68,33 @@ export default function ExplorarScreen({
       );
     }
 
-    // Filtro pelo tipo de restaurante
-    if (filtroTipo === 'italiana') {
-      list = list.filter((p) => {
-        const n = p.name.toLowerCase();
-        return n.includes('trattoria') || n.includes('pizza') || n.includes('pasta') || n.includes('nonno') || n.includes('forno') || n.includes('napoletana');
-      });
-    } else if (filtroTipo === 'hamburguer') {
-      list = list.filter((p) => {
-        const n = p.name.toLowerCase();
-        return n.includes('burger') || n.includes('hamburguer') || n.includes('craft');
-      });
-    } else if (filtroTipo === 'japonesa') {
-      list = list.filter((p) => {
-        const n = p.name.toLowerCase();
-        return n.includes('sushi') || n.includes('omakase') || n.includes('shima') || n.includes('ramen') || n.includes('japones');
-      });
-    } else if (filtroTipo === 'cafe_padaria') {
-      list = list.filter((p) => p.tipo === 'cafe' || p.tipo === 'bakery' || p.name.toLowerCase().includes('padaria') || p.name.toLowerCase().includes('café') || p.name.toLowerCase().includes('torra') || p.name.toLowerCase().includes('confeitaria'));
-    } else if (filtroTipo === 'bistro') {
-      list = list.filter((p) => {
-        const n = p.name.toLowerCase();
-        return n.includes('bistrô') || n.includes('maniçoba') || n.includes('contemporâneo');
-      });
-    } else if (filtroTipo === 'carnes') {
-      list = list.filter((p) => {
-        const n = p.name.toLowerCase();
-        return n.includes('parrilla') || n.includes('fogo') || n.includes('carne') || n.includes('steak');
-      });
-    } else if (filtroTipo === 'bar') {
-      list = list.filter((p) => p.tipo === 'bar' || p.name.toLowerCase().includes('bar') || p.name.toLowerCase().includes('boteco') || p.name.toLowerCase().includes('coquetelaria'));
+    // Filtro por categoria — prioriza campos estruturados (tipo, cuisine, category), fallback por nome
+    if (filtroTipo !== 'todos') {
+      const corpus = (p: Place) =>
+        [p.name, p.cuisine, p.category, p.tipo].filter(Boolean).join(' ').toLowerCase();
+      const has = (p: Place, ...termos: string[]) => termos.some((t) => corpus(p).includes(t));
+
+      if (filtroTipo === 'italiana') {
+        list = list.filter((p) => has(p, 'italiana', 'italian', 'trattoria', 'pizza', 'pasta', 'forno', 'napoletana', 'cantina'));
+      } else if (filtroTipo === 'hamburguer') {
+        list = list.filter((p) => has(p, 'burger', 'hamburguer', 'hamburger', 'lanche', 'sandwich'));
+      } else if (filtroTipo === 'japonesa') {
+        list = list.filter((p) => has(p, 'japones', 'japanese', 'sushi', 'omakase', 'ramen', 'temaki', 'izakaya'));
+      } else if (filtroTipo === 'cafe_padaria') {
+        list = list.filter((p) =>
+          p.tipo === 'cafe' || p.tipo === 'bakery' ||
+          has(p, 'café', 'cafe', 'coffee', 'padaria', 'panific', 'torra', 'confeitaria', 'croissant', 'espresso')
+        );
+      } else if (filtroTipo === 'bistro') {
+        list = list.filter((p) => has(p, 'bistro', 'bistrô', 'contemporâneo', 'contemporaneo', 'fusion', 'criativo'));
+      } else if (filtroTipo === 'carnes') {
+        list = list.filter((p) => has(p, 'parrilla', 'churrasco', 'carne', 'steak', 'fogo', 'espeto', 'assado', 'grill'));
+      } else if (filtroTipo === 'bar') {
+        list = list.filter((p) =>
+          p.tipo === 'bar' ||
+          has(p, 'bar', 'boteco', 'coquetelaria', 'pub', 'cervej', 'chopp', 'chope', 'craft beer')
+        );
+      }
     }
 
     return list;
@@ -126,12 +123,16 @@ export default function ExplorarScreen({
       .filter(Boolean)
       .join(' · ');
 
-  // Populares: os lugares com mais avaliações reais (Google ou VIMO)
+  // Em destaque: melhor combinação de nota e volume de avaliações
   const populares = useMemo(
     () =>
-      [...lugaresFiltrados].sort(
-        (a, b) => (b.googleUserRatingCount ?? b.reviewsCount ?? 0) - (a.googleUserRatingCount ?? a.reviewsCount ?? 0)
-      ),
+      [...lugaresFiltrados].sort((a, b) => {
+        const notaA = a.vimoRating ?? a.googleRating ?? 0;
+        const notaB = b.vimoRating ?? b.googleRating ?? 0;
+        const volA = a.vimoReviewsCount ?? a.googleUserRatingCount ?? a.reviewsCount ?? 0;
+        const volB = b.vimoReviewsCount ?? b.googleUserRatingCount ?? b.reviewsCount ?? 0;
+        return notaB * Math.log(volB + 1) - notaA * Math.log(volA + 1);
+      }),
     [lugaresFiltrados]
   );
 
@@ -236,7 +237,7 @@ export default function ExplorarScreen({
           /* Início: estilo Letterboxd, muitos pôsteres e nenhuma nota (a nota aparece no lugar) */
           <div className="space-y-9">
             <section className="px-4">
-              <CabecalhoSecao titulo="Populares da semana" total={lugaresFiltrados.length} />
+              <CabecalhoSecao titulo="Em destaque" total={lugaresFiltrados.length} />
               <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
                 {populares.slice(0, 4).map((place) => (
                   <Poster key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} />

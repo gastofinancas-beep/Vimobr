@@ -60,7 +60,7 @@ export default function PerfilScreen({
   const [mostrarPro, setMostrarPro] = useState(false);
   const [seguindo, setSeguindo] = useState(false);
   const [salvandoFollow, setSalvandoFollow] = useState(false);
-  const [perfilRemoto, setPerfilRemoto] = useState<{ followersCount?: number; followingCount?: number }>({});
+  const [perfilRemoto, setPerfilRemoto] = useState<Partial<import('../types').UserProfile>>({});
   const [listas, setListas] = useState<{ queroIr: string[]; jaFui: string[]; favoritos: string[] }>({
     queroIr: [],
     jaFui: [],
@@ -85,9 +85,7 @@ export default function PerfilScreen({
       setSeguindo(estaSeguindo(currentUser.uid, uid));
       carregarPerfil(uid).then((p) => {
         if (!ativo) return;
-        if (p.followersCount !== undefined || p.followingCount !== undefined) {
-          setPerfilRemoto({ followersCount: p.followersCount, followingCount: p.followingCount });
-        }
+        if (Object.keys(p).length > 0) setPerfilRemoto(p);
       });
     }
     return () => {
@@ -101,12 +99,12 @@ export default function PerfilScreen({
     const r = reviews[0];
     return {
       uid,
-      displayName: r?.authorName ?? 'Usuário',
-      handle: r?.authorHandle ?? '@usuario',
-      photoURL: r?.authorPhoto ?? '',
-      bio: '',
-      homeCityKey: r?.cityKey ?? '',
-      homeCityName: r?.cityName ?? '',
+      displayName: perfilRemoto.displayName ?? r?.authorName ?? 'Usuário',
+      handle: perfilRemoto.handle ?? r?.authorHandle ?? '@usuario',
+      photoURL: perfilRemoto.photoURL ?? r?.authorPhoto ?? '',
+      bio: perfilRemoto.bio ?? '',
+      homeCityKey: perfilRemoto.homeCityKey ?? r?.cityKey ?? '',
+      homeCityName: perfilRemoto.homeCityName ?? r?.cityName ?? '',
       followersCount: perfilRemoto.followersCount ?? 0,
       followingCount: perfilRemoto.followingCount ?? 0,
     };
@@ -121,7 +119,7 @@ export default function PerfilScreen({
     setSeguindo(novoEstado);
     setPerfilRemoto((prev) => ({
       ...prev,
-      followersCount: (prev.followersCount ?? usuario.followersCount) + (novoEstado ? 1 : -1),
+      followersCount: (prev.followersCount ?? 0) + (novoEstado ? 1 : -1),
     }));
     try {
       if (novoEstado) {
@@ -133,7 +131,7 @@ export default function PerfilScreen({
       setSeguindo(!novoEstado);
       setPerfilRemoto((prev) => ({
         ...prev,
-        followersCount: (prev.followersCount ?? usuario.followersCount) + (novoEstado ? -1 : 1),
+        followersCount: (prev.followersCount ?? 0) + (novoEstado ? -1 : 1),
       }));
     } finally {
       setSalvandoFollow(false);
