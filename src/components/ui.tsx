@@ -112,13 +112,29 @@ export function Spinner({ label = 'Carregando', className = '', size = 28 }: { l
 }
 
 /** Logo "vimo" (arte oficial): versão escura no tema claro e clara no tema escuro. */
+/**
+ * Logo "vimo" em vetor: traços arredondados como na prancha oficial,
+ * letras na cor do texto e o ponto do "i" no azul da marca.
+ */
 export function Logo({ altura = 26, className = '' }: { altura?: number; className?: string }) {
-  const largura = Math.round(altura * (325 / 116));
+  const largura = Math.round(altura * (232 / 92));
   return (
-    <span className={`inline-block select-none ${className}`} style={{ width: largura, height: altura }}>
-      <img src="/brand/vimo-logo-escuro.png" alt="vimo" width={largura} height={altura} className="block dark:hidden" />
-      <img src="/brand/vimo-logo-claro.png" alt="vimo" width={largura} height={altura} className="hidden dark:block" />
-    </span>
+    <svg
+      role="img"
+      aria-label="vimo"
+      viewBox="0 0 232 92"
+      width={largura}
+      height={altura}
+      className={`block select-none text-ink ${className}`}
+    >
+      <g fill="none" stroke="currentColor" strokeWidth={16} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 40 L33 84 L54 40" />
+        <path d="M77 40 V84" />
+        <path d="M100 84 V54 A14 14 0 0 1 128 54 V84 M128 54 A14 14 0 0 1 156 54 V84" />
+        <circle cx="200" cy="62" r="22" />
+      </g>
+      <circle cx="77" cy="14" r="10" className="fill-primary" />
+    </svg>
   );
 }
 

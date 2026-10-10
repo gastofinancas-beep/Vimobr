@@ -219,6 +219,8 @@ export interface UserProfile {
   homeCityName: string;
   followersCount: number;
   followingCount: number;
+  /** Plano da conta: 'pro' libera a vitrine de medalhas no perfil. */
+  plano?: 'gratis' | 'pro';
   queroIr?: string[];
   jaFui?: string[];
   wishlist?: WishlistItem[];

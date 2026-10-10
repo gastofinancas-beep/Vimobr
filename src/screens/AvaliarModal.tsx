@@ -8,7 +8,6 @@ import {
   MapPin,
   Check,
   Calendar,
-  Sparkles,
   Users,
   Utensils,
   AlertCircle,

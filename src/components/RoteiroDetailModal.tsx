@@ -37,7 +37,7 @@ export default function RoteiroDetailModal({
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Link do roteiro copiado para a área de transferência!');
+      alert('Link copiado');
     }
   };
 

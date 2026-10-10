@@ -13,6 +13,25 @@ import { buscarProximos, searchPlaces, SAMPLE_PLACES, calcularDistanciaKm } from
 import { estaNaWishlist, alternarWishlist } from '../lib/wishlist';
 import type { UserProfile, Place } from '../types';
 
+/** Regras de cada filtro do mapa: tipo do lugar e palavras do nome ou da cozinha. */
+const REGRAS_CATEGORIA: Record<string, { tipos?: string[]; termos?: RegExp }> = {
+  restaurant: { tipos: ['restaurant'] },
+  cafe: { tipos: ['cafe'], termos: /caf[eé]|espresso|torra/ },
+  bar: { tipos: ['bar'], termos: /\bbar\b|boteco|coquetel|chopp/ },
+  pizza: { termos: /pizz|napolet/ },
+  burger: { termos: /burger|hamb[uú]rguer/ },
+  japonesa: { termos: /japon|sushi|omakase|ramen|izakaya/ },
+  padaria: { tipos: ['bakery'], termos: /padaria|confeitaria|p[aã]es|levain/ },
+};
+
+function combinaCategoria(p: Place, categoria: string) {
+  const regra = REGRAS_CATEGORIA[categoria];
+  if (!regra) return true;
+  if (regra.tipos?.includes(p.tipo || '')) return true;
+  const texto = `${p.name || ''} ${p.cuisine || ''}`.toLowerCase();
+  return !!regra.termos?.test(texto);
+}
+
 const CATEGORIAS_FILTRO = [
   { id: 'todos', label: 'Todos' },
   { id: 'restaurant', label: 'Restaurantes' },
@@ -50,6 +69,7 @@ export default function DescobrirPertoDeMimScreen({
   // Wishlist
   const [wishlistState, setWishlistState] = useState<Record<string, boolean>>({});
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toastSalvo, setToastSalvo] = useState(true);
 
   const searchCacheRef = useRef<Map<string, UnifiedPlace[]>>(new Map());
 
@@ -97,11 +117,7 @@ export default function DescobrirPertoDeMimScreen({
 
       // Filtragem por categoria
       if (categoria !== 'todos') {
-        const catLow = categoria.toLowerCase();
-        rawPlaces = rawPlaces.filter((p) => {
-          const t = ((p.tipo || '') + ' ' + (p.name || '') + ' ' + (p.address || '')).toLowerCase();
-          return t.includes(catLow);
-        });
+        rawPlaces = rawPlaces.filter((p) => combinaCategoria(p, categoria));
       }
 
       // Normaliza para UnifiedPlace
@@ -188,8 +204,7 @@ export default function DescobrirPertoDeMimScreen({
 
     const res = await alternarWishlist(uid, pObj);
     setWishlistState((prev) => ({ ...prev, [place.id]: res.added }));
-    setToastMsg(res.added ? `${place.name} salvo` : 'Removido');
-    setTimeout(() => setToastMsg(null), 1600);
+    avisar(res.added ? `${place.name} salvo` : 'Removido', true);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -213,10 +228,27 @@ export default function DescobrirPertoDeMimScreen({
     }
   };
 
+  const avisar = (msg: string, salvo = false) => {
+    setToastSalvo(salvo);
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2200);
+  };
+
   const handleRecentralizar = () => {
-    if (mapRef.current) {
-      mapRef.current.recenter(coords.lat, coords.lng);
-    }
+    const voltarParaCidade = () => {
+      mapRef.current?.recenter(coords.lat, coords.lng);
+      avisar('Sem acesso à localização. Mostrando a cidade.');
+    };
+    if (!navigator.geolocation) return voltarParaCidade();
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setCoords((c) => ({ ...c, lat, lng }));
+        mapRef.current?.recenter(lat, lng);
+      },
+      voltarParaCidade,
+      { timeout: 6000, maximumAge: 60000 }
+    );
   };
 
   const sel = selectedPlace;
@@ -233,7 +265,7 @@ export default function DescobrirPertoDeMimScreen({
           role="status"
           className="fixed top-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-ink px-3.5 py-2 text-sm font-medium text-bg shadow-lg animate-in slide-in-from-top-2"
         >
-          <Bookmark size={14} className="fill-current" />
+          {toastSalvo && <Bookmark size={14} className="fill-current" />}
           <span>{toastMsg}</span>
         </div>
       )}

@@ -85,12 +85,25 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
   });
 
   return [
+    {
+      id: 'primeira-ida',
+      titulo: 'Primeira ida',
+      descricao: 'Registrou a primeira ida no diário.',
+      pistaSecreta: 'Registre sua primeira ida para liberar.',
+      icone: 'flag',
+      categoria: 'Avaliações',
+      tier: 'bronze',
+      meta: 1,
+      progressoAtual: Math.min(1, totalAvaliacoes),
+      desbloqueada: totalAvaliacoes >= 1,
+      pontos: 50,
+    },
     // === MARCOS ALTOS E DIFÍCEIS DE AVALIAÇÕES ===
     {
       id: 'critico-gourmet',
-      titulo: 'Crítico Gastronômico',
-      descricao: 'Construiu um histórico sólido com mais de 5 avaliações consistentes no seu diário.',
-      pistaSecreta: 'Um crítico não nasce no primeiro prato. Continue registrando suas visitas.',
+      titulo: '5 idas',
+      descricao: 'Registrou 5 idas no diário.',
+      pistaSecreta: 'Registre 5 idas para liberar.',
       icone: 'flame',
       categoria: 'Avaliações',
       tier: 'prata',
@@ -101,9 +114,9 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     },
     {
       id: 'top-critico-consagrado',
-      titulo: 'Top Crítico Consagrado',
-      descricao: 'Alcançou a marca de 15 avaliações criteriosas e virou referência culinária.',
-      pistaSecreta: 'Reservado aos paladares que realmente vivem a gastronomia da cidade.',
+      titulo: '15 idas',
+      descricao: 'Registrou 15 idas no diário.',
+      pistaSecreta: 'Registre 15 idas para liberar.',
       icone: 'crown',
       categoria: 'Avaliações',
       tier: 'ouro',
@@ -114,9 +127,9 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     },
     {
       id: 'lenda-do-guia',
-      titulo: 'Lenda do Guia Secreto',
-      descricao: 'Mais de 30 experiências gastronômicas documentadas. Um verdadeiro mestre do paladar.',
-      pistaSecreta: 'Apenas os mais dedicados exploradores alcançam este patamar lendário.',
+      titulo: '30 idas',
+      descricao: 'Registrou 30 idas no diário.',
+      pistaSecreta: 'Registre 30 idas para liberar.',
       icone: 'trophy',
       categoria: 'Avaliações',
       tier: 'diamante',
@@ -129,9 +142,9 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     // === MISTÉRIOS DE CULINÁRIA E ESPECIALIDADES (DIFÍCEIS DE CONSEGUIR) ===
     {
       id: 'alquimista-dos-cafes',
-      titulo: 'Alquimista dos Cafés',
-      descricao: 'Mapeou e avaliou 5 ou mais cafeterias e torrefações de cafés especiais.',
-      pistaSecreta: 'Existe um segredo no aroma dos grãos especiais e métodos filtrados...',
+      titulo: 'Rota do café',
+      descricao: 'Avaliou 5 cafés.',
+      pistaSecreta: 'Avalie 5 cafés para liberar.',
       icone: 'coffee',
       categoria: 'Culinária',
       tier: 'ouro',
@@ -142,9 +155,9 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     },
     {
       id: 'mestre-do-levain',
-      titulo: 'Mestre da Fermentação',
-      descricao: 'Visitou e avaliou 5 padarias artesanais e casas de sourdough.',
-      pistaSecreta: 'Paciência, farinha e tempo revelam esta conquista...',
+      titulo: 'Rota da padaria',
+      descricao: 'Avaliou 5 padarias.',
+      pistaSecreta: 'Avalie 5 padarias para liberar.',
       icone: 'bakery',
       categoria: 'Culinária',
       tier: 'ouro',
@@ -155,9 +168,9 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     },
     {
       id: 'balcao-autoral',
-      titulo: 'Sommelier & Balcão Autoral',
-      descricao: 'Explorou e documentou 5 bares e balcões de alta coquetelaria.',
-      pistaSecreta: 'A noite guarda segredos para quem aprecia a verdadeira coquetelaria...',
+      titulo: 'Rota dos bares',
+      descricao: 'Avaliou 5 bares.',
+      pistaSecreta: 'Avalie 5 bares para liberar.',
       icone: 'drink',
       categoria: 'Culinária',
       tier: 'ouro',
@@ -168,9 +181,9 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     },
     {
       id: 'connoisseur-napoletano',
-      titulo: 'Connoisseur da Vera Pizza',
-      descricao: 'Avaliou 5 pizzarias tradicionais de fermentação lenta ou trattorias.',
-      pistaSecreta: 'Fornos a 450°C e receitas ancestrais revelam este marco.',
+      titulo: 'Rota da pizza',
+      descricao: 'Avaliou 5 pizzarias ou cantinas.',
+      pistaSecreta: 'Avalie 5 pizzarias ou cantinas para liberar.',
       icone: 'pizza',
       categoria: 'Culinária',
       tier: 'ouro',
@@ -183,9 +196,9 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     // === CONQUISTAS ESPECIAIS E MISTERIOSAS ===
     {
       id: 'olhar-do-esteta',
-      titulo: 'Olhar do Esteta',
-      descricao: 'Registrou 6 ou mais visitas enriquecidas com fotos detalhadas dos pratos e ambiente.',
-      pistaSecreta: 'A experiência também se come com os olhos...',
+      titulo: 'Fotógrafo',
+      descricao: 'Publicou 6 idas com fotos.',
+      pistaSecreta: 'Publique 6 idas com fotos para liberar.',
       icone: 'camera',
       categoria: 'Especial',
       tier: 'prata',
@@ -196,10 +209,10 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     },
     {
       id: 'paladar-cirurgico',
-      titulo: 'Paladar Cirúrgico',
-      descricao: 'Elaborou 5 resenhas detalhadas com relatos aprofundados e notas por critério.',
-      pistaSecreta: 'Aprofunde suas impressões sobre sabor, serviço e atmosfera...',
-      icone: 'sparkles',
+      titulo: 'Detalhista',
+      descricao: 'Fez 5 avaliações com texto e notas por critério.',
+      pistaSecreta: 'Escreva 5 avaliações completas para liberar.',
+      icone: 'pen',
       categoria: 'Especial',
       tier: 'ouro',
       meta: 5,
@@ -209,9 +222,9 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     },
     {
       id: 'mesa-farta-e-amigos',
-      titulo: 'Confraria Gastronômica',
-      descricao: 'Compartilhou e marcou amigos em 5 ou mais almoços ou jantares.',
-      pistaSecreta: 'A melhor gastronomia é sempre aquela dividida em boa companhia...',
+      titulo: 'Boa companhia',
+      descricao: 'Marcou amigos em 5 idas.',
+      pistaSecreta: 'Marque amigos em 5 idas para liberar.',
       icone: 'users',
       categoria: 'Comunidade',
       tier: 'ouro',
@@ -222,9 +235,9 @@ export function calcularConquistasUsuario(reviews: Review[]): Badge[] {
     },
     {
       id: 'influencia-culinaria',
-      titulo: 'Influência Culinária',
-      descricao: 'Suas opiniões conquistaram mais de 25 curtidas e reconhecimentos da comunidade.',
-      pistaSecreta: 'Quando seu gosto inspira outros comensais...',
+      titulo: 'Referência',
+      descricao: 'Recebeu 25 curtidas nas avaliações.',
+      pistaSecreta: 'Receba 25 curtidas para liberar.',
       icone: 'heart',
       categoria: 'Comunidade',
       tier: 'diamante',
@@ -244,10 +257,10 @@ export function obterResumoConquistas(reviews: Review[]): ConquistasSummary {
   const totalPontos = desbloqueadas.reduce((acc, b) => acc + b.pontos, 0);
 
   const niveis = [
-    { nivel: 1, nome: 'Explorador Discreto', min: 0, max: 500 },
-    { nivel: 2, nome: 'Paladar Criterioso', min: 500, max: 1200 },
-    { nivel: 3, nome: 'Crítico de Destaque', min: 1200, max: 2500 },
-    { nivel: 4, nome: 'Mestre da Gastronomia', min: 2500, max: 5000 },
+    { nivel: 1, nome: 'Iniciante', min: 0, max: 500 },
+    { nivel: 2, nome: 'Frequente', min: 500, max: 1200 },
+    { nivel: 3, nome: 'Experiente', min: 1200, max: 2500 },
+    { nivel: 4, nome: 'Referência', min: 2500, max: 5000 },
   ];
 
   const nivelInfo = niveis.find((n) => totalPontos < n.max) || niveis[niveis.length - 1];

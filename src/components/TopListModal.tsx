@@ -44,7 +44,7 @@ export default function TopListModal({
     e.stopPropagation();
     const res = await alternarWishlist(currentUser.uid, place);
     setSalvos((prev) => ({ ...prev, [place.id]: res.added }));
-    setToast(res.added ? `"${place.name}" salvo na Wishlist!` : 'Removido da Wishlist');
+    setToast(res.added ? `"${place.name}" salvo na lista` : 'Removido da lista');
     setTimeout(() => setToast(null), 2500);
   };
 
@@ -59,7 +59,7 @@ export default function TopListModal({
       map[r.place.id] = true;
     });
     setSalvos(map);
-    setToast('Top 3 adicionado à sua Lista de Desejos!');
+    setToast('Top 3 salvo na sua lista');
     setTimeout(() => setToast(null), 2500);
   };
 

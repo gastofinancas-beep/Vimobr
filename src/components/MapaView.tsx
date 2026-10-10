@@ -78,7 +78,7 @@ export default function MapaView({ onAbrirLugar, userId = '' }: { onAbrirLugar: 
     e.stopPropagation();
     const res = await alternarWishlist(userId, p);
     setWishlistMap((prev) => ({ ...prev, [p.id]: res.added }));
-    setToastMsg(res.added ? `${p.name} salvo na Lista de Desejos!` : 'Removido da Lista de Desejos');
+    setToastMsg(res.added ? `${p.name} salvo na lista` : 'Removido da lista');
     setTimeout(() => setToastMsg(null), 2500);
   };
 

@@ -209,7 +209,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
         {/* Mascote: pisca e fecha os olhos enquanto a senha é digitada */}
         <div className="mt-4 flex flex-col items-center text-center">
           <MascoteHero tamanho={168} olhosFechados={cobrindo} />
-          <h1 className="mt-3 text-[26px] font-bold leading-[1.15] tracking-[-0.025em] text-ink">
+          <h1 className="mt-3 font-display text-[26px] font-bold leading-[1.15] tracking-[-0.025em] text-ink">
             {modo === 'entrar' ? 'Boas comidas aproximam boas pessoas.' : 'Crie sua conta no VIMO'}
           </h1>
           <p className="mt-2 max-w-[300px] text-[15px] text-muted">

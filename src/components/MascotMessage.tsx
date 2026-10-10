@@ -94,7 +94,7 @@ export default function MascotMessage({
     <div className={`flex flex-col items-center justify-center px-6 py-10 text-center ${className}`}>
       <Mascote reacao={reacao} tamanho={Math.min(size, 96)} animacao={animacao} />
 
-      <h3 className="mt-4 text-lg font-semibold tracking-tight text-ink">{title}</h3>
+      <h3 className="mt-4 font-display text-lg font-bold tracking-tight text-ink">{title}</h3>
 
       {subtitle && <p className="mt-1.5 max-w-[280px] text-sm text-muted">{subtitle}</p>}
 

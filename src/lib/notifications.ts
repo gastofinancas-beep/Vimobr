@@ -17,7 +17,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     reviewId: 'rev-04',
     placeId: 'chIJf-place-04',
     placeName: 'Bar do Canto & Coquetelaria',
-    texto: 'marcou você como companhia na avaliação de Bar do Canto & Coquetelaria. Escolha como deseja aparecer!',
+    texto: 'marcou você como companhia na avaliação de Bar do Canto & Coquetelaria. Escolha como quer aparecer.',
     lida: false,
     createdAt: Date.now() - 1000 * 60 * 25, // 25 min atrás
     companionStatus: 'pendente',
@@ -174,9 +174,9 @@ export function responderNotificacaoMarcacao(
         companionStatus: resposta,
         texto:
           resposta === 'aprovado_coautor'
-            ? 'Você aceitou a co-autoria. A avaliação foi adicionada ao seu Diário!'
+            ? 'Avaliação adicionada ao seu Diário'
             : resposta === 'aprovado_presenca'
-            ? 'Presença confirmada na avaliação!'
+            ? 'Presença confirmada'
             : 'Marcação recusada.',
       };
     }

@@ -95,7 +95,7 @@ export function iniciarEscutaNotificacoes(
 
     onMessage(messaging, (payload) => {
       const title = payload.notification?.title || payload.data?.title || 'Vimo Gastronomia';
-      const body = payload.notification?.body || payload.data?.body || 'Nova notificação recebida!';
+      const body = payload.notification?.body || payload.data?.body || 'Nova notificação';
 
       // Exibe notificação nativa do sistema operacional se tiver permissão
       if ('Notification' in window && Notification.permission === 'granted') {

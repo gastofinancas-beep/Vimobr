@@ -131,7 +131,7 @@ export default function WishlistTab({
             </h3>
             <p className="max-w-[260px] text-[13px] leading-relaxed text-[var(--muted)]">
               {items.length === 0
-                ? 'Explore o feed ou o mapa e salve os lugares que você quer conhecer!'
+                ? 'Salve lugares pelo Explorar ou pelo mapa.'
                 : 'Tente selecionar outra categoria.'}
             </p>
             {items.length === 0 && onExplorar && (

@@ -168,7 +168,7 @@ export default function TutorialModal({
           className={`flex flex-1 flex-col items-center justify-center text-center animate-in ${dir > 0 ? 'slide-in-from-right' : 'slide-in-from-left'}`}
         >
           <div className="flex h-[210px] items-end justify-center">{passo.arte}</div>
-          <h2 className="mt-6 text-[26px] font-bold leading-tight tracking-[-0.025em] text-ink">{passo.titulo}</h2>
+          <h2 className="mt-6 font-display text-[26px] font-bold leading-tight tracking-[-0.025em] text-ink">{passo.titulo}</h2>
           <p className="mt-3 max-w-[330px] text-[15px] leading-relaxed text-muted">{passo.texto}</p>
           {passo.pista && <div className="mt-6">{passo.pista}</div>}
         </div>

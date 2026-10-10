@@ -1,65 +1,16 @@
 import React, { useState } from 'react';
-import {
-  Trophy,
-  Lock,
-  Sparkles,
-  Award,
-  Coffee,
-  Pizza,
-  Wine,
-  Croissant,
-  Crown,
-  Users,
-  Flame,
-  Camera,
-  Heart,
-  HelpCircle,
-} from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { obterResumoConquistas, type Badge, type BadgeTier } from '../lib/badges';
 import type { Review } from '../types';
 
 import { Mascote } from './Mascote';
-function renderBadgeIcon(icone: string, desbloqueada: boolean) {
-  const size = 20;
-  const className = desbloqueada ? 'text-[var(--star)]' : 'text-[var(--muted)]';
-
-  if (!desbloqueada) {
-    return <HelpCircle size={size} className={className} />;
-  }
-
-  switch (icone) {
-    case 'coffee':
-      return <Coffee size={size} className={className} />;
-    case 'pizza':
-      return <Pizza size={size} className={className} />;
-    case 'drink':
-      return <Wine size={size} className={className} />;
-    case 'bakery':
-      return <Croissant size={size} className={className} />;
-    case 'crown':
-      return <Crown size={size} className={className} />;
-    case 'trophy':
-      return <Trophy size={size} className={className} />;
-    case 'users':
-      return <Users size={size} className={className} />;
-    case 'flame':
-      return <Flame size={size} className={className} />;
-    case 'camera':
-      return <Camera size={size} className={className} />;
-    case 'heart':
-      return <Heart size={size} className={className} />;
-    case 'sparkles':
-      return <Sparkles size={size} className={className} />;
-    default:
-      return <Award size={size} className={className} />;
-  }
-}
+import { Medalha } from './Medalha';
 
 const TIER_CONFIG: Record<BadgeTier, { label: string }> = {
   bronze: { label: 'Bronze' },
   prata: { label: 'Prata' },
   ouro: { label: 'Ouro' },
-  diamante: { label: 'Lendário' },
+  diamante: { label: 'Diamante' },
 };
 
 type Filtro = 'todas' | 'conquistadas' | 'ocultas';
@@ -121,13 +72,7 @@ export default function ConquistasTab({ reviews }: { reviews: Review[] }) {
           const tierInfo = TIER_CONFIG[b.tier] || TIER_CONFIG.bronze;
           return (
             <li key={b.id} className={`flex gap-3.5 py-3.5 ${b.desbloqueada ? '' : 'opacity-60'}`}>
-              <div
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
-                  b.desbloqueada ? 'bg-star/12' : 'bg-s2'
-                }`}
-              >
-                {renderBadgeIcon(b.icone, b.desbloqueada)}
-              </div>
+              <Medalha badge={b} tamanho={44} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <h4 className="truncate text-[15px] font-semibold text-ink">

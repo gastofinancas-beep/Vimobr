@@ -231,7 +231,7 @@ export default function ReviewCard({
         <div className="mx-4 mb-3 rounded-2xl border border-accent/40 bg-accent/15 p-3.5 space-y-2">
           <div className="flex items-center gap-2 text-xs font-bold text-ink">
             <Users size={16} className="text-accent shrink-0" />
-            <span>{r.authorName} marcou você nesta avaliação!</span>
+            <span>{r.authorName} marcou você nesta avaliação</span>
           </div>
           <p className="text-[11px] text-[#DDD3C4] leading-relaxed">
             Como você deseja aparecer nesta visita a <b>{r.placeName}</b>?

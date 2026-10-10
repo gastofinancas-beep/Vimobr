@@ -50,7 +50,7 @@ export async function criarReservaReminder(
           // Agenda disparo simulado ou real via setTimeout se for em breve
           setTimeout(() => {
             new Notification(`Lembrete de Visita: ${reminder.placeName}`, {
-              body: reminder.note || 'Chegou a hora da sua reserva! Aproveite a experiência gastronômica.',
+              body: reminder.note || 'Está na hora da sua reserva.',
               icon: reminder.placePhotoUrl || '/favicon.ico',
             });
           }, Math.min(diffMs, 2147483647));

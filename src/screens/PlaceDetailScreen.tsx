@@ -20,7 +20,7 @@ import {
 } from '../lib/reviews';
 import StarRating from '../components/StarRating';
 import MascotMessage from '../components/MascotMessage';
-import { Avatar, PlaceImage, RatingBadge, Spinner, btn, card } from '../components/ui';
+import { Avatar, PlaceImage, Spinner, btn, card } from '../components/ui';
 import { Mascote, type Reacao } from '../components/Mascote';
 import { useEscape } from '../hooks/useEscape';
 
@@ -144,8 +144,10 @@ export default function PlaceDetailScreen({
         url: window.location.href,
       }).catch(() => {});
     } else {
-      navigator.clipboard?.writeText(window.location.href);
-      showToast('Link copiado', 'compartilhando');
+      navigator.clipboard
+        ?.writeText(window.location.href)
+        .then(() => showToast('Link copiado', 'compartilhando'))
+        .catch(() => showToast('Não foi possível copiar o link', 'decepcionado'));
     }
   };
 
@@ -307,9 +309,6 @@ export default function PlaceDetailScreen({
           loading="eager"
           className="aspect-[4/3] sm:aspect-[21/9] max-h-[420px] w-full"
         />
-        {notaGoogle !== null && !scoreInfo.vimoDesbloqueado && (
-          <RatingBadge nota={notaGoogle} className="absolute bottom-10 right-4" />
-        )}
         <div className="absolute top-0 inset-x-0 flex items-center justify-between p-4">
           <button type="button" onClick={onVoltar} aria-label="Voltar" className={botaoFoto}>
             <ArrowLeft size={19} strokeWidth={2} />

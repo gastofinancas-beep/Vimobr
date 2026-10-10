@@ -5,8 +5,7 @@ import NotificationsModal from '../components/NotificationsModal';
 import { SAMPLE_PLACES, autocompleteCidade, formatarPrecoLabel } from '../lib/places';
 import type { Place, UserProfile } from '../types';
 import MascotMessage from '../components/MascotMessage';
-import { PlaceImage, RatingBadge, Logo, btn, chip, card } from '../components/ui';
-import { Mascote } from '../components/Mascote';
+import { PlaceImage, Logo, btn, chip } from '../components/ui';
 import { useEscape } from '../hooks/useEscape';
 
 type TipoRestauranteFiltro =
@@ -127,6 +126,27 @@ export default function ExplorarScreen({
       .filter(Boolean)
       .join(' · ');
 
+  // Populares: os lugares com mais avaliações reais (Google ou VIMO)
+  const populares = useMemo(
+    () =>
+      [...lugaresFiltrados].sort(
+        (a, b) => (b.googleUserRatingCount ?? b.reviewsCount ?? 0) - (a.googleUserRatingCount ?? a.reviewsCount ?? 0)
+      ),
+    [lugaresFiltrados]
+  );
+
+  // Fileiras por tipo (só aparecem com pelo menos 3 lugares)
+  const secoesPorTipo = useMemo(() => {
+    const grupos: { titulo: string; tipos: string[] }[] = [
+      { titulo: 'Restaurantes', tipos: ['restaurant'] },
+      { titulo: 'Cafés e padarias', tipos: ['cafe', 'bakery'] },
+      { titulo: 'Bares', tipos: ['bar'] },
+    ];
+    return grupos
+      .map((g) => ({ titulo: g.titulo, lugares: lugaresFiltrados.filter((p) => g.tipos.includes(p.tipo || '')) }))
+      .filter((g) => g.lugares.length >= 3);
+  }, [lugaresFiltrados]);
+
   return (
     <div className="flex-1 w-full bg-bg text-ink min-h-screen pb-28">
       {/* Cabeçalho: marca, cidade e notificações */}
@@ -193,7 +213,7 @@ export default function ExplorarScreen({
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 pt-1">
+      <main className="max-w-4xl mx-auto pt-2">
         {lugaresFiltrados.length === 0 ? (
           <MascotMessage
             reaction="pensativo"
@@ -202,51 +222,52 @@ export default function ExplorarScreen({
             ctaLabel="Limpar filtros"
             onCta={limparFiltros}
           />
-        ) : (
-          <>
-            {/* Saudação: o mascote curioso convida a descobrir */}
-            {!buscaTermo && filtroTipo === 'todos' && (
-              <div className="mb-4 flex items-center gap-3">
-                <Mascote reacao="curioso" tamanho={52} />
-                <div className="min-w-0">
-                  <h1 className="text-xl font-bold tracking-tight text-ink">Onde vamos comer hoje?</h1>
-                  <p className="text-sm text-muted tabular">
-                    {lugaresFiltrados.length} lugares para descobrir em {cidadeCurta}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Cartões com foto em destaque */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {lugaresFiltrados.map((place) => {
-                const nota = place.googleRating ?? place.rating ?? null;
-                const meta = metaDe(place);
-                return (
-                  <button
-                    key={place.id}
-                    type="button"
-                    onClick={() => onAbrirLugar(place)}
-                    aria-label={place.name}
-                    className={`${card} group overflow-hidden text-left transition-transform active:scale-[0.99] cursor-pointer`}
-                  >
-                    <div className="relative overflow-hidden">
-                      <PlaceImage
-                        src={place.photoUrl}
-                        name={place.name}
-                        className="aspect-[16/10] w-full transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-                      />
-                      {nota !== null && <RatingBadge nota={nota} className="absolute right-3 top-3" />}
-                    </div>
-                    <div className="px-4 pb-4 pt-3">
-                      <h3 className="truncate text-[17px] font-semibold tracking-tight text-ink">{place.name}</h3>
-                      {meta && <p className="mt-0.5 truncate text-sm text-muted">{meta}</p>}
-                    </div>
-                  </button>
-                );
-              })}
+        ) : buscaTermo || filtroTipo !== 'todos' ? (
+          /* Busca ou filtro: uma grade só, sem seções */
+          <section className="px-4">
+            <CabecalhoSecao titulo={buscaTermo ? 'Resultados' : chips.find((c) => c.id === filtroTipo)?.label || 'Lugares'} total={lugaresFiltrados.length} />
+            <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
+              {lugaresFiltrados.map((place) => (
+                <Poster key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} />
+              ))}
             </div>
-          </>
+          </section>
+        ) : (
+          /* Início: estilo Letterboxd, muitos pôsteres e nenhuma nota (a nota aparece no lugar) */
+          <div className="space-y-9">
+            <section className="px-4">
+              <CabecalhoSecao titulo="Populares da semana" total={lugaresFiltrados.length} />
+              <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
+                {populares.slice(0, 4).map((place) => (
+                  <Poster key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} />
+                ))}
+              </div>
+            </section>
+
+            {secoesPorTipo.map((sec) => (
+              <section key={sec.titulo}>
+                <div className="px-4">
+                  <CabecalhoSecao titulo={sec.titulo} total={sec.lugares.length} />
+                </div>
+                <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1">
+                  {sec.lugares.map((place) => (
+                    <div key={place.id} className="w-[34%] max-w-[150px] shrink-0 snap-start">
+                      <Poster place={place} meta={place.bairro || ''} onAbrir={onAbrirLugar} pequeno />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+
+            <section className="px-4">
+              <CabecalhoSecao titulo="Todos os lugares" total={lugaresFiltrados.length} />
+              <div className="grid grid-cols-3 gap-x-2.5 gap-y-4 sm:grid-cols-4 lg:grid-cols-5">
+                {lugaresFiltrados.map((place) => (
+                  <Poster key={place.id} place={place} meta="" onAbrir={onAbrirLugar} pequeno />
+                ))}
+              </div>
+            </section>
+          </div>
         )}
       </main>
 
@@ -339,5 +360,51 @@ export default function ExplorarScreen({
         />
       )}
     </div>
+  );
+}
+
+/** Título de seção com contagem à direita, como nas listas do Letterboxd. */
+function CabecalhoSecao({ titulo, total }: { titulo: string; total: number }) {
+  return (
+    <div className="mb-3 flex items-baseline justify-between gap-3">
+      <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">{titulo}</h2>
+      <span className="text-xs font-medium text-muted tabular">
+        {total} {total === 1 ? 'lugar' : 'lugares'}
+      </span>
+    </div>
+  );
+}
+
+/** Pôster de lugar: foto em 4:5, nome embaixo. Sem nota: ela aparece ao abrir o lugar. */
+function Poster({
+  place,
+  meta,
+  onAbrir,
+  pequeno = false,
+}: {
+  place: Place;
+  meta: string;
+  onAbrir: (p: Place) => void;
+  pequeno?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onAbrir(place)}
+      aria-label={place.name}
+      className="group block w-full text-left cursor-pointer"
+    >
+      <div className="relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98]">
+        <PlaceImage
+          src={place.photoUrl}
+          name={place.name}
+          className="aspect-[4/5] w-full transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+        />
+      </div>
+      <p className={`mt-2 truncate font-semibold tracking-tight text-ink ${pequeno ? 'text-[13px]' : 'text-[15px]'}`}>
+        {place.name}
+      </p>
+      {meta && <p className="truncate text-xs text-muted">{meta}</p>}
+    </button>
   );
 }

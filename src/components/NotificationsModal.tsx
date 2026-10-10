@@ -10,7 +10,6 @@ import {
   Trash2,
   BookOpen,
   UserCheck,
-  Sparkles,
   MapPin,
   Check,
   Smartphone,
@@ -27,7 +26,9 @@ import {
 } from '../lib/notifications';
 import { solicitarPermissaoNotificacoes, dispararNotificacaoLocalPush } from '../lib/fcm';
 import type { NotificationItem, NotificationType, CompanionStatus } from '../types';
-import { Avatar } from './ui';
+import { Avatar, PlaceImage, chip } from './ui';
+import { SAMPLE_PLACES } from '../lib/places';
+import { seguir, idsSeguindo } from '../lib/reviews';
 import { useEscape } from '../hooks/useEscape';
 
 import { Mascote } from './Mascote';
@@ -63,6 +64,17 @@ export default function NotificationsModal({
       : 'default'
   );
   const [ativandoPush, setAtivandoPush] = useState(false);
+  const [pushDispensado, setPushDispensado] = useState(() => {
+    try {
+      return localStorage.getItem('vimo_push_dispensado') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [seguindo, setSeguindo] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    idsSeguindo(currentUserUid).then((ids) => setSeguindo(new Set(ids))).catch(() => {});
+  }, [currentUserUid]);
 
   const carregar = () => {
     setNotifs(obterNotificacoes(currentUserUid));
@@ -82,8 +94,8 @@ export default function NotificationsModal({
     if (res.granted) {
       setPushStatus('granted');
       dispararNotificacaoLocalPush({
-        titulo: 'Notificações Push Ativadas! 🔔',
-        corpo: 'Você agora receberá alertas instantâneos quando amigos curtirem ou comentarem em suas avaliações.',
+        titulo: 'Notificações ativadas',
+        corpo: 'Você vai receber um aviso quando alguém curtir, comentar ou marcar você.',
       });
     } else {
       setPushStatus(typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied');
@@ -101,7 +113,7 @@ export default function NotificationsModal({
       },
       placeId: 'chIJf-place-01',
       placeName: 'Maniçoba Bistrô & Café',
-      texto: 'curtiu sua avaliação sobre o Maniçoba Bistrô & Café!',
+      texto: 'curtiu sua avaliação de Maniçoba Bistrô & Café.',
     });
     carregar();
   };
@@ -139,29 +151,53 @@ export default function NotificationsModal({
   };
 
   const ICONE: Record<NotificationType, { Icon: typeof Heart; cor: string }> = {
-    curtida: { Icon: Heart, cor: 'bg-star text-white' },
-    comentario: { Icon: MessageCircle, cor: 'bg-primary text-on-primary' },
-    marcacao_presenca: { Icon: Users, cor: 'bg-primary text-on-primary' },
-    seguir: { Icon: UserPlus, cor: 'bg-success text-white' },
-  } as Record<NotificationType, { Icon: typeof Heart; cor: string }>;
+    curtida: { Icon: Heart, cor: 'bg-like text-white' },
+    comentario: { Icon: MessageCircle, cor: 'bg-ink text-bg' },
+    marcacao_presenca: { Icon: Users, cor: 'bg-primary text-white' },
+    seguir: { Icon: UserPlus, cor: 'bg-primary text-white' },
+  };
 
   const filtros: { key: 'todas' | NotificationType; label: string }[] = [
     { key: 'todas', label: 'Todas' },
     { key: 'curtida', label: 'Curtidas' },
     { key: 'comentario', label: 'Comentários' },
     { key: 'marcacao_presenca', label: 'Marcações' },
+    { key: 'seguir', label: 'Seguidores' },
   ];
 
-  const botaoResposta =
-    'h-8 rounded-full px-3 text-sm font-semibold transition-colors cursor-pointer';
+  // Agrupa por período, como nos apps sociais
+  const agora = Date.now();
+  const inicioHoje = new Date(); inicioHoje.setHours(0, 0, 0, 0);
+  const grupos = [
+    { titulo: 'Hoje', itens: filtradas.filter((n) => n.createdAt >= inicioHoje.getTime()) },
+    { titulo: 'Esta semana', itens: filtradas.filter((n) => n.createdAt < inicioHoje.getTime() && agora - n.createdAt < 7 * 864e5) },
+    { titulo: 'Antes', itens: filtradas.filter((n) => agora - n.createdAt >= 7 * 864e5) },
+  ].filter((g) => g.itens.length > 0);
+
+  const fotoDoLugar = (placeId?: string) => SAMPLE_PLACES.find((p) => p.id === placeId)?.photoUrl;
+
+  const seguirDeVolta = (uid: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSeguindo((s) => new Set(s).add(uid));
+    seguir(currentUserUid, uid).catch(() => {});
+  };
+
+  const dispensarPush = () => {
+    setPushDispensado(true);
+    try {
+      localStorage.setItem('vimo_push_dispensado', '1');
+    } catch {}
+  };
+
+  const botaoResposta = 'h-8 rounded-full px-3.5 text-sm font-semibold transition-colors cursor-pointer';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="titulo-notificacoes"
-        className="w-full sm:max-w-lg h-[88dvh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-2xl bg-s1 flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom"
+        className="w-full sm:max-w-lg h-[90dvh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl bg-bg flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mt-2.5 h-1 w-9 shrink-0 rounded-full bg-s3 sm:hidden" />
@@ -169,7 +205,9 @@ export default function NotificationsModal({
         {/* Cabeçalho */}
         <div className="shrink-0 px-4 pt-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 id="titulo-notificacoes" className="t-title text-ink whitespace-nowrap">Notificações</h2>
+            <h2 id="titulo-notificacoes" className="font-display text-[22px] font-bold tracking-tight text-ink">
+              Notificações
+            </h2>
             <div className="flex items-center gap-1">
               {naoLidas > 0 && (
                 <button
@@ -178,9 +216,11 @@ export default function NotificationsModal({
                     marcarTodasComoLidas(currentUserUid);
                     carregar();
                   }}
-                  className="h-9 whitespace-nowrap rounded-full px-3 text-sm font-medium text-primary hover:bg-s2 transition-colors cursor-pointer"
+                  aria-label="Marcar todas como lidas"
+                  className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold text-primary hover:bg-s2 transition-colors cursor-pointer"
                 >
-                  Marcar {naoLidas} como lidas
+                  <CheckCheck size={16} strokeWidth={2} />
+                  Ler todas
                 </button>
               )}
               <button
@@ -194,33 +234,15 @@ export default function NotificationsModal({
             </div>
           </div>
 
-          {/* Push: uma linha discreta, só enquanto não estiver ativo */}
-          {pushStatus !== 'granted' && (
-            <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-s2 px-3 py-2.5">
-              <p className="min-w-0 text-sm text-ink-2">Receba um aviso quando alguém interagir com você.</p>
-              <button
-                type="button"
-                onClick={handleAtivarPush}
-                disabled={ativandoPush}
-                className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3.5 text-sm font-semibold text-on-primary disabled:opacity-60 cursor-pointer"
-              >
-                {ativandoPush && <Loader2 size={14} className="animate-spin" />}
-                Ativar
-              </button>
-            </div>
-          )}
-
-          {/* Filtros */}
-          <div className="mt-3 flex gap-5 overflow-x-auto no-scrollbar border-b border-line">
+          {/* Filtros em pílula, como em Amigos */}
+          <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-3">
             {filtros.map((f) => (
               <button
                 key={f.key}
                 type="button"
                 onClick={() => setFiltro(f.key)}
                 aria-pressed={filtro === f.key}
-                className={`-mb-px shrink-0 border-b-2 pb-2.5 text-sm transition-colors cursor-pointer ${
-                  filtro === f.key ? 'border-primary font-semibold text-ink' : 'border-transparent text-muted hover:text-ink'
-                }`}
+                className={chip(filtro === f.key)}
               >
                 {f.label}
               </button>
@@ -229,89 +251,141 @@ export default function NotificationsModal({
         </div>
 
         {/* Lista */}
-        <div className="flex-1 overflow-y-auto px-4">
+        <div className="flex-1 overflow-y-auto">
+          {/* Aviso de push: uma linha, pode ser dispensado */}
+          {pushStatus === 'default' && !pushDispensado && (
+            <div className="mx-4 mb-3 flex items-center gap-3 rounded-2xl bg-s1 p-3.5 shadow-sm dark:shadow-none dark:ring-1 dark:ring-line">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Bell size={18} strokeWidth={2} />
+              </span>
+              <p className="min-w-0 flex-1 text-sm text-ink-2">Receba um aviso quando alguém interagir com você.</p>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <button
+                  type="button"
+                  onClick={handleAtivarPush}
+                  disabled={ativandoPush}
+                  className="flex h-8 items-center gap-1.5 rounded-full bg-primary px-3.5 text-sm font-semibold text-white disabled:opacity-60 cursor-pointer"
+                >
+                  {ativandoPush && <Loader2 size={14} className="animate-spin" />}
+                  Ativar
+                </button>
+                <button type="button" onClick={dispensarPush} className="text-xs font-medium text-muted hover:text-ink cursor-pointer">
+                  Agora não
+                </button>
+              </div>
+            </div>
+          )}
+
           {filtradas.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-center">
-              <Mascote reacao="tranquilo" tamanho={96} />
-              <p className="mt-4 text-base font-semibold text-ink">Tudo calmo por aqui</p>
-              <p className="mt-1 max-w-[240px] text-sm text-muted">Curtidas, comentários e marcações aparecem aqui.</p>
+            <div className="flex flex-col items-center px-6 py-14 text-center">
+              <Mascote reacao="tranquilo" tamanho={88} />
+              <p className="mt-4 text-lg font-semibold tracking-tight text-ink">
+                {filtro === 'todas' ? 'Tudo calmo por aqui' : 'Nada neste filtro'}
+              </p>
+              <p className="mt-1 max-w-[260px] text-sm text-muted">
+                Curtidas, comentários, marcações e novos seguidores aparecem aqui.
+              </p>
             </div>
           ) : (
-            <ul className="divide-y divide-line">
-              {filtradas.map((n) => {
-                const tipo = ICONE[n.tipo] || ICONE.curtida;
-                const pendente =
-                  n.tipo === 'marcacao_presenca' && (!n.companionStatus || n.companionStatus === 'pendente');
-                return (
-                  <li
-                    key={n.id}
-                    onClick={() => handleMarcarLida(n)}
-                    className="group relative flex cursor-pointer gap-3 py-3.5"
-                  >
-                    <div className="relative shrink-0">
-                      <Avatar src={n.remetente.photo} name={n.remetente.name} size={40} />
-                      <span
-                        className={`absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full ring-2 ring-s1 ${tipo.cor}`}
+            grupos.map((g) => (
+              <section key={g.titulo} className="pb-2">
+                <h3 className="px-4 pb-1 pt-2 text-sm font-semibold text-ink">{g.titulo}</h3>
+                <ul>
+                  {g.itens.map((n) => {
+                    const tipo = ICONE[n.tipo] || ICONE.curtida;
+                    const pendente =
+                      n.tipo === 'marcacao_presenca' && (!n.companionStatus || n.companionStatus === 'pendente');
+                    const foto = fotoDoLugar(n.placeId);
+                    return (
+                      <li
+                        key={n.id}
+                        onClick={() => handleMarcarLida(n)}
+                        className={`group relative flex cursor-pointer gap-3 px-4 py-3 transition-colors hover:bg-s2/60 ${
+                          n.lida ? '' : 'bg-primary/[0.06]'
+                        }`}
                       >
-                        <tipo.Icon size={10} strokeWidth={2.4} className={n.tipo === 'curtida' ? 'fill-current' : ''} />
-                      </span>
-                    </div>
-
-                    <div className="min-w-0 flex-1 pr-4">
-                      <p className="text-sm text-ink-2">
-                        <span className="font-semibold text-ink">{n.remetente.name}</span> {n.texto}
-                      </p>
-                      <p className="mt-0.5 t-meta">
-                        {n.placeName ? `${n.placeName} · ` : ''}
-                        {tempoAtras(n.createdAt)}
-                      </p>
-
-                      {pendente && (
-                        <div className="mt-2.5 flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => handleResponderMarcacao(n, 'aprovado_coautor', e)}
-                            className={`${botaoResposta} bg-primary text-on-primary`}
+                        {!n.lida && <span className="sr-only">Não lida</span>}
+                        <div className="relative h-11 w-11 shrink-0">
+                          <Avatar src={n.remetente.photo} name={n.remetente.name} size={44} />
+                          <span
+                            className={`absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full ring-2 ring-bg ${tipo.cor}`}
                           >
-                            Coautor
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleResponderMarcacao(n, 'aprovado_presenca', e)}
-                            className={`${botaoResposta} bg-s2 text-ink hover:bg-s3`}
-                          >
-                            Só presença
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleResponderMarcacao(n, 'recusado', e)}
-                            className={`${botaoResposta} text-muted hover:text-ink`}
-                          >
-                            Recusar
-                          </button>
+                            <tipo.Icon size={11} strokeWidth={2.4} className={n.tipo === 'curtida' ? 'fill-current' : ''} />
+                          </span>
                         </div>
-                      )}
-                    </div>
 
-                    {!n.lida && (
-                      <span aria-label="Não lida" className="absolute right-0 top-5 h-2 w-2 rounded-full bg-primary" />
-                    )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removerNotificacao(currentUserUid, n.id);
-                        carregar();
-                      }}
-                      aria-label="Excluir notificação"
-                      className="absolute bottom-3 right-0 p-1 text-muted opacity-0 transition-opacity hover:text-ink group-hover:opacity-100 focus:opacity-100 cursor-pointer"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm leading-snug text-ink-2">
+                            <span className="font-semibold text-ink">{n.remetente.name}</span> {n.texto}{' '}
+                            <span className="whitespace-nowrap text-muted">{tempoAtras(n.createdAt)}</span>
+                          </p>
+
+                          {pendente && (
+                            <div className="mt-2.5 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => handleResponderMarcacao(n, 'aprovado_coautor', e)}
+                                className={`${botaoResposta} bg-ink text-bg`}
+                              >
+                                Coautor
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleResponderMarcacao(n, 'aprovado_presenca', e)}
+                                className={`${botaoResposta} bg-s2 text-ink hover:bg-s3`}
+                              >
+                                Só presença
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleResponderMarcacao(n, 'recusado', e)}
+                                className={`${botaoResposta} text-muted hover:text-ink`}
+                              >
+                                Recusar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* À direita: seguir de volta ou miniatura do lugar */}
+                        {n.tipo === 'seguir' ? (
+                          seguindo.has(n.remetente.uid) ? (
+                            <span className="h-8 shrink-0 self-center rounded-full bg-s2 px-3.5 text-sm font-semibold leading-8 text-muted">
+                              Seguindo
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => seguirDeVolta(n.remetente.uid, e)}
+                              className="h-8 shrink-0 self-center rounded-full bg-primary px-3.5 text-sm font-semibold text-white cursor-pointer"
+                            >
+                              Seguir
+                            </button>
+                          )
+                        ) : (
+                          n.placeId && (
+                            <PlaceImage src={foto} name={n.placeName} className="h-12 w-12 shrink-0 self-center rounded-xl" />
+                          )
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removerNotificacao(currentUserUid, n.id);
+                            carregar();
+                          }}
+                          aria-label="Excluir notificação"
+                          className="absolute right-1 top-1 rounded-full p-1.5 text-muted opacity-0 transition-opacity hover:text-ink focus:opacity-100 group-hover:opacity-100 cursor-pointer"
+                        >
+                          <X size={13} />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))
           )}
         </div>
       </div>

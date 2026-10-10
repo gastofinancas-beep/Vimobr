@@ -231,7 +231,7 @@ export async function salvarAvaliacao(a: {
           reviewId: newId,
           placeId: a.place.id,
           placeName: a.place.name,
-          texto: `marcou você na avaliação de ${a.place.name}. Escolha como deseja aparecer!`,
+          texto: `marcou você em ${a.place.name}.`,
           companionStatus: 'pendente',
         });
       }

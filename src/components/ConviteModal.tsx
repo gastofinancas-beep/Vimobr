@@ -5,9 +5,9 @@ import PlacePlaceholder from './PlacePlaceholder';
 
 const SUGESTOES_MENSAGEM = [
   'Bora conhecer esse lugar juntos?',
-  'Te convido para um jantar especial!',
+  'Bora jantar?',
   'Café e papo furado, topo?',
-  'Happy hour gastronômico pra comemorar!',
+  'Happy hour pra comemorar',
   'Dizem que a comida aqui é surreal. Vamos?',
 ];
 
@@ -184,7 +184,7 @@ Bora? Confirma comigo!`;
                     {currentUser.displayName}
                   </span>
                   <span className="text-[12px] text-accent font-semibold uppercase tracking-wider">
-                    {nomeConvidado ? `Convida ${nomeConvidado}` : 'Te convidou!'}
+                    {nomeConvidado ? `Convida ${nomeConvidado}` : 'Te convidou'}
                   </span>
                 </div>
               </div>
@@ -261,7 +261,7 @@ Bora? Confirma comigo!`;
             className="h-11 rounded-xl bg-accent text-bg font-bold text-xs flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition active:scale-95"
           >
             <Share2 size={16} />
-            <span>{compartilhado ? 'Compartilhado!' : 'Compartilhar'}</span>
+            <span>{compartilhado ? 'Compartilhado' : 'Compartilhar'}</span>
           </button>
 
           {/* Copiar Texto */}
@@ -271,7 +271,7 @@ Bora? Confirma comigo!`;
             className="h-11 rounded-xl bg-s2 border border-line hover:bg-line/40 text-ink font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95"
           >
             {copiado ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-            <span>{copiado ? 'Copiado!' : 'Copiar Texto'}</span>
+            <span>{copiado ? 'Copiado' : 'Copiar texto'}</span>
           </button>
         </div>
       </div>

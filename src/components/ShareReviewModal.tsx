@@ -285,7 +285,7 @@ export default function ShareReviewModal({
       const data = await res.json();
       if (data.success && data.imageUrl) {
         setFotoFundoUrl(data.imageUrl);
-        setStatusMsg('Arte gastronômica gerada com sucesso pela IA!');
+        setStatusMsg('Imagem pronta');
       } else {
         setStatusMsg(data.message || 'Personalizando com estilo gráfico...');
         renderizarCard(fotoFundoUrl);
@@ -307,7 +307,7 @@ export default function ShareReviewModal({
     link.download = `garfo-review-${review.placeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}.png`;
     link.href = imagemGeradaUrl;
     link.click();
-    setStatusMsg('Imagem baixada com sucesso!');
+    setStatusMsg('Imagem baixada');
     setTimeout(() => setStatusMsg(null), 2500);
   };
 
@@ -323,7 +323,7 @@ export default function ShareReviewModal({
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             title: `Avaliação de ${review.placeName} no VIMO`,
-            text: `Confira minha avaliação de ${review.placeName}: ${review.overall.toFixed(1)} no VIMO!`,
+            text: `Confira minha avaliação de ${review.placeName}: ${review.overall.toFixed(1)} no VIMO`,
             files: [file],
           });
           setCompartilhado(true);
@@ -354,19 +354,23 @@ export default function ShareReviewModal({
             new ClipboardItem({ 'image/png': blob }),
           ]);
           setCopiado(true);
-          setStatusMsg('Card copiado para a área de transferência!');
+          setStatusMsg('Imagem copiada');
           setTimeout(() => setCopiado(false), 2500);
         } catch {
-          await navigator.clipboard.writeText(
-            `“${review.text}” — Avaliação de ${review.placeName} no VIMO: ${review.overall.toFixed(1)}!\n${window.location.href}`
-          );
-          setCopiado(true);
-          setStatusMsg('Texto da avaliação copiado!');
-          setTimeout(() => setCopiado(false), 2500);
+          try {
+            await navigator.clipboard.writeText(
+              `“${review.text}” — Avaliação de ${review.placeName} no VIMO: ${review.overall.toFixed(1)}\n${window.location.href}`
+            );
+            setCopiado(true);
+            setStatusMsg('Texto copiado');
+            setTimeout(() => setCopiado(false), 2500);
+          } catch {
+            setStatusMsg('Não foi possível copiar');
+          }
         }
       });
     } catch {
-      setStatusMsg('Não foi possível copiar imagem diretamente.');
+      setStatusMsg('Não foi possível copiar');
     }
   };
 

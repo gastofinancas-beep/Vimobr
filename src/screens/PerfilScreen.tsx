@@ -6,6 +6,10 @@ import DiarioTab from '../components/DiarioTab';
 import ResumoPaladar from '../components/ResumoPaladar';
 import ConquistasTab from '../components/ConquistasTab';
 import NotificationsModal from '../components/NotificationsModal';
+import ProSheet from '../components/ProSheet';
+import { Medalha, SeloPro, rotuloNivel } from '../components/Medalha';
+import { ehPro } from '../lib/plano';
+import { obterResumoConquistas } from '../lib/badges';
 import { Avatar, PlaceImage, Spinner, btn, card } from '../components/ui';
 import type { Place, Review, UserProfile } from '../types';
 
@@ -52,6 +56,7 @@ export default function PerfilScreen({
   const [reviews, setReviews] = useState<Review[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
+  const [mostrarPro, setMostrarPro] = useState(false);
   const [listas, setListas] = useState<{ queroIr: string[]; jaFui: string[]; favoritos: string[] }>({
     queroIr: [],
     jaFui: [],
@@ -136,6 +141,11 @@ export default function PerfilScreen({
   }, [listas.favoritos, reviews]);
 
   const abasVisiveis = ABAS.filter((a) => !a.soDono || isMeuPerfil);
+  const pro = ehPro(usuario);
+  const medalhas = useMemo(
+    () => obterResumoConquistas(reviews).desbloqueadas.sort((a, b) => b.pontos - a.pontos),
+    [reviews]
+  );
 
   const numeros: { valor: number; rotulo: string }[] = [
     { valor: reviews.length, rotulo: reviews.length === 1 ? 'ida' : 'idas' },
@@ -184,7 +194,10 @@ export default function PerfilScreen({
           <div className="flex items-center gap-4">
             <Avatar src={usuario.photoURL} name={usuario.displayName} size={76} className="text-2xl ring-4 ring-s1 shadow-sm" />
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-[22px] font-bold tracking-tight text-ink">{usuario.displayName}</h2>
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="truncate font-display text-[22px] font-bold tracking-tight text-ink">{usuario.displayName}</h2>
+                {pro && <SeloPro className="shrink-0" />}
+              </div>
               <p className="truncate text-sm text-muted">
                 {usuario.handle}
                 {usuario.homeCityName ? ` · ${usuario.homeCityName}` : ''}
@@ -210,6 +223,67 @@ export default function PerfilScreen({
             </button>
           )}
         </div>
+
+        {/* Medalhas: vitrine para assinantes PRO */}
+        {pro ? (
+          <section aria-labelledby="titulo-medalhas" className="mt-7">
+            <div className="mb-3 flex items-baseline justify-between px-4">
+              <h2 id="titulo-medalhas" className="t-section text-ink">
+                Medalhas <span className="font-medium text-muted tabular">{medalhas.length}</span>
+              </h2>
+              {isMeuPerfil && (
+                <button type="button" onClick={() => setAba('conquistas')} className="text-sm font-semibold text-primary cursor-pointer">
+                  Ver todas
+                </button>
+              )}
+            </div>
+            {medalhas.length > 0 ? (
+              <ul className="no-scrollbar flex gap-4 overflow-x-auto px-4 pb-1">
+                {medalhas.map((m) => (
+                  <li key={m.id} className="flex w-[76px] shrink-0 flex-col items-center text-center">
+                    <Medalha badge={m} tamanho={64} className="mascote-entrar" />
+                    <span className="mt-2 line-clamp-2 text-xs font-semibold leading-tight text-ink">{m.titulo}</span>
+                    <span className="mt-0.5 text-[11px] text-muted">{rotuloNivel(m.tier)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-4 text-sm text-muted">
+                {isMeuPerfil ? 'Registre idas para ganhar as primeiras medalhas.' : 'Nenhuma medalha ainda.'}
+              </p>
+            )}
+          </section>
+        ) : (
+          isMeuPerfil && (
+            <section className="mt-6 px-4">
+              <button
+                type="button"
+                onClick={() => setMostrarPro(true)}
+                className={`${card} flex w-full items-center gap-4 p-4 text-left transition-transform active:scale-[0.99] cursor-pointer`}
+              >
+                <span className="flex -space-x-3" aria-hidden="true">
+                  {(['ouro', 'prata', 'bronze'] as const).map((t, i) => (
+                    <Medalha
+                      key={t}
+                      badge={{ icone: ['trophy', 'flag', 'coffee'][i], tier: t, desbloqueada: true, titulo: '' }}
+                      tamanho={40}
+                      className="ring-2 ring-s1"
+                    />
+                  ))}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold text-ink">Medalhas no perfil</span>
+                  <span className="block text-sm text-muted">
+                    {medalhas.length > 0
+                      ? `Você já tem ${medalhas.length} ${medalhas.length === 1 ? 'medalha' : 'medalhas'}. Mostre com o PRO.`
+                      : 'Disponível no VIMO PRO.'}
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-white">PRO</span>
+              </button>
+            </section>
+          )
+        )}
 
         {/* 4 favoritos */}
         <section aria-labelledby="titulo-favoritos" className="mt-7 px-4">
@@ -286,6 +360,8 @@ export default function PerfilScreen({
           )}
         </main>
       </div>
+
+      {mostrarPro && <ProSheet uid={currentUser.uid} onClose={() => setMostrarPro(false)} />}
 
       {mostrarNotificacoes && (
         <NotificationsModal
