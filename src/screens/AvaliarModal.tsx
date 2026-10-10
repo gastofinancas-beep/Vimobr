@@ -373,7 +373,7 @@ export default function AvaliarModal({
             aria-hidden="true"
             width={72}
             height={75}
-            className="mx-auto object-contain"
+            className="mascote mascote-pular mx-auto object-contain"
           />
           <h2 className="mt-4 t-title text-ink">Ida publicada</h2>
           <p className="mt-1.5 text-sm text-muted">

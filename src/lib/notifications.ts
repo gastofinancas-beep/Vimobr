@@ -78,13 +78,11 @@ function notifyListeners() {
 export function obterNotificacoes(userUid: string): NotificationItem[] {
   try {
     const raw = localStorage.getItem(LS_NOTIFICATIONS_PREFIX + userUid);
-    if (!raw) {
-      localStorage.setItem(LS_NOTIFICATIONS_PREFIX + userUid, JSON.stringify(INITIAL_NOTIFICATIONS));
-      return INITIAL_NOTIFICATIONS;
-    }
+    // Só dados reais: sem notificações de demonstração para usuários novos
+    if (!raw) return [];
     return JSON.parse(raw);
   } catch {
-    return INITIAL_NOTIFICATIONS;
+    return [];
   }
 }
 

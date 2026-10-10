@@ -91,7 +91,7 @@ export default function ConquistasTab({ reviews }: { reviews: Review[] }) {
           aria-hidden="true"
           width={56}
           height={58}
-          className="shrink-0 object-contain"
+          className={`mascote shrink-0 object-contain ${desbloqueadas.length > 0 ? 'mascote-orgulho' : 'mascote-flutuar'}`}
         />
         <div className="min-w-0 flex-1">
           <p className="text-base font-semibold text-ink tabular">

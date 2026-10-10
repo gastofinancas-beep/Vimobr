@@ -54,6 +54,19 @@ export type MascotReaction =
   | 'lendo'
   | 'agradecendo';
 
+export type MascotAnimacao = 'flutuar' | 'respirar' | 'pular' | 'inclinar' | 'orgulho' | 'entrar' | 'nenhuma';
+
+/** Movimento padrão de cada expressão: o gesto combina com o que o mascote está "sentindo". */
+const ANIMACAO_PADRAO: Partial<Record<MascotReaction, MascotAnimacao>> = {
+  dormindo: 'respirar',
+  comemorando: 'pular',
+  sucesso: 'pular',
+  confuso: 'inclinar',
+  duvida: 'inclinar',
+  orgulhoso: 'orgulho',
+  vitoria: 'orgulho',
+};
+
 interface MascotMessageProps {
   reaction: MascotReaction;
   title: string;
@@ -62,6 +75,8 @@ interface MascotMessageProps {
   onCta?: () => void;
   /** Tamanho em px. Limitado a 72 para manter o PNG nítido. */
   size?: number;
+  /** Movimento do mascote. Padrão: definido pela expressão (ou flutuar). */
+  animacao?: MascotAnimacao;
   className?: string;
 }
 
@@ -73,8 +88,10 @@ export default function MascotMessage({
   onCta,
   size = 72,
   className = '',
+  animacao,
 }: MascotMessageProps) {
   const px = Math.min(size, 72);
+  const movimento = animacao ?? ANIMACAO_PADRAO[reaction] ?? 'flutuar';
   return (
     <div className={`flex flex-col items-center justify-center px-6 py-10 text-center ${className}`}>
       <img
@@ -83,7 +100,7 @@ export default function MascotMessage({
         aria-hidden="true"
         width={px}
         height={Math.round(px * 1.045)}
-        className="object-contain select-none"
+        className={`mascote object-contain select-none ${movimento !== 'nenhuma' ? `mascote-${movimento}` : ''}`}
         loading="lazy"
         draggable={false}
       />

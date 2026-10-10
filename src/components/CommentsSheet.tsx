@@ -166,7 +166,7 @@ export default function CommentsSheet({
             </div>
           ) : comentarios.length === 0 ? (
             <div className="py-8 flex flex-col items-center text-center gap-2">
-              <img src="/mascot/vimo_timido.png" alt="" aria-hidden="true" width={64} height={67} className="object-contain" />
+              <img src="/mascot/vimo_timido.png" alt="" aria-hidden="true" width={64} height={67} className="mascote mascote-flutuar object-contain" />
               <p className="font-semibold text-base text-ink mt-2">Nenhum comentário ainda</p>
               <p className="text-sm text-muted">Comece a conversa.</p>
             </div>

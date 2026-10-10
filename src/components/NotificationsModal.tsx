@@ -231,7 +231,7 @@ export default function NotificationsModal({
         <div className="flex-1 overflow-y-auto px-4">
           {filtradas.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-center">
-              <img src="/mascot/vimo_dormindo.png" alt="" aria-hidden="true" width={72} height={75} className="object-contain" />
+              <img src="/mascot/vimo_dormindo.png" alt="" aria-hidden="true" width={72} height={75} className="mascote mascote-respirar object-contain" />
               <p className="mt-4 text-base font-semibold text-ink">Tudo calmo por aqui</p>
               <p className="mt-1 max-w-[240px] text-sm text-muted">Curtidas, comentários e marcações aparecem aqui.</p>
             </div>

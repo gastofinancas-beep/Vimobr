@@ -32,15 +32,15 @@ export default function VimoMascot({ coberto = false }: VimoMascotProps) {
         className={`pointer-events-none absolute left-1/2 z-[4] aspect-[1480/988] w-full max-w-[372px] transition-opacity duration-200 motion-reduce:transition-none ${
           coberto ? 'opacity-0' : 'opacity-100'
         }`}
-        style={{ bottom: 'calc(100% - 42px)', transform: 'translateX(-50%)' }}
+        style={{ bottom: 'calc(100% - 42px)', transform: 'translateX(-50%)', clipPath: 'inset(-30% -30% 0 -30%)' }}
       >
         <img
           src="/mascote.webp"
           alt="Mascote do VIMO apoiado no card de login"
-          className="absolute inset-0 h-full w-full object-contain"
+          className="mascote mascote-espiar absolute inset-0 h-full w-full object-contain"
           style={{ filter: 'drop-shadow(0 12px 14px rgba(4,7,20,0.55))' }}
         />
-        <span aria-hidden="true" className="absolute right-[4%] top-[30%] z-[5] flex flex-col gap-1.5">
+        <span aria-hidden="true" className="mascote-alertar absolute right-[4%] top-[30%] z-[5] flex flex-col gap-1.5">
           <i className="block h-1.5 w-[21px] -rotate-[40deg] rounded-full bg-[#F77947]" />
           <i className="block h-1.5 w-[17px] -rotate-[40deg] translate-x-1 rounded-full bg-[#F77947]" />
         </span>
