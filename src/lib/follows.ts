@@ -7,7 +7,14 @@ import {
   updateDoc,
   increment,
   serverTimestamp,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
 } from 'firebase/firestore';
+import { criarNotificacao } from './notifications';
 import type { UserProfile } from '../types';
 
 const chaveLocal = (uid: string) => `vimo_seguindo_${uid}`;
@@ -33,11 +40,19 @@ export function estaSeguindo(currentUid: string, targetUid: string): boolean {
 
 export async function seguirUsuario(
   currentUid: string,
-  targetUid: string
+  targetUid: string,
+  remetente?: { name: string; handle: string; photo: string }
 ): Promise<void> {
   const lista = seguindoLocais(currentUid);
   if (!lista.includes(targetUid)) {
     salvarLocal(currentUid, [...lista, targetUid]);
+  }
+  if (remetente) {
+    criarNotificacao(targetUid, {
+      tipo: 'seguir',
+      remetente: { uid: currentUid, name: remetente.name, handle: remetente.handle, photo: remetente.photo },
+      texto: 'começou a seguir o seu diário gastronômico.',
+    });
   }
   if (!isFirebaseConfigured) return;
   const id = `${currentUid}_${targetUid}`;
@@ -75,5 +90,24 @@ export async function carregarPerfil(uid: string): Promise<Partial<UserProfile>>
     return snap.exists() ? (snap.data() as Partial<UserProfile>) : {};
   } catch {
     return {};
+  }
+}
+
+export async function buscarUsuarios(termo: string): Promise<Partial<UserProfile & { uid: string }>[]> {
+  if (!isFirebaseConfigured || termo.trim().length < 2) return [];
+  const q = termo.trim().toLowerCase();
+  try {
+    const col = collection(db, 'users');
+    const [porNome, porHandle] = await Promise.all([
+      getDocs(query(col, where('displayNameLower', '>=', q), where('displayNameLower', '<=', q + ''), orderBy('displayNameLower'), limit(10))),
+      getDocs(query(col, where('handle', '>=', '@' + q), where('handle', '<=', '@' + q + ''), orderBy('handle'), limit(10))),
+    ]);
+    const mapa = new Map<string, Partial<UserProfile & { uid: string }>>();
+    [...porNome.docs, ...porHandle.docs].forEach((d) => {
+      if (!mapa.has(d.id)) mapa.set(d.id, { uid: d.id, ...(d.data() as Partial<UserProfile>) });
+    });
+    return [...mapa.values()].slice(0, 15);
+  } catch {
+    return [];
   }
 }

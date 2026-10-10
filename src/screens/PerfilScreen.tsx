@@ -123,7 +123,11 @@ export default function PerfilScreen({
     }));
     try {
       if (novoEstado) {
-        await seguirUsuario(currentUser.uid, uid);
+        await seguirUsuario(currentUser.uid, uid, {
+          name: currentUser.displayName,
+          handle: currentUser.handle,
+          photo: currentUser.photoURL ?? '',
+        });
       } else {
         await deixarDeSeguir(currentUser.uid, uid);
       }

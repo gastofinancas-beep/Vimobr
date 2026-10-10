@@ -380,6 +380,7 @@ export default function App() {
           onClose={() => setMostrarBusca(false)}
           onAbrirLugar={handleAbrirLugar}
           onAbrirPerfil={handleAbrirPerfil}
+          currentUser={currentUser}
         />
       )}
 
