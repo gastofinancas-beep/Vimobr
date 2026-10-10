@@ -15,6 +15,7 @@ import {
 import { searchPlaces, SAMPLE_PLACES } from '../lib/places';
 import MascotMessage from './MascotMessage';
 import { Spinner } from './ui';
+import { useEscape } from '../hooks/useEscape';
 import { SUGGESTED_FRIENDS } from '../screens/ComunidadeScreen';
 import type { Place } from '../types';
 
@@ -44,6 +45,7 @@ export default function SearchModal({
   onAbrirLugar: (p: Place | string) => void;
   onAbrirPerfil: (uid: string) => void;
 }) {
+  useEscape(onClose);
   const [query, setQuery] = useState('');
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>('todos');
   const [lugares, setLugares] = useState<Place[]>(SAMPLE_PLACES);

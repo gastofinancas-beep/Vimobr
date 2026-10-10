@@ -28,6 +28,7 @@ import {
 import { solicitarPermissaoNotificacoes, dispararNotificacaoLocalPush } from '../lib/fcm';
 import type { NotificationItem, NotificationType, CompanionStatus } from '../types';
 import { Avatar } from './ui';
+import { useEscape } from '../hooks/useEscape';
 
 function tempoAtras(timestamp: number): string {
   const seg = Math.floor((Date.now() - timestamp) / 1000);
@@ -53,6 +54,7 @@ export default function NotificationsModal({
   onAbrirPerfil?: (uid: string) => void;
 }) {
   const [notifs, setNotifs] = useState<NotificationItem[]>([]);
+  useEscape(onClose);
   const [filtro, setFiltro] = useState<'todas' | NotificationType>('todas');
   const [pushStatus, setPushStatus] = useState<'default' | 'granted' | 'denied'>(
     typeof window !== 'undefined' && 'Notification' in window

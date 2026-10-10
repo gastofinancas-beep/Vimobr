@@ -62,13 +62,12 @@ export default function FeedReviewCard({
     review.placePhotoUrl ||
     (review.placePhotoName ? photoUrl(review.placePhotoName, 800) : null);
 
-  const curtir = async () => {
-    const antes = curtido;
-    const agora = await alternarCurtida(review.id, currentUser.uid);
+  // Atualiza na hora; a gravação local é imediata e o Firestore segue em segundo plano
+  const curtir = () => {
+    const agora = !curtido;
     setCurtido(agora);
-    if (agora !== antes) {
-      setCurtidas((c) => Math.max(0, c + (agora ? 1 : -1)));
-    }
+    setCurtidas((c) => Math.max(0, c + (agora ? 1 : -1)));
+    alternarCurtida(review.id, currentUser.uid).catch((err) => console.warn('Falha ao curtir:', err));
   };
 
   return (

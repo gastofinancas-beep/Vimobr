@@ -21,6 +21,7 @@ import {
 import StarRating from '../components/StarRating';
 import MascotMessage from '../components/MascotMessage';
 import { Avatar, PlaceImage, Spinner, btn } from '../components/ui';
+import { useEscape } from '../hooks/useEscape';
 
 const TIPOS: Record<string, string> = {
   restaurant: 'Restaurante',
@@ -65,6 +66,7 @@ export default function PlaceDetailScreen({
   }>({ queroIr: [], jaFui: [], favoritos: [] });
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  useEscape(() => setFotoModal(null), !!fotoModal);
 
   // Carrega dados do estabelecimento e avaliações reais
   useEffect(() => {

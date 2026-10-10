@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Heart, CornerDownRight, Share2 } from 'lucide-react';
 import type { Comment, Review, UserProfile } from '../types';
 import { carregarComentarios, comentar } from '../lib/reviews';
+import { useEscape } from '../hooks/useEscape';
 
 export default function CommentsSheet({
   review,
@@ -31,7 +32,13 @@ export default function CommentsSheet({
       setCarregando(true);
       const lista = await carregarComentarios(review.id);
       if (ativo) {
-        setComentarios(lista);
+        // Mantém comentários enviados enquanto a lista ainda carregava
+        setComentarios((prev) => {
+          const pendentes = prev.filter(
+            (c) => c.id.startsWith('tmp-') && !lista.some((l) => l.uid === c.uid && l.text === c.text)
+          );
+          return [...lista, ...pendentes];
+        });
         setCarregando(false);
       }
     })();
@@ -44,32 +51,40 @@ export default function CommentsSheet({
     e?.preventDefault();
     if (!texto.trim() || enviando) return;
 
-    setEnviando(true);
-    try {
-      await comentar(
-        review.id,
-        {
-          uid: currentUser.uid,
-          name: currentUser.displayName,
-          handle: currentUser.handle,
-          photo: currentUser.photoURL,
-        },
-        texto,
-        respondendoA?.id
-      );
+    // Mostra o comentário na hora; a gravação local é imediata e o Firestore segue em segundo plano
+    const textoEnvio = texto.trim();
+    const pai = respondendoA?.id;
+    const otimista: Comment = {
+      id: 'tmp-' + Date.now(),
+      uid: currentUser.uid,
+      authorName: currentUser.displayName,
+      authorHandle: currentUser.handle,
+      authorPhoto: currentUser.photoURL,
+      text: textoEnvio,
+      createdAt: Date.now(),
+      parentId: pai,
+      likesCount: 0,
+    };
+    setComentarios((prev) => [...prev, otimista]);
+    setTexto('');
+    setRespondendoA(null);
+    onCommentAdded();
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
 
-      setTexto('');
-      setRespondendoA(null);
-      const atualizados = await carregarComentarios(review.id);
-      setComentarios(atualizados);
-      onCommentAdded();
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    } catch (err) {
-      console.error('Falha ao enviar comentário:', err);
-    } finally {
-      setEnviando(false);
-    }
+    comentar(
+      review.id,
+      {
+        uid: currentUser.uid,
+        name: currentUser.displayName,
+        handle: currentUser.handle,
+        photo: currentUser.photoURL,
+      },
+      textoEnvio,
+      pai
+    ).catch((err) => console.error('Falha ao enviar comentário:', err));
   };
+
+  useEscape(onClose);
 
   const alternarCurtidaComentario = (cid: string) => {
     setCurtidasComentarios((prev) => {
@@ -137,7 +152,7 @@ export default function CommentsSheet({
 
         {/* Lista de Comentários */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-          {carregando ? (
+          {carregando && comentarios.length === 0 ? (
             <div className="space-y-4 py-8">
               {[1, 2, 3].map((n) => (
                 <div key={n} className="flex gap-3 animate-pulse">

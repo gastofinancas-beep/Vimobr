@@ -98,9 +98,9 @@ export default function AmigosScreen({
     setSalvos((s) => ({ ...s, [r.placeId]: adicionado }));
   };
 
-  const handleSeguir = async (alvo: string) => {
-    await seguir(currentUser.uid, alvo);
+  const handleSeguir = (alvo: string) => {
     setSeguindoIds((s) => new Set(s).add(alvo));
+    seguir(currentUser.uid, alvo).catch((err) => console.warn('Falha ao seguir:', err));
   };
 
   return (

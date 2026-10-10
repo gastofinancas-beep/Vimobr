@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, Moon, Sun, Plus, LogOut } from 'lucide-react';
-import { carregarReviewsDoUsuario, obterListasUsuario } from '../lib/reviews';
+import { carregarReviewsDoUsuario, obterListasUsuario, reviewsLocaisDoUsuario } from '../lib/reviews';
 import { photoUrl, SAMPLE_PLACES } from '../lib/places';
 import DiarioTab from '../components/DiarioTab';
 import ResumoPaladar from '../components/ResumoPaladar';
@@ -58,7 +58,11 @@ export default function PerfilScreen({
 
   useEffect(() => {
     let ativo = true;
-    setCarregando(true);
+    // Mostra na hora o que já está no aparelho e atualiza quando o servidor responder
+    const locais = reviewsLocaisDoUsuario(uid);
+    setReviews(locais);
+    setListas(obterListasUsuario(uid));
+    setCarregando(locais.length === 0);
     carregarReviewsDoUsuario(uid)
       .then((r) => {
         if (!ativo) return;

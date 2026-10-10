@@ -6,6 +6,7 @@ import { SAMPLE_PLACES, autocompleteCidade } from '../lib/places';
 import type { Place, UserProfile } from '../types';
 import MascotMessage from '../components/MascotMessage';
 import { PlaceImage, btn } from '../components/ui';
+import { useEscape } from '../hooks/useEscape';
 
 type TipoRestauranteFiltro =
   | 'todos'
@@ -49,6 +50,7 @@ export default function ExplorarScreen({
   const [filtroTipo, setFiltroTipo] = useState<TipoRestauranteFiltro>('todos');
   const [buscaTermo, setBuscaTermo] = useState('');
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
+  useEscape(() => setCidadeModalAberta(false), cidadeModalAberta);
 
   // Filtragem dos restaurantes por tipo
   const lugaresFiltrados = useMemo(() => {

@@ -42,8 +42,13 @@ export async function uploadFoto(uid: string, file: File): Promise<string> {
   }
   try {
     const r = ref(storage, `reviews/${uid}/${crypto.randomUUID()}.jpg`);
-    await uploadBytes(r, await comprimir(file), { contentType: 'image/jpeg' });
-    return await getDownloadURL(r);
+    const envio = (async () => {
+      await uploadBytes(r, await comprimir(file), { contentType: 'image/jpeg' });
+      return await getDownloadURL(r);
+    })();
+    // Sem rede o Storage tenta por até 10 min; limita para não travar a publicação
+    const limite = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('upload timeout')), 15000));
+    return await Promise.race([envio, limite]);
   } catch (err) {
     console.warn('Storage upload fallback:', err);
     return URL.createObjectURL(file);
@@ -233,8 +238,10 @@ export async function salvarAvaliacao(a: {
     });
   }
 
-  // If Firebase is configured, persist to Firestore
+  // Firestore em segundo plano: a ida já está salva no aparelho, então a confirmação
+  // aparece na hora mesmo com rede lenta ou sem conexão.
   if (isFirebaseConfigured) {
+    void (async () => {
     try {
       const reviewRef = doc(collection(db, 'reviews'));
       const placeRef = doc(db, 'places', a.place.id);
@@ -267,10 +274,10 @@ export async function salvarAvaliacao(a: {
         };
         tx.set(reviewRef, firestoreReview);
       });
-      return reviewRef.id;
     } catch (err) {
       console.warn('Firestore salvarAvaliacao error, used local fallback:', err);
     }
+  })();
   }
 
   return newId;
@@ -381,6 +388,13 @@ export async function carregarExplorar(
 }
 
 // Todas as idas de um usuário (para o Perfil e o Diário)
+/** Avaliações do usuário já salvas neste aparelho (resposta imediata, sem rede). */
+export function reviewsLocaisDoUsuario(uid: string): Review[] {
+  return getLocalReviews()
+    .filter((r) => r.uid === uid)
+    .sort((a, b) => b.visitedAt - a.visitedAt);
+}
+
 export async function carregarReviewsDoUsuario(uid: string): Promise<Review[]> {
   const locais = getLocalReviews().filter((r) => r.uid === uid);
   let remotas: Review[] = [];
@@ -622,14 +636,8 @@ export function obterListasUsuario(uid: string) {
   try {
     const raw = localStorage.getItem('vimo_lists_' + uid);
     if (raw) return JSON.parse(raw);
-    const padrao =
-      uid === 'user-me'
-        ? {
-            queroIr: ['chIJf-place-03'],
-            jaFui: ['chIJf-place-01', 'chIJf-place-02'],
-            favoritos: ['chIJf-place-01', 'chIJf-place-02'],
-          }
-        : { queroIr: [], jaFui: [], favoritos: [] };
+    // Só dados reais: listas começam vazias para todo mundo
+    const padrao = { queroIr: [], jaFui: [], favoritos: [] };
     localStorage.setItem('vimo_lists_' + uid, JSON.stringify(padrao));
     return padrao;
   } catch {
