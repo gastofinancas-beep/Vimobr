@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { AlertCircle, Camera, Check, X, MapPin, Loader } from 'lucide-react';
+import { AlertCircle, Camera, Check, X, MapPin, Loader, Trash2 } from 'lucide-react';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage, isFirebaseConfigured } from '../lib/firebase';
+import { deleteUser } from 'firebase/auth';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { storage, auth, db, isFirebaseConfigured } from '../lib/firebase';
 import { autocompleteCidade, slug } from '../lib/places';
 import { Avatar } from './ui';
 import type { UserProfile } from '../types';
@@ -57,6 +59,9 @@ export default function EditarPerfilModal({
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
+  const [textoConfirmacao, setTextoConfirmacao] = useState('');
+  const [excluindo, setExcluindo] = useState(false);
   const inputFotoRef = useRef<HTMLInputElement>(null);
 
   const handleHandleChange = (val: string) => {
@@ -78,6 +83,24 @@ export default function EditarPerfilModal({
       setSugestoesCidade(res);
     } else {
       setSugestoesCidade([]);
+    }
+  };
+
+  const handleExcluirConta = async () => {
+    if (textoConfirmacao.trim().toUpperCase() !== 'EXCLUIR') return;
+    setExcluindo(true);
+    try {
+      if (isFirebaseConfigured && auth.currentUser) {
+        await deleteDoc(doc(db, 'users', usuario.uid));
+        await deleteUser(auth.currentUser);
+      }
+      localStorage.clear();
+      window.location.reload();
+    } catch {
+      setExcluindo(false);
+      setConfirmarExclusao(false);
+      setTextoConfirmacao('');
+      setErro('Não foi possível excluir a conta. Tente fazer login novamente e repita a ação.');
     }
   };
 
@@ -271,6 +294,74 @@ export default function EditarPerfilModal({
               )}
             </div>
           </Field>
+
+          {/* Links legais */}
+          <div className="flex gap-6 px-4 py-5 border-b border-line">
+            <a
+              href="/privacidade.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-muted hover:text-ink underline underline-offset-2 transition"
+            >
+              Política de Privacidade
+            </a>
+            <a
+              href="/termos.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-muted hover:text-ink underline underline-offset-2 transition"
+            >
+              Termos de Uso
+            </a>
+          </div>
+
+          {/* Zona de perigo: exclusão de conta */}
+          <div className="px-4 py-5">
+            {!confirmarExclusao ? (
+              <button
+                type="button"
+                onClick={() => setConfirmarExclusao(true)}
+                className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 transition cursor-pointer"
+              >
+                <Trash2 size={15} />
+                Excluir conta
+              </button>
+            ) : (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
+                <p className="text-sm font-semibold text-red-700">Excluir conta permanentemente</p>
+                <p className="text-[13px] text-red-600">
+                  Todos os seus dados, avaliações e histórico serão apagados. Esta ação não pode ser desfeita.
+                </p>
+                <p className="text-[13px] text-red-600 font-medium">
+                  Digite <span className="font-bold">EXCLUIR</span> para confirmar:
+                </p>
+                <input
+                  value={textoConfirmacao}
+                  onChange={(e) => setTextoConfirmacao(e.target.value)}
+                  placeholder="EXCLUIR"
+                  className="w-full h-10 rounded-lg border border-red-300 bg-white px-3 text-sm text-red-700 placeholder:text-red-300 outline-none focus:ring-2 focus:ring-red-400"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setConfirmarExclusao(false); setTextoConfirmacao(''); }}
+                    className="flex-1 h-10 rounded-lg border border-line text-sm font-medium text-ink hover:bg-s1 transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={textoConfirmacao.trim().toUpperCase() !== 'EXCLUIR' || excluindo}
+                    onClick={handleExcluirConta}
+                    className="flex-1 h-10 rounded-lg bg-red-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-red-700 transition cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {excluindo ? <Loader size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </form>
       </div>
     </div>
