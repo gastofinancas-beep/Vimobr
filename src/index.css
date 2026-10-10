@@ -72,61 +72,64 @@
   --radius-3xl: 24px;
 
   /* Elevação: sombras discretas, tingidas com o preto da marca */
-  --shadow-2xs: 0 1px 1px rgb(11 15 26 / 0.04);
-  --shadow-xs: 0 1px 2px rgb(11 15 26 / 0.05);
-  --shadow-sm: 0 1px 2px rgb(11 15 26 / 0.04), 0 2px 8px rgb(11 15 26 / 0.05);
-  --shadow-md: 0 2px 4px rgb(11 15 26 / 0.04), 0 8px 20px rgb(11 15 26 / 0.07);
-  --shadow-lg: 0 4px 8px rgb(11 15 26 / 0.05), 0 16px 36px rgb(11 15 26 / 0.10);
-  --shadow-xl: 0 8px 16px rgb(11 15 26 / 0.08), 0 24px 48px rgb(11 15 26 / 0.14);
-  --shadow-2xl: 0 12px 24px rgb(11 15 26 / 0.12), 0 32px 64px rgb(11 15 26 / 0.20);
+  --shadow-2xs: 0 1px 1px rgb(16 17 22 / 0.02);
+  --shadow-xs: 0 1px 2px rgb(16 17 22 / 0.03);
+  --shadow-sm: 0 1px 2px rgb(16 17 22 / 0.03), 0 2px 6px rgb(16 17 22 / 0.03);
+  --shadow-md: 0 2px 4px rgb(16 17 22 / 0.03), 0 6px 16px rgb(16 17 22 / 0.04);
+  --shadow-lg: 0 4px 8px rgb(16 17 22 / 0.04), 0 12px 28px rgb(16 17 22 / 0.07);
+  --shadow-xl: 0 8px 16px rgb(16 17 22 / 0.06), 0 20px 40px rgb(16 17 22 / 0.10);
+  --shadow-2xl: 0 12px 24px rgb(16 17 22 / 0.10), 0 28px 56px rgb(16 17 22 / 0.16);
 }
 
 /* --------------------------------------------------------------------------
    Temas
    -------------------------------------------------------------------------- */
 
-/* Identidade VIMO: preto #0B0F1A · azul #2563FF · cinza #E9ECF2 · off-white #F7F8FA */
-:root { /* claro: padrão, como a prancha */
-  --bg: #F7F8FA;
+/* Identidade VIMO — paleta oficial
+   off-white #F8F7F4 (fundo) · preto azulado #101116 (textos e botões)
+   azul elétrico #124BFF (destaque da marca) · cinza claro #D9D9D9 (divisórias e secundários)
+   Os demais tons são misturas dessas quatro cores. */
+:root { /* claro: padrão */
+  --bg: #F8F7F4;
   --s1: #FFFFFF;
-  --s2: #EFF1F5;
-  --s3: #E9ECF2;
-  --line: #E6E9EF;
-  --ink: #0B0F1A;
-  --ink-2: #2B3243;
-  --muted: #687083;
-  --primary: #2563FF;        /* azul elétrico: ativos, links, estrelas, + */
-  --primary-hover: #1C52E6;
+  --s2: #EEEDEA;             /* off-white + cinza claro */
+  --s3: #D9D9D9;
+  --line: #D9D9D9;
+  --ink: #101116;
+  --ink-2: #3A3B41;          /* preto azulado a 80% */
+  --muted: #6E6F74;          /* preto azulado a 60% */
+  --primary: #124BFF;        /* azul elétrico: ativos, links, estrelas, + */
+  --primary-hover: #0D3DE0;
   --on-primary: #FFFFFF;
-  --cta: #0B0F1A;            /* botões principais em pílula preta */
-  --on-cta: #FFFFFF;
-  --star: #2563FF;
-  --like: #F0384F;
+  --cta: #101116;            /* botões principais em pílula preta */
+  --on-cta: #F8F7F4;
+  --star: #124BFF;
+  --like: #124BFF;           /* curtir no azul da marca */
   --danger: #E5484D;
   --success: #12A150;
   --mascote-disco: transparent;
   color-scheme: light;
 }
 
-html.dark { /* escuro: alternativa */
-  --bg: #0B0F1A;
-  --s1: #141A28;
-  --s2: #1C2334;
-  --s3: #262E42;
-  --line: #222A3C;
-  --ink: #F7F8FA;
-  --ink-2: #C9CFDB;
-  --muted: #8B93A7;
-  --primary: #4F7FFF;        /* azul um tom acima para contraste no escuro */
-  --primary-hover: #6B93FF;
+html.dark { /* escuro: alternativa com as mesmas cores */
+  --bg: #101116;
+  --s1: #1A1B21;
+  --s2: #24252C;
+  --s3: #2F3038;
+  --line: #2F3038;
+  --ink: #F8F7F4;
+  --ink-2: #D9D9D9;
+  --muted: #9B9CA1;
+  --primary: #3D6BFF;        /* o mesmo azul um tom acima, para texto legível no fundo escuro */
+  --primary-hover: #5C83FF;
   --on-primary: #FFFFFF;
-  --cta: #F7F8FA;
-  --on-cta: #0B0F1A;
-  --star: #5B88FF;
-  --like: #FF5267;
+  --cta: #F8F7F4;
+  --on-cta: #101116;
+  --star: #3D6BFF;
+  --like: #3D6BFF;
   --danger: #FF6B6F;
   --success: #3CCB7F;
-  --mascote-disco: #E9ECF2;  /* o mascote é preto: no escuro ele fica num disco claro */
+  --mascote-disco: #F8F7F4;  /* o mascote é preto: no escuro ele fica num disco off-white */
   color-scheme: dark;
 }
 

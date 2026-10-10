@@ -26,14 +26,14 @@ export default function ShareReviewModal({
   // Renderiza o card social no Canvas (1080 x 1350 px) na identidade VIMO.
   // Canvas não entende variáveis CSS: as cores da marca ficam em constantes.
   const COR = {
-    fundo: '#F7F8FA',
+    fundo: '#F8F7F4',
     cartao: '#FFFFFF',
-    tinta: '#0B0F1A',
-    tinta2: '#2B3243',
-    suave: '#687083',
-    azul: '#2563FF',
-    linha: '#E6E9EF',
-    trilho: '#E9ECF2',
+    tinta: '#101116',
+    tinta2: '#3A3B41',
+    suave: '#6E6F74',
+    azul: '#124BFF',
+    linha: '#D9D9D9',
+    trilho: '#EEEDEA',
   };
   const FONTE = 'Inter, ui-sans-serif, system-ui, sans-serif';
 
@@ -66,7 +66,7 @@ export default function ShareReviewModal({
     ctx.fillStyle = COR.fundo;
     ctx.fillRect(0, 0, width, height);
     ctx.save();
-    ctx.shadowColor = 'rgba(11,15,26,0.08)';
+    ctx.shadowColor = 'rgba(16,17,22,0.08)';
     ctx.shadowBlur = 40;
     ctx.shadowOffsetY = 12;
     ctx.fillStyle = COR.cartao;
@@ -111,7 +111,7 @@ export default function ShareReviewModal({
     const bx = imgX + imgW - bw - 24;
     const by = imgY + 24;
     ctx.save();
-    ctx.shadowColor = 'rgba(11,15,26,0.18)';
+    ctx.shadowColor = 'rgba(16,17,22,0.18)';
     ctx.shadowBlur = 16;
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
@@ -251,13 +251,13 @@ export default function ShareReviewModal({
     h: number,
     nome: string
   ) {
-    ctx.fillStyle = '#0B0F1A';
+    ctx.fillStyle = '#101116';
     ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = '#2563FF';
+    ctx.fillStyle = '#124BFF';
     ctx.beginPath();
     ctx.arc(x + w - 120, y + 110, 150, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#F7F8FA';
+    ctx.fillStyle = '#F8F7F4';
     ctx.font = `700 48px ${FONTE}`;
     wrapText(ctx, nome, x + 48, y + h - 60, w - 96, 56, 2);
   }

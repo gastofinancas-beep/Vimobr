@@ -7,7 +7,7 @@ import { Star } from 'lucide-react';
    ========================================================================== */
 
 /** Tons da marca para lugares sem foto. */
-const CORES_POSTER = ['#0B0F1A', '#1A2340', '#2563FF', '#1E2A4A', '#141B2E', '#3A5BD9'];
+const CORES_POSTER = ['#101116', '#124BFF', '#2A2B33', '#0D37BF', '#1D1E26', '#3B3C44'];
 
 export function corDoLugar(nome = ''): string {
   let h = 0;
@@ -126,9 +126,9 @@ export function Logo({ altura = 26, className = '' }: { altura?: number; classNa
 export function RatingBadge({ nota, className = '' }: { nota: number; className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-xs font-semibold text-[#0B0F1A] shadow-sm tabular ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-xs font-semibold text-[#101116] shadow-sm tabular ${className}`}
     >
-      <Star size={11} className="fill-[#2563FF] text-[#2563FF]" />
+      <Star size={11} className="fill-[#124BFF] text-[#124BFF]" />
       {nota.toFixed(1).replace('.', ',')}
     </span>
   );

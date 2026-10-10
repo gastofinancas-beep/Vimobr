@@ -284,7 +284,7 @@ export default function PlaceDetailScreen({
       : `${amigosQueForam[0]?.name}, ${amigosQueForam[1]?.name} e mais ${amigosQueForam.length - 2}`;
 
   const botaoFoto =
-    'w-10 h-10 rounded-full bg-white/95 text-[#0B0F1A] shadow-md flex items-center justify-center hover:bg-white transition-colors cursor-pointer';
+    'w-10 h-10 rounded-full bg-white/95 text-[#101116] shadow-md flex items-center justify-center hover:bg-white transition-colors cursor-pointer';
 
   return (
     <div className="flex-1 min-h-screen bg-bg text-ink pb-28">

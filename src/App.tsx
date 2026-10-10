@@ -76,7 +76,7 @@ export default function App() {
     try {
       localStorage.setItem('vimo_tema_v3', tema);
     } catch {}
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tema === 'dark' ? '#0B0F1A' : '#F7F8FA');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tema === 'dark' ? '#101116' : '#F8F7F4');
   }, [tema]);
 
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
