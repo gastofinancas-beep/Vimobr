@@ -84,7 +84,7 @@ function FotoPicker({
       <div className="flex flex-wrap gap-2">
         {fotos.map((f, i) => (
           <div
-            key={i}
+            key={f.url}
             className="relative w-16 h-16 rounded-xl overflow-hidden bg-black/40 border border-[var(--line)] group"
           >
             <img src={f.url} alt="" className="w-full h-full object-cover" />

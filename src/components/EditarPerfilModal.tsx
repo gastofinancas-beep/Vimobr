@@ -79,8 +79,12 @@ export default function EditarPerfilModal({
   const handleCidadeInput = async (val: string) => {
     setCidadeTexto(val);
     if (val.length > 1) {
-      const res = await autocompleteCidade(val);
-      setSugestoesCidade(res);
+      try {
+        const res = await autocompleteCidade(val);
+        setSugestoesCidade(res);
+      } catch {
+        setSugestoesCidade([]);
+      }
     } else {
       setSugestoesCidade([]);
     }

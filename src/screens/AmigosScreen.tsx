@@ -45,6 +45,7 @@ export default function AmigosScreen({
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [erroCarregar, setErroCarregar] = useState(false);
   const [seguindoIds, setSeguindoIds] = useState<Set<string>>(new Set());
   const [salvos, setSalvos] = useState<Record<string, boolean>>({});
 
@@ -60,11 +61,12 @@ export default function AmigosScreen({
         if (r.cityKey && r.cityKey !== currentUser.homeCityKey) mapa.set(r.cityKey, r.cityName);
       });
       setCidades([...mapa.entries()].map(([key, nome]) => ({ key, nome })));
-    });
+    }).catch(() => setCidades([]));
   }, [aba, filtro, currentUser.uid, currentUser.homeCityKey]);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
+    setErroCarregar(false);
     try {
       setSeguindoIds(new Set(await idsSeguindo(currentUser.uid)));
 
@@ -84,6 +86,8 @@ export default function AmigosScreen({
       const mapa: Record<string, boolean> = {};
       (listas.queroIr as string[]).forEach((id) => (mapa[id] = true));
       setSalvos(mapa);
+    } catch {
+      setErroCarregar(true);
     } finally {
       setCarregando(false);
     }
@@ -176,6 +180,14 @@ export default function AmigosScreen({
         <div className="mt-4 space-y-4">
           {carregando ? (
             <Spinner label="Carregando avaliações" />
+          ) : erroCarregar ? (
+            <MascotMessage
+              reaction="decepcionado"
+              title="Não foi possível carregar"
+              subtitle="Verifique sua conexão e tente novamente."
+              ctaLabel="Tentar novamente"
+              onCta={carregar}
+            />
           ) : reviews.length === 0 ? (
             <MascotMessage
               reaction={aba === 'seguindo' ? 'social' : 'explorando'}
