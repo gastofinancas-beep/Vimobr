@@ -126,6 +126,17 @@ export function saveLocalReviews(reviews: Review[]) {
   }
 }
 
+export async function excluirAvaliacao(reviewId: string): Promise<void> {
+  const atualizadas = getLocalReviews().filter((r) => r.id !== reviewId);
+  saveLocalReviews(atualizadas);
+  if (!isFirebaseConfigured) return;
+  try {
+    await deleteDoc(doc(db, 'reviews', reviewId));
+  } catch (err) {
+    console.warn('Erro ao excluir avaliação no Firestore:', err);
+  }
+}
+
 // ---------- Publicar avaliação
 export async function salvarAvaliacao(a: {
   autor: Autor;

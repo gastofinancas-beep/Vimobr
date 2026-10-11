@@ -54,6 +54,7 @@ export default function PlaceDetailScreen({
   onAbrirPerfil,
 }: PlaceDetailScreenProps) {
   const [place, setPlace] = useState<Place | null>(initialPlace || null);
+  const [naoEncontrado, setNaoEncontrado] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [carregando, setCarregando] = useState(!initialPlace);
   const [fotoModal, setFotoModal] = useState<string | null>(null);
@@ -82,13 +83,21 @@ export default function PlaceDetailScreen({
         if (ativo && p) {
           setPlace(p);
         } else if (ativo && !place) {
-          const found = SAMPLE_PLACES.find((s) => s.id === placeId) || SAMPLE_PLACES[0];
-          setPlace(found);
+          const found = SAMPLE_PLACES.find((s) => s.id === placeId);
+          if (found) {
+            setPlace(found);
+          } else {
+            setNaoEncontrado(true);
+          }
         }
       } catch {
         if (ativo && !place) {
-          const found = SAMPLE_PLACES.find((s) => s.id === placeId) || SAMPLE_PLACES[0];
-          setPlace(found);
+          const found = SAMPLE_PLACES.find((s) => s.id === placeId);
+          if (found) {
+            setPlace(found);
+          } else {
+            setNaoEncontrado(true);
+          }
         }
       }
 

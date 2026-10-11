@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, Moon, Sun, Plus, LogOut, HelpCircle, UserPlus, UserCheck } from 'lucide-react';
 import { estaSeguindo, seguirUsuario, deixarDeSeguir, carregarPerfil } from '../lib/follows';
-import { carregarReviewsDoUsuario, obterListasUsuario, reviewsLocaisDoUsuario } from '../lib/reviews';
+import { carregarReviewsDoUsuario, obterListasUsuario, reviewsLocaisDoUsuario, excluirAvaliacao } from '../lib/reviews';
 import { photoUrl, SAMPLE_PLACES } from '../lib/places';
 import DiarioTab from '../components/DiarioTab';
 import ResumoPaladar from '../components/ResumoPaladar';
@@ -410,6 +410,10 @@ export default function PerfilScreen({
                   onAbrirLugar={onAbrirLugar}
                   onNovaIda={onNovaAvaliacao}
                   somenteLeitura={!isMeuPerfil}
+                  onExcluir={isMeuPerfil ? async (reviewId) => {
+                    setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+                    await excluirAvaliacao(reviewId);
+                  } : undefined}
                 />
               )}
               {aba === 'paladar' && (
