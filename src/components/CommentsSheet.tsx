@@ -31,16 +31,21 @@ export default function CommentsSheet({
     let ativo = true;
     (async () => {
       setCarregando(true);
-      const lista = await carregarComentarios(review.id);
-      if (ativo) {
-        // Mantém comentários enviados enquanto a lista ainda carregava
-        setComentarios((prev) => {
-          const pendentes = prev.filter(
-            (c) => c.id.startsWith('tmp-') && !lista.some((l) => l.uid === c.uid && l.text === c.text)
-          );
-          return [...lista, ...pendentes];
-        });
-        setCarregando(false);
+      try {
+        const lista = await carregarComentarios(review.id);
+        if (ativo) {
+          // Mantém comentários enviados enquanto a lista ainda carregava
+          setComentarios((prev) => {
+            const pendentes = prev.filter(
+              (c) => c.id.startsWith('tmp-') && !lista.some((l) => l.uid === c.uid && l.text === c.text)
+            );
+            return [...lista, ...pendentes];
+          });
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar comentários:', err);
+      } finally {
+        if (ativo) setCarregando(false);
       }
     })();
     return () => {
@@ -82,7 +87,9 @@ export default function CommentsSheet({
       },
       textoEnvio,
       pai
-    ).catch((err) => console.error('Falha ao enviar comentário:', err));
+    ).catch(() => {
+      setComentarios((prev) => prev.filter((c) => c.id !== otimista.id));
+    });
   };
 
   useEscape(onClose);

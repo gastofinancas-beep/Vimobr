@@ -648,44 +648,15 @@ export async function buscarRestaurantesReaisOSM(
   return [];
 }
 
-// Aba Mapa: Restaurantes reais ao redor da localização do usuário
+// Aba Mapa: Restaurantes reais ao redor da localização do usuário.
+// Usa OpenStreetMap (gratuito, sem API key) para zero custo.
 export async function buscarProximos(
   lat: number,
   lng: number,
   raio = 3000,
-  tipos: string[] = TIPOS
+  _tipos: string[] = TIPOS
 ): Promise<Place[]> {
-  const key = getApiKey();
-
-  // 1. Tentar primeiro o Google Places API (New) com fotos reais do Google Meu Negócio
-  if (key) {
-    try {
-      const data = await post(
-        'places:searchNearby',
-        {
-          includedTypes: tipos,
-          maxResultCount: 20,
-          rankPreference: 'DISTANCE',
-          languageCode: 'pt-BR',
-          locationRestriction: {
-            circle: { center: { latitude: lat, longitude: lng }, radius: raio },
-          },
-        },
-        FIELDS
-      );
-
-      const res = (data.places ?? []).map(mapPlace);
-      if (res.length > 0) {
-        cachePlaces(res);
-        return res;
-      }
-    } catch (err) {
-      console.warn('Google Places API falhou, buscando estabelecimentos reais via OSM:', err);
-    }
-  }
-
-  // 2. Se a API do Google não estiver configurada ou falhar (ex: faturamento pendente),
-  // buscar estabelecimentos REAIS da vizinhança do usuário via OpenStreetMap Overpass
+  // 1. OpenStreetMap Overpass — gratuito, sem chave, dados reais
   try {
     const reaisOSM = await buscarRestaurantesReaisOSM(lat, lng, raio);
     if (reaisOSM.length > 0) {
@@ -695,7 +666,7 @@ export async function buscarProximos(
     console.warn('Falha na busca OSM:', err);
   }
 
-  // 3. Fallback de salvaguarda caso o dispositivo esteja offline ou sem rede
+  // 2. Fallback de salvaguarda caso o dispositivo esteja offline ou sem rede
   const locaisFallback = gerarLugaresAoRedor(lat, lng);
   cachePlaces(locaisFallback);
   return locaisFallback;
@@ -798,7 +769,28 @@ export function cachePlaces(places: Place[]): void {
 export async function getPlace(placeId: string): Promise<Place> {
   // 1. Tentar obter do cache em memória instantâneo
   const emCache = MEMORY_PLACES_CACHE.get(placeId);
-  if (emCache) return emCache;
+  const isOsmId =
+    placeId.startsWith('local-place-') ||
+    placeId.startsWith('osm-') ||
+    placeId.startsWith('node-');
+
+  // Lugares Google (não-OSM) são retornados direto do cache
+  if (emCache && !isOsmId) return emCache;
+  // Lugares OSM já enriquecidos (foto Foursquare ou sem foto confirmado) retornam do cache
+  if (emCache && isOsmId && emCache.photoUrl !== undefined) return emCache;
+  // Lugares OSM sem foto ainda — verificar localStorage antes de buscar
+  if (emCache && isOsmId && emCache.photoUrl === undefined) {
+    const lsKey = `vimo_fsq_photo_${emCache.name?.toLowerCase().replace(/\s+/g, '_').slice(0, 40)}`;
+    try {
+      const lsVal = localStorage.getItem(lsKey);
+      if (lsVal !== null) {
+        // '' significa que buscamos e não encontramos foto
+        const enriched: Place = { ...emCache, photoUrl: lsVal || undefined };
+        cachePlace(enriched);
+        return enriched;
+      }
+    } catch { /* localStorage pode falhar em modo privado */ }
+  }
 
   // 2. Tentar encontrar nos estabelecimentos padrão
   const sample = SAMPLE_PLACES.find((p) => p.id === placeId);
@@ -807,33 +799,60 @@ export async function getPlace(placeId: string): Promise<Place> {
     return sample;
   }
 
-  // 3. Fallback inteligente para IDs gerados ou locais
-  if (
-    placeId.startsWith('local-place-') ||
-    placeId.startsWith('osm-') ||
-    placeId.startsWith('node-')
-  ) {
+  // 3. Lugares do OSM/gerados — enriquecer com foto do Foursquare (grátis, 1000 chamadas/dia)
+  if (isOsmId) {
+    const osmPlace = emCache;
+    if (osmPlace && osmPlace.name && osmPlace.lat && osmPlace.lng) {
+      const lsKey = `vimo_fsq_photo_${osmPlace.name.toLowerCase().replace(/\s+/g, '_').slice(0, 40)}`;
+      const fsqKey = (import.meta.env.VITE_FOURSQUARE_API_KEY as string) || '';
+      if (fsqKey) {
+        try {
+          const searchRes = await fetch(
+            `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(osmPlace.name)}&ll=${osmPlace.lat},${osmPlace.lng}&radius=200&limit=1&fields=fsq_id`,
+            { headers: { Authorization: fsqKey, Accept: 'application/json' } }
+          );
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            const fsqId = searchData.results?.[0]?.fsq_id as string | undefined;
+            if (fsqId) {
+              const photoRes = await fetch(
+                `https://api.foursquare.com/v3/places/${fsqId}/photos?limit=1`,
+                { headers: { Authorization: fsqKey, Accept: 'application/json' } }
+              );
+              if (photoRes.ok) {
+                const photos = await photoRes.json();
+                const p = photos[0];
+                const fsqPhoto = p ? `${p.prefix}original${p.suffix}` : undefined;
+                // Salvar no localStorage: URL da foto ou '' se não encontrou
+                try { localStorage.setItem(lsKey, fsqPhoto ?? ''); } catch { /* noop */ }
+                const enriched: Place = { ...osmPlace, photoUrl: fsqPhoto };
+                cachePlace(enriched);
+                return enriched;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[Vimo] Busca de foto no Foursquare falhou:', err);
+        }
+      }
+      // Sem chave ou sem resultado — registrar que já tentamos (sem foto)
+      try { localStorage.setItem(lsKey, ''); } catch { /* noop */ }
+      const semFoto: Place = { ...osmPlace, photoUrl: undefined };
+      cachePlace(semFoto);
+      return semFoto;
+    }
+    if (osmPlace) return osmPlace;
+
+    // Stub mínimo quando o lugar OSM não está no cache
     const fallbackPlace: Place = {
       id: placeId,
-      name: placeId.includes('1')
-        ? 'Bistrô & Café Alecrim'
-        : placeId.includes('2')
-        ? 'Padaria Artesanal Farinha & Flor'
-        : placeId.includes('3')
-        ? 'Torra Especial & Espresso Bar'
-        : 'Restaurante & Bar Selecionado',
-      address: 'Endereço Gastronômico, São Paulo - SP',
+      name: 'Lugar selecionado',
+      address: 'São Paulo - SP',
       lat: -23.561684,
       lng: -46.682371,
       cityName: 'São Paulo - SP',
       cityKey: 'sao-paulo-sp',
-      photoUrl:
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
-      priceLevel: 'PRICE_LEVEL_MODERATE',
-      rating: 4.8,
-      reviewsCount: 24,
       tipo: 'restaurant',
-      sums: { ambiente: 115, comida: 120, atendimento: 110, custoBeneficio: 105 },
     };
     cachePlace(fallbackPlace);
     return fallbackPlace;
@@ -849,8 +868,6 @@ export async function getPlace(placeId: string): Promise<Place> {
       lng: -46.682371,
       cityName: 'São Paulo - SP',
       cityKey: 'sao-paulo-sp',
-      photoUrl:
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
       rating: 4.8,
       reviewsCount: 16,
       sums: { ambiente: 120, comida: 125, atendimento: 115, custoBeneficio: 110 },
@@ -884,8 +901,6 @@ export async function getPlace(placeId: string): Promise<Place> {
         lng: -46.682371,
         cityName: 'São Paulo - SP',
         cityKey: 'sao-paulo-sp',
-        photoUrl:
-          'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
         rating: 4.8,
         reviewsCount: 18,
       };
@@ -906,8 +921,6 @@ export async function getPlace(placeId: string): Promise<Place> {
       lng: -46.682371,
       cityName: 'São Paulo - SP',
       cityKey: 'sao-paulo-sp',
-      photoUrl:
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
       rating: 4.7,
       reviewsCount: 14,
     };

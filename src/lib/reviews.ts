@@ -126,6 +126,17 @@ export function saveLocalReviews(reviews: Review[]) {
   }
 }
 
+export async function excluirAvaliacao(reviewId: string): Promise<void> {
+  const atualizadas = getLocalReviews().filter((r) => r.id !== reviewId);
+  saveLocalReviews(atualizadas);
+  if (!isFirebaseConfigured) return;
+  try {
+    await deleteDoc(doc(db, 'reviews', reviewId));
+  } catch (err) {
+    console.warn('Erro ao excluir avaliação no Firestore:', err);
+  }
+}
+
 // ---------- Publicar avaliação
 export async function salvarAvaliacao(a: {
   autor: Autor;
@@ -288,7 +299,7 @@ export async function seguir(meu: string, alvo: string) {
   // Local storage
   try {
     const raw = localStorage.getItem(LS_FOLLOWING_KEY + '_' + meu);
-    const set = new Set<string>(raw ? JSON.parse(raw) : ['user-camila', 'user-pedro']);
+    const set = new Set<string>(raw ? JSON.parse(raw) : []);
     set.add(alvo);
     localStorage.setItem(LS_FOLLOWING_KEY + '_' + meu, JSON.stringify([...set]));
   } catch {}
@@ -310,7 +321,7 @@ export async function seguir(meu: string, alvo: string) {
 export async function deixarDeSeguir(meu: string, alvo: string) {
   try {
     const raw = localStorage.getItem(LS_FOLLOWING_KEY + '_' + meu);
-    const list: string[] = raw ? JSON.parse(raw) : ['user-camila', 'user-pedro'];
+    const list: string[] = raw ? JSON.parse(raw) : [];
     const filtered = list.filter((id) => id !== alvo);
     localStorage.setItem(LS_FOLLOWING_KEY + '_' + meu, JSON.stringify(filtered));
   } catch {}
@@ -332,13 +343,9 @@ export async function deixarDeSeguir(meu: string, alvo: string) {
 export async function idsSeguindo(meu: string): Promise<string[]> {
   try {
     const raw = localStorage.getItem(LS_FOLLOWING_KEY + '_' + meu);
-    if (raw) return JSON.parse(raw);
-    // Default demo following: user-camila and user-pedro
-    const defaultFollowing = ['user-camila', 'user-pedro'];
-    localStorage.setItem(LS_FOLLOWING_KEY + '_' + meu, JSON.stringify(defaultFollowing));
-    return defaultFollowing;
+    return raw ? JSON.parse(raw) : [];
   } catch {
-    return ['user-camila', 'user-pedro'];
+    return [];
   }
 }
 

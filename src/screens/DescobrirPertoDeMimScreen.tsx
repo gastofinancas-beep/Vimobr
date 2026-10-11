@@ -1,8 +1,6 @@
 // Source: Google Maps Platform Code Assist
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Crosshair, Bookmark } from 'lucide-react';
-import StarRating from '../components/StarRating';
-import { PlaceImage, btn } from '../components/ui';
 import GoogleMapsView, {
   type UnifiedPlace,
   type GoogleMapsViewRef,
@@ -10,7 +8,6 @@ import GoogleMapsView, {
 import { solicitarLocalizacaoAtual, obterCoordenadasSalvas } from '../services/locationService';
 import { calculateDistanceMeters } from '../services/foursquare/distance';
 import { buscarProximos, searchPlaces, SAMPLE_PLACES, calcularDistanciaKm } from '../lib/places';
-import { estaNaWishlist, alternarWishlist } from '../lib/wishlist';
 import type { UserProfile, Place } from '../types';
 
 /** Regras de cada filtro do mapa: tipo do lugar e palavras do nome ou da cozinha. */
@@ -66,8 +63,6 @@ export default function DescobrirPertoDeMimScreen({
   const [categoriaAtiva, setCategoriaAtiva] = useState('todos');
   const [termoBusca, setTermoBusca] = useState('');
 
-  // Wishlist
-  const [wishlistState, setWishlistState] = useState<Record<string, boolean>>({});
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastSalvo, setToastSalvo] = useState(true);
 
@@ -176,37 +171,6 @@ export default function DescobrirPertoDeMimScreen({
     carregarLugares(coords.lat, coords.lng, categoriaAtiva, termoBusca);
   }, [coords.lat, coords.lng, categoriaAtiva]);
 
-  // Wishlist
-  useEffect(() => {
-    const uid = currentUser?.uid || 'user-me';
-    const map: Record<string, boolean> = {};
-    lugares.forEach((p) => {
-      if (estaNaWishlist(uid, p.id)) {
-        map[p.id] = true;
-      }
-    });
-    setWishlistState(map);
-  }, [lugares, currentUser?.uid]);
-
-  const handleToggleWishlist = async (e: React.MouseEvent, place: UnifiedPlace) => {
-    e.stopPropagation();
-    const uid = currentUser?.uid || 'user-me';
-    const pObj: Place = place.rawPlace || {
-      id: place.id,
-      name: place.name,
-      address: place.address,
-      lat: place.lat,
-      lng: place.lng,
-      rating: place.rating || 4.5,
-      tipo: place.category,
-      photoUrl: place.photoUrl || '',
-    };
-
-    const res = await alternarWishlist(uid, pObj);
-    setWishlistState((prev) => ({ ...prev, [place.id]: res.added }));
-    avisar(res.added ? `${place.name} salvo` : 'Removido', true);
-  };
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     carregarLugares(coords.lat, coords.lng, categoriaAtiva, termoBusca);
@@ -251,13 +215,6 @@ export default function DescobrirPertoDeMimScreen({
     );
   };
 
-  const sel = selectedPlace;
-  const notaSel = sel ? sel.vimoRating ?? sel.rating ?? null : null;
-  const qtdSel = sel ? (sel.vimoRating ? sel.vimoReviewsCount : sel.googleUserRatingCount) || 0 : 0;
-  const metaSel = sel
-    ? [sel.category, sel.priceLevel, sel.distanceFormatted].filter(Boolean).join(' · ')
-    : '';
-
   return (
     <div className="relative h-screen w-full overflow-hidden bg-bg">
       {toastMsg && (
@@ -278,7 +235,10 @@ export default function DescobrirPertoDeMimScreen({
           userLng={coords.lng}
           places={lugares}
           selectedPlaceId={selectedPlace?.id ?? null}
-          onSelectPlace={(p) => setSelectedPlace(p)}
+          onSelectPlace={(p) => {
+            setSelectedPlace(p);
+            if (p) handleVerRestaurante(p);
+          }}
           className="h-full w-full"
         />
       </div>
@@ -345,64 +305,10 @@ export default function DescobrirPertoDeMimScreen({
         type="button"
         onClick={handleRecentralizar}
         aria-label="Voltar para minha localização"
-        className={`absolute right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-s1 text-ink shadow-md transition-[bottom] duration-200 hover:text-primary cursor-pointer ${
-          sel ? 'bottom-[15.5rem]' : 'bottom-24'
-        }`}
+        className="absolute right-4 bottom-24 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-s1 text-ink shadow-md hover:text-primary cursor-pointer"
       >
         <Crosshair size={19} strokeWidth={1.8} />
       </button>
-
-      {/* Lugar selecionado: aparece só ao tocar em um pino */}
-      {sel && (
-        <div className="absolute inset-x-4 bottom-24 z-30 mx-auto max-w-md animate-in slide-in-from-bottom-2">
-          <div className="flex gap-3 rounded-2xl bg-s1 p-3 shadow-lg">
-            <button
-              type="button"
-              onClick={() => handleVerRestaurante(sel)}
-              aria-label={`Ver ${sel.name}`}
-              className="h-[88px] w-[66px] shrink-0 overflow-hidden rounded-md cursor-pointer"
-            >
-              <PlaceImage src={sel.photoUrl} name={sel.name} className="h-full w-full" />
-            </button>
-
-            <div className="flex min-w-0 flex-1 flex-col">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="min-w-0 truncate text-base font-semibold text-ink">{sel.name}</h3>
-                <button
-                  type="button"
-                  onClick={(e) => handleToggleWishlist(e, sel)}
-                  aria-pressed={!!wishlistState[sel.id]}
-                  aria-label={wishlistState[sel.id] ? 'Remover de Quero ir' : 'Salvar em Quero ir'}
-                  className={`-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-s2 cursor-pointer ${
-                    wishlistState[sel.id] ? 'text-primary' : 'text-muted'
-                  }`}
-                >
-                  <Bookmark size={18} strokeWidth={1.8} className={wishlistState[sel.id] ? 'fill-current' : ''} />
-                </button>
-              </div>
-
-              {notaSel !== null ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="t-rating text-sm text-ink">{notaSel.toFixed(1).replace('.', ',')}</span>
-                  <StarRating value={notaSel} size={11} />
-                  {qtdSel > 0 && <span className="t-meta tabular">({qtdSel.toLocaleString('pt-BR')})</span>}
-                </div>
-              ) : (
-                <span className="t-meta">Sem avaliações ainda</span>
-              )}
-              {metaSel && <p className="mt-0.5 truncate t-meta">{metaSel}</p>}
-
-              <button
-                type="button"
-                onClick={() => handleVerRestaurante(sel)}
-                className={`${btn.secondary} mt-auto h-9 self-start px-4`}
-              >
-                Ver lugar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

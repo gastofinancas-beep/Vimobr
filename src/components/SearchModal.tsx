@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Search,
   X,
@@ -11,13 +11,15 @@ import {
   ArrowUpRight,
   Loader2,
   Users,
+  UserPlus,
+  UserCheck,
 } from 'lucide-react';
 import { searchPlaces, SAMPLE_PLACES } from '../lib/places';
+import { buscarUsuarios, estaSeguindo, seguirUsuario, deixarDeSeguir } from '../lib/follows';
 import MascotMessage from './MascotMessage';
-import { Spinner } from './ui';
+import { Avatar, Spinner } from './ui';
 import { useEscape } from '../hooks/useEscape';
-import { SUGGESTED_FRIENDS } from '../screens/ComunidadeScreen';
-import type { Place } from '../types';
+import type { Place, UserProfile } from '../types';
 
 const CATEGORIAS_BUSCA = [
   { id: 'todos', label: 'Todos', icon: Utensils, tipo: undefined },
@@ -40,10 +42,12 @@ export default function SearchModal({
   onClose,
   onAbrirLugar,
   onAbrirPerfil,
+  currentUser,
 }: {
   onClose: () => void;
   onAbrirLugar: (p: Place | string) => void;
   onAbrirPerfil: (uid: string) => void;
+  currentUser?: UserProfile;
 }) {
   useEscape(onClose);
   const [query, setQuery] = useState('');
@@ -51,11 +55,14 @@ export default function SearchModal({
   const [lugares, setLugares] = useState<Place[]>(SAMPLE_PLACES);
   const [carregando, setCarregando] = useState(false);
   const [abaPrincipal, setAbaPrincipal] = useState<'lugares' | 'pessoas'>('lugares');
+  const [pessoas, setPessoas] = useState<Partial<UserProfile & { uid: string }>[]>([]);
+  const [carregandoPessoas, setCarregandoPessoas] = useState(false);
+  const [seguindoSet, setSeguindoSet] = useState<Set<string>>(() => new Set());
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const tipoSelecionado = CATEGORIAS_BUSCA.find((c) => c.id === categoriaAtiva)?.tipo;
 
-  const executarBusca = async (texto: string, tipo?: string) => {
+  const executarBuscaLugares = async (texto: string, tipo?: string) => {
     if (texto.trim().length > 1) {
       setCarregando(true);
       try {
@@ -76,28 +83,58 @@ export default function SearchModal({
     }
   };
 
+  const executarBuscaPessoas = async (texto: string) => {
+    if (texto.trim().length < 2) { setPessoas([]); return; }
+    setCarregandoPessoas(true);
+    try {
+      const res = await buscarUsuarios(texto);
+      const filtrados = currentUser ? res.filter((u) => u.uid !== currentUser.uid) : res;
+      setPessoas(filtrados);
+      if (currentUser) {
+        const novos = new Set(filtrados.map((u) => u.uid!).filter((id) => estaSeguindo(currentUser.uid, id)));
+        setSeguindoSet(novos);
+      }
+    } finally {
+      setCarregandoPessoas(false);
+    }
+  };
+
   const handleQueryChange = (val: string) => {
     setQuery(val);
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      executarBusca(val, tipoSelecionado);
+      if (abaPrincipal === 'lugares') {
+        executarBuscaLugares(val, tipoSelecionado);
+      } else {
+        executarBuscaPessoas(val);
+      }
     }, 350);
   };
 
   const handleSelecionarCategoria = (catId: string) => {
     setCategoriaAtiva(catId);
     const tipo = CATEGORIAS_BUSCA.find((c) => c.id === catId)?.tipo;
-    executarBusca(query, tipo);
+    executarBuscaLugares(query, tipo);
   };
 
-  const amigosFiltrados = (SUGGESTED_FRIENDS as any[]).filter(
-    (f: any) =>
-      f.name.toLowerCase().includes(query.toLowerCase()) ||
-      f.handle.toLowerCase().includes(query.toLowerCase()) ||
-      f.city.toLowerCase().includes(query.toLowerCase())
-  );
+  const handleToggleSeguir = async (uid: string) => {
+    if (!currentUser) return;
+    const jaSeguindo = seguindoSet.has(uid);
+    setSeguindoSet((s) => { const n = new Set(s); jaSeguindo ? n.delete(uid) : n.add(uid); return n; });
+    try {
+      if (jaSeguindo) {
+        await deixarDeSeguir(currentUser.uid, uid);
+      } else {
+        await seguirUsuario(currentUser.uid, uid, {
+          name: currentUser.displayName,
+          handle: currentUser.handle,
+          photo: currentUser.photoURL ?? '',
+        });
+      }
+    } catch {
+      setSeguindoSet((s) => { const n = new Set(s); jaSeguindo ? n.add(uid) : n.delete(uid); return n; });
+    }
+  };
 
   return (
     <div
@@ -170,7 +207,7 @@ export default function SearchModal({
           </button>
           <button
             type="button"
-            onClick={() => setAbaPrincipal('pessoas')}
+            onClick={() => { setAbaPrincipal('pessoas'); if (query.trim().length >= 2) executarBuscaPessoas(query); }}
             className={`flex-1 min-h-11 pb-2 text-[14px] text-center transition flex items-center justify-center gap-1.5 cursor-pointer ${
               abaPrincipal === 'pessoas'
                 ? 'text-[var(--ink)] font-medium border-b-2 border-[var(--primary)] -mb-px'
@@ -293,39 +330,56 @@ export default function SearchModal({
               ))
             )
           ) : (
-            amigosFiltrados.length === 0 ? (
+            carregandoPessoas ? (
+              <Spinner label="Buscando pessoas" />
+            ) : query.trim().length < 2 ? (
+              <p className="text-sm text-center text-[var(--muted)] py-8">Digite pelo menos 2 letras para buscar.</p>
+            ) : pessoas.length === 0 ? (
               <MascotMessage
                 reaction="social"
                 title="Nenhum usuário encontrado"
-                subtitle={`Ninguém encontrado para "${query}".`}
+                subtitle={`Nenhuma conta encontrada para "${query}".`}
               />
             ) : (
-              amigosFiltrados.map((f: any) => (
-                <button
-                  key={f.uid}
-                  type="button"
-                  onClick={() => {
-                    onAbrirPerfil(f.uid);
-                    onClose();
-                  }}
-                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-s1 text-left transition-colors group cursor-pointer"
-                >
-                  <img
-                    src={f.photo}
-                    alt=""
-                    className="h-10 w-10 rounded-full object-cover border border-[var(--line)]"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-[14px] font-medium text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition">
-                      {f.name}
-                    </h4>
-                    <p className="text-[12px] text-[var(--muted)] truncate">
-                      {f.handle} &bull; {f.city}
-                    </p>
+              pessoas.map((f) => {
+                const jaSeguindo = seguindoSet.has(f.uid!);
+                return (
+                  <div
+                    key={f.uid}
+                    className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-s1 transition-colors"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => { onAbrirPerfil(f.uid!); onClose(); }}
+                      className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer group"
+                    >
+                      <Avatar src={f.photoURL} name={f.displayName ?? ''} size={40} />
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[14px] font-medium text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition">
+                          {f.displayName ?? 'Usuário'}
+                        </h4>
+                        <p className="text-[12px] text-[var(--muted)] truncate">
+                          {f.handle ?? ''}
+                          {f.homeCityName ? ` · ${f.homeCityName}` : ''}
+                        </p>
+                      </div>
+                    </button>
+                    {currentUser && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSeguir(f.uid!)}
+                        className={`shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer ${
+                          jaSeguindo
+                            ? 'bg-[var(--s2)] text-[var(--ink)] ring-1 ring-[var(--line)] hover:bg-red-50 hover:text-red-600 hover:ring-red-300'
+                            : 'bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90'
+                        }`}
+                      >
+                        {jaSeguindo ? <><UserCheck size={14} /><span>Seguindo</span></> : <><UserPlus size={14} /><span>Seguir</span></>}
+                      </button>
+                    )}
                   </div>
-                  <ArrowUpRight size={15} className="text-[var(--muted)] group-hover:text-[var(--primary)] transition" />
-                </button>
-              ))
+                );
+              })
             )
           )}
         </div>

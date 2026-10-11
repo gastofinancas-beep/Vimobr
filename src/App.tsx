@@ -17,15 +17,16 @@ import PerfilScreen from './screens/PerfilScreen';
 import PlaceDetailScreen from './screens/PlaceDetailScreen';
 import AvaliarModal from './screens/AvaliarModal';
 import OnboardingModal from './components/OnboardingModal';
+import EditarPerfilModal from './components/EditarPerfilModal';
 import SearchModal from './components/SearchModal';
 import TutorialModal, { tutorialJaVisto } from './components/TutorialModal';
 
 const DEFAULT_CURRENT_USER: UserProfile = {
-  uid: 'user-me',
-  displayName: 'Pedro Otávio',
-  handle: '@pedrootavio',
-  photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-  bio: 'Explorador da gastronomia paulistana e caçador dos melhores cafés e pães artesanais.',
+  uid: '',
+  displayName: '',
+  handle: '',
+  photoURL: '',
+  bio: '',
   homeCityKey: 'sao-paulo-sp',
   homeCityName: 'São Paulo - SP',
   followersCount: 0,
@@ -97,6 +98,7 @@ export default function App() {
   });
 
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
+  const [mostrarEditarPerfil, setMostrarEditarPerfil] = useState(false);
   const [lugarDetalheId, setLugarDetalheId] = useState<string | null>(null);
   const [lugarDetalheObjeto, setLugarDetalheObjeto] = useState<Place | null>(null);
   const [perfilVisualizadoUid, setPerfilVisualizadoUid] = useState<string | null>(null);
@@ -266,6 +268,7 @@ export default function App() {
               uid={perfilVisualizadoUid}
               currentUser={currentUser}
               onAbrirLugar={handleAbrirLugar}
+              onAbrirPerfil={handleAbrirPerfil}
               onEditarPerfil={() => setMostrarOnboarding(true)}
               onAvaliarLugar={handleAbrirAvaliarComLugar}
               onNovaAvaliacao={() => {
@@ -325,7 +328,8 @@ export default function App() {
                 uid={currentUser.uid}
                 currentUser={currentUser}
                 onAbrirLugar={handleAbrirLugar}
-                onEditarPerfil={() => setMostrarOnboarding(true)}
+                onAbrirPerfil={handleAbrirPerfil}
+                onEditarPerfil={() => setMostrarEditarPerfil(true)}
                 onAvaliarLugar={handleAbrirAvaliarComLugar}
                 onNovaAvaliacao={() => {
                   setLugarParaAvaliar(null);
@@ -378,6 +382,7 @@ export default function App() {
           onClose={() => setMostrarBusca(false)}
           onAbrirLugar={handleAbrirLugar}
           onAbrirPerfil={handleAbrirPerfil}
+          currentUser={currentUser}
         />
       )}
 
@@ -398,11 +403,20 @@ export default function App() {
         />
       )}
 
-      {/* Modal de Onboarding / Edição de Perfil */}
+      {/* Modal de Onboarding (primeiro acesso) */}
       {mostrarOnboarding && (
         <OnboardingModal
           initialUser={currentUser}
           onSalvar={handleSalvarPerfil}
+        />
+      )}
+
+      {/* Modal de Edição de Perfil */}
+      {mostrarEditarPerfil && (
+        <EditarPerfilModal
+          usuario={currentUser}
+          onSalvar={handleSalvarPerfil}
+          onFechar={() => setMostrarEditarPerfil(false)}
         />
       )}
     </div>

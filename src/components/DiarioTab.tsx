@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, Trash2 } from 'lucide-react';
 import StarRating from './StarRating';
 import { PlaceImage } from './ui';
 import MascotMessage from './MascotMessage';
@@ -12,6 +12,7 @@ interface DiarioTabProps {
   onAbrirLugar: (placeId: string) => void;
   onNovaIda?: () => void;
   somenteLeitura?: boolean;
+  onExcluir?: (reviewId: string) => void;
 }
 
 const fotoDe = (r: Review) =>
@@ -22,8 +23,10 @@ export default function DiarioTab({
   onAbrirLugar,
   onNovaIda,
   somenteLeitura,
+  onExcluir,
 }: DiarioTabProps) {
   const [busca, setBusca] = useState('');
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null);
 
   // Filtragem suave por estabelecimento ou texto
   const filtradas = useMemo(() => {
@@ -115,30 +118,63 @@ export default function DiarioTab({
                   const d = new Date(r.visitedAt);
                   const dia = String(d.getDate()).padStart(2, '0');
                   const foto = fotoDe(r);
+                  const confirmando = confirmandoExclusao === r.id;
 
                   return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => onAbrirLugar(r.placeId)}
-                      aria-label={`Ver avaliação de ${r.placeName}`}
-                      className="w-full flex items-center gap-3 py-2.5 text-left transition-colors hover:bg-s1 cursor-pointer"
-                    >
-                      {/* Dia */}
-                      <span className="w-7 text-right text-lg font-semibold tabular text-muted shrink-0">{dia}</span>
+                    <div key={r.id} className="relative flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => onAbrirLugar(r.placeId)}
+                        aria-label={`Ver avaliação de ${r.placeName}`}
+                        className="flex-1 flex items-center gap-3 py-2.5 text-left transition-colors hover:bg-s1 cursor-pointer min-w-0"
+                      >
+                        {/* Dia */}
+                        <span className="w-7 text-right text-lg font-semibold tabular text-muted shrink-0">{dia}</span>
 
-                      {/* Pôster */}
-                      <PlaceImage src={foto} name={r.placeName} className="h-[54px] w-10 shrink-0 rounded-sm" />
+                        {/* Pôster */}
+                        <PlaceImage src={foto} name={r.placeName} className="h-[54px] w-10 shrink-0 rounded-sm" />
 
-                      {/* Lugar, nota e trecho */}
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[15px] font-semibold text-ink">{r.placeName}</div>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          <StarRating value={r.overall || 0} size={12} />
-                          {r.text && <span className="truncate text-sm text-muted">{r.text}</span>}
+                        {/* Lugar, nota e trecho */}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[15px] font-semibold text-ink">{r.placeName}</div>
+                          <div className="mt-0.5 flex items-center gap-2">
+                            <StarRating value={r.overall || 0} size={12} />
+                            {r.text && <span className="truncate text-sm text-muted">{r.text}</span>}
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+
+                      {/* Botão excluir — só para dono do diário */}
+                      {!somenteLeitura && onExcluir && (
+                        confirmando ? (
+                          <div className="flex items-center gap-1 pl-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => { onExcluir(r.id); setConfirmandoExclusao(null); }}
+                              className="text-xs text-red-500 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950 cursor-pointer"
+                            >
+                              Excluir
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmandoExclusao(null)}
+                              className="text-xs text-muted px-2 py-1 rounded hover:bg-s2 cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmandoExclusao(r.id)}
+                            aria-label="Excluir avaliação"
+                            className="p-2 text-muted hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )
+                      )}
+                    </div>
                   );
                 })}
               </div>
