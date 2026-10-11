@@ -62,11 +62,13 @@ function createPillIcon(place: UnifiedPlace, selected: boolean): L.DivIcon {
   const fg = selected ? '#FFFFFF' : '#101116';
   const scale = selected ? 'transform:scale(1.1);' : '';
 
+  // iconAnchor [0,0] + translateX(-50%) translateY(-100%) centraliza a pílula sobre a coordenada
   return L.divIcon({
     className: '',
-    iconSize: [1, 1],
+    iconSize: [0, 0],
     iconAnchor: [0, 0],
-    html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;${scale}">
+    html: `<div style="position:absolute;left:0;top:0;transform:translateX(-50%) translateY(-100%);
+      display:flex;flex-direction:column;align-items:center;cursor:pointer;${scale}">
       <div style="display:flex;align-items:center;gap:4px;border-radius:9999px;padding:4px 10px;
         font-size:11px;font-weight:600;font-family:Inter,sans-serif;white-space:nowrap;
         box-shadow:0 2px 8px rgba(0,0,0,0.18);background:${bg};color:${fg};">
