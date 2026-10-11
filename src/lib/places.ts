@@ -776,8 +776,21 @@ export async function getPlace(placeId: string): Promise<Place> {
 
   // Lugares Google (não-OSM) são retornados direto do cache
   if (emCache && !isOsmId) return emCache;
-  // Lugares OSM já enriquecidos com foto do Google também
-  if (emCache && isOsmId && emCache.photoUrl?.includes('places.googleapis.com')) return emCache;
+  // Lugares OSM já enriquecidos (foto Foursquare ou sem foto confirmado) retornam do cache
+  if (emCache && isOsmId && emCache.photoUrl !== undefined) return emCache;
+  // Lugares OSM sem foto ainda — verificar localStorage antes de buscar
+  if (emCache && isOsmId && emCache.photoUrl === undefined) {
+    const lsKey = `vimo_fsq_photo_${emCache.name?.toLowerCase().replace(/\s+/g, '_').slice(0, 40)}`;
+    try {
+      const lsVal = localStorage.getItem(lsKey);
+      if (lsVal !== null) {
+        // '' significa que buscamos e não encontramos foto
+        const enriched: Place = { ...emCache, photoUrl: lsVal || undefined };
+        cachePlace(enriched);
+        return enriched;
+      }
+    } catch { /* localStorage pode falhar em modo privado */ }
+  }
 
   // 2. Tentar encontrar nos estabelecimentos padrão
   const sample = SAMPLE_PLACES.find((p) => p.id === placeId);
@@ -786,38 +799,47 @@ export async function getPlace(placeId: string): Promise<Place> {
     return sample;
   }
 
-  // 3. Lugares do OSM/gerados — enriquecer com foto real do Google Places
+  // 3. Lugares do OSM/gerados — enriquecer com foto do Foursquare (grátis, 1000 chamadas/dia)
   if (isOsmId) {
     const osmPlace = emCache;
-    const key = getApiKey();
-    if (osmPlace && key && osmPlace.name && osmPlace.lat && osmPlace.lng) {
-      try {
-        const data = await post(
-          'places:searchText',
-          {
-            textQuery: osmPlace.name,
-            languageCode: 'pt-BR',
-            maxResultCount: 1,
-            locationBias: {
-              circle: {
-                center: { latitude: osmPlace.lat, longitude: osmPlace.lng },
-                radius: 500,
-              },
-            },
-          },
-          'places.photos'
-        );
-        const photoName = data.places?.[0]?.photos?.[0]?.name as string | undefined;
-        const googlePhoto = photoName
-          ? `${BASE}/${photoName}/media?maxWidthPx=1000&key=${key}`
-          : undefined;
-        const enriched: Place = { ...osmPlace, photoUrl: googlePhoto || osmPlace.photoUrl };
-        cachePlace(enriched);
-        return enriched;
-      } catch (err) {
-        console.warn('[Vimo] Enriquecimento de foto do Google Places falhou:', err);
+    if (osmPlace && osmPlace.name && osmPlace.lat && osmPlace.lng) {
+      const lsKey = `vimo_fsq_photo_${osmPlace.name.toLowerCase().replace(/\s+/g, '_').slice(0, 40)}`;
+      const fsqKey = (import.meta.env.VITE_FOURSQUARE_API_KEY as string) || '';
+      if (fsqKey) {
+        try {
+          const searchRes = await fetch(
+            `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(osmPlace.name)}&ll=${osmPlace.lat},${osmPlace.lng}&radius=200&limit=1&fields=fsq_id`,
+            { headers: { Authorization: fsqKey, Accept: 'application/json' } }
+          );
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            const fsqId = searchData.results?.[0]?.fsq_id as string | undefined;
+            if (fsqId) {
+              const photoRes = await fetch(
+                `https://api.foursquare.com/v3/places/${fsqId}/photos?limit=1`,
+                { headers: { Authorization: fsqKey, Accept: 'application/json' } }
+              );
+              if (photoRes.ok) {
+                const photos = await photoRes.json();
+                const p = photos[0];
+                const fsqPhoto = p ? `${p.prefix}original${p.suffix}` : undefined;
+                // Salvar no localStorage: URL da foto ou '' se não encontrou
+                try { localStorage.setItem(lsKey, fsqPhoto ?? ''); } catch { /* noop */ }
+                const enriched: Place = { ...osmPlace, photoUrl: fsqPhoto };
+                cachePlace(enriched);
+                return enriched;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[Vimo] Busca de foto no Foursquare falhou:', err);
+        }
       }
-      return osmPlace;
+      // Sem chave ou sem resultado — registrar que já tentamos (sem foto)
+      try { localStorage.setItem(lsKey, ''); } catch { /* noop */ }
+      const semFoto: Place = { ...osmPlace, photoUrl: undefined };
+      cachePlace(semFoto);
+      return semFoto;
     }
     if (osmPlace) return osmPlace;
 
@@ -830,8 +852,6 @@ export async function getPlace(placeId: string): Promise<Place> {
       lng: -46.682371,
       cityName: 'São Paulo - SP',
       cityKey: 'sao-paulo-sp',
-      photoUrl:
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
       tipo: 'restaurant',
     };
     cachePlace(fallbackPlace);
@@ -848,8 +868,6 @@ export async function getPlace(placeId: string): Promise<Place> {
       lng: -46.682371,
       cityName: 'São Paulo - SP',
       cityKey: 'sao-paulo-sp',
-      photoUrl:
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
       rating: 4.8,
       reviewsCount: 16,
       sums: { ambiente: 120, comida: 125, atendimento: 115, custoBeneficio: 110 },
@@ -883,8 +901,6 @@ export async function getPlace(placeId: string): Promise<Place> {
         lng: -46.682371,
         cityName: 'São Paulo - SP',
         cityKey: 'sao-paulo-sp',
-        photoUrl:
-          'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
         rating: 4.8,
         reviewsCount: 18,
       };
@@ -905,8 +921,6 @@ export async function getPlace(placeId: string): Promise<Place> {
       lng: -46.682371,
       cityName: 'São Paulo - SP',
       cityKey: 'sao-paulo-sp',
-      photoUrl:
-        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
       rating: 4.7,
       reviewsCount: 14,
     };
