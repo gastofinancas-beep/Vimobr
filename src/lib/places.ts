@@ -648,44 +648,15 @@ export async function buscarRestaurantesReaisOSM(
   return [];
 }
 
-// Aba Mapa: Restaurantes reais ao redor da localização do usuário
+// Aba Mapa: Restaurantes reais ao redor da localização do usuário.
+// Usa OpenStreetMap (gratuito, sem API key) para zero custo.
 export async function buscarProximos(
   lat: number,
   lng: number,
   raio = 3000,
-  tipos: string[] = TIPOS
+  _tipos: string[] = TIPOS
 ): Promise<Place[]> {
-  const key = getApiKey();
-
-  // 1. Tentar primeiro o Google Places API (New) com fotos reais do Google Meu Negócio
-  if (key) {
-    try {
-      const data = await post(
-        'places:searchNearby',
-        {
-          includedTypes: tipos,
-          maxResultCount: 20,
-          rankPreference: 'DISTANCE',
-          languageCode: 'pt-BR',
-          locationRestriction: {
-            circle: { center: { latitude: lat, longitude: lng }, radius: raio },
-          },
-        },
-        FIELDS
-      );
-
-      const res = (data.places ?? []).map(mapPlace);
-      if (res.length > 0) {
-        cachePlaces(res);
-        return res;
-      }
-    } catch (err) {
-      console.warn('Google Places API falhou, buscando estabelecimentos reais via OSM:', err);
-    }
-  }
-
-  // 2. Se a API do Google não estiver configurada ou falhar (ex: faturamento pendente),
-  // buscar estabelecimentos REAIS da vizinhança do usuário via OpenStreetMap Overpass
+  // 1. OpenStreetMap Overpass — gratuito, sem chave, dados reais
   try {
     const reaisOSM = await buscarRestaurantesReaisOSM(lat, lng, raio);
     if (reaisOSM.length > 0) {
@@ -695,7 +666,7 @@ export async function buscarProximos(
     console.warn('Falha na busca OSM:', err);
   }
 
-  // 3. Fallback de salvaguarda caso o dispositivo esteja offline ou sem rede
+  // 2. Fallback de salvaguarda caso o dispositivo esteja offline ou sem rede
   const locaisFallback = gerarLugaresAoRedor(lat, lng);
   cachePlaces(locaisFallback);
   return locaisFallback;
@@ -807,7 +778,8 @@ export async function getPlace(placeId: string): Promise<Place> {
     return sample;
   }
 
-  // 3. Fallback inteligente para IDs gerados ou locais
+  // 3. Lugares do OSM/gerados — o cache deve ter sido populado pela busca do mapa.
+  // Se de alguma forma não estiver no cache, retorna um stub mínimo com o ID original.
   if (
     placeId.startsWith('local-place-') ||
     placeId.startsWith('osm-') ||
@@ -815,25 +787,15 @@ export async function getPlace(placeId: string): Promise<Place> {
   ) {
     const fallbackPlace: Place = {
       id: placeId,
-      name: placeId.includes('1')
-        ? 'Bistrô & Café Alecrim'
-        : placeId.includes('2')
-        ? 'Padaria Artesanal Farinha & Flor'
-        : placeId.includes('3')
-        ? 'Torra Especial & Espresso Bar'
-        : 'Restaurante & Bar Selecionado',
-      address: 'Endereço Gastronômico, São Paulo - SP',
+      name: 'Lugar selecionado',
+      address: 'São Paulo - SP',
       lat: -23.561684,
       lng: -46.682371,
       cityName: 'São Paulo - SP',
       cityKey: 'sao-paulo-sp',
       photoUrl:
         'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
-      priceLevel: 'PRICE_LEVEL_MODERATE',
-      rating: 4.8,
-      reviewsCount: 24,
       tipo: 'restaurant',
-      sums: { ambiente: 115, comida: 120, atendimento: 110, custoBeneficio: 105 },
     };
     cachePlace(fallbackPlace);
     return fallbackPlace;
