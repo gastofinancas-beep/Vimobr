@@ -45,38 +45,50 @@ interface GoogleMapsViewProps {
 }
 
 function categoryEmoji(category: string): string {
-  const c = category.toLowerCase();
-  if (c.includes('caf') || c.includes('café')) return '☕';
-  if (c.includes('padaria') || c.includes('bakery')) return '🥐';
-  if (c.includes('bar')) return '🍺';
-  if (c.includes('pizza')) return '🍕';
-  if (c.includes('sushi') || c.includes('japon')) return '🍣';
+  const c = (category || '').toLowerCase();
+  if (c.includes('caf') || c.includes('café') || c.includes('cafe')) return '☕';
+  if (c.includes('padaria') || c.includes('bakery') || c.includes('pão') || c.includes('pao')) return '🥐';
+  if (c.includes('bar') || c.includes('boteco') || c.includes('chopp')) return '🍺';
+  if (c.includes('pizza') || c.includes('pizz')) return '🍕';
+  if (c.includes('sushi') || c.includes('japon') || c.includes('japonês') || c.includes('ramen')) return '🍣';
   if (c.includes('burger') || c.includes('hamb')) return '🍔';
+  if (c.includes('sorvete') || c.includes('ice cream') || c.includes('gelato')) return '🍦';
+  if (c.includes('churrasco') || c.includes('churrascaria') || c.includes('steak')) return '🥩';
+  if (c.includes('italiana') || c.includes('italian') || c.includes('massa') || c.includes('pasta')) return '🍝';
+  if (c.includes('francesa') || c.includes('french') || c.includes('bistrô') || c.includes('bistro')) return '🥐';
   return '🍽️';
 }
 
 function createPillIcon(place: UnifiedPlace, selected: boolean): L.DivIcon {
   const emoji = categoryEmoji(place.category);
-  const shortName = place.name.length > 18 ? place.name.slice(0, 16) + '…' : place.name;
+  const shortName = place.name.length > 20 ? place.name.slice(0, 18) + '…' : place.name;
   const bg = selected ? '#101116' : '#FFFFFF';
   const fg = selected ? '#FFFFFF' : '#101116';
-  const scale = selected ? 'transform:scale(1.1);' : '';
+  const fgMuted = selected ? 'rgba(255,255,255,0.60)' : 'rgba(16,17,22,0.45)';
+  const iconBg = selected ? 'rgba(255,255,255,0.12)' : '#F3F2EF';
+  const scaleCss = selected ? 'transform:translateX(-50%) translateY(-100%) scale(1.08);' : 'transform:translateX(-50%) translateY(-100%);';
 
-  // iconAnchor [0,0] + translateX(-50%) translateY(-100%) centraliza a pílula sobre a coordenada
   return L.divIcon({
     className: '',
     iconSize: [0, 0],
     iconAnchor: [0, 0],
-    html: `<div style="position:absolute;left:0;top:0;transform:translateX(-50%) translateY(-100%);
-      display:flex;flex-direction:column;align-items:center;cursor:pointer;${scale}">
-      <div style="display:flex;align-items:center;gap:4px;border-radius:9999px;padding:4px 10px;
-        font-size:11px;font-weight:600;font-family:Inter,sans-serif;white-space:nowrap;
-        box-shadow:0 2px 8px rgba(0,0,0,0.18);background:${bg};color:${fg};">
-        <span style="font-size:13px;line-height:1;">${emoji}</span>
-        <span>${shortName}</span>
+    html: `<div style="position:absolute;left:0;top:0;${scaleCss}
+      display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform .15s;">
+      <div style="display:flex;align-items:center;gap:7px;
+        border-radius:14px;padding:5px 11px 5px 5px;
+        font-family:Inter,system-ui,sans-serif;white-space:nowrap;
+        box-shadow:0 2px 12px rgba(0,0,0,0.18),0 1px 3px rgba(0,0,0,0.10);
+        background:${bg};border:1.5px solid ${selected ? 'transparent' : 'rgba(0,0,0,0.06)'};">
+        <div style="width:30px;height:30px;border-radius:50%;background:${iconBg};
+          display:flex;align-items:center;justify-content:center;
+          flex-shrink:0;font-size:15px;line-height:1;">${emoji}</div>
+        <div style="min-width:0;">
+          <div style="font-size:11.5px;font-weight:700;color:${fg};line-height:1.25;">${shortName}</div>
+          <div style="font-size:9.5px;font-weight:500;color:${fgMuted};line-height:1.3;">${place.category}</div>
+        </div>
       </div>
-      <div style="width:8px;height:8px;transform:rotate(45deg);margin-top:-3px;
-        background:${bg};${!selected ? 'box-shadow:1px 1px 2px rgba(0,0,0,0.12);' : ''}"></div>
+      <div style="width:8px;height:8px;transform:rotate(45deg);margin-top:-4px;
+        background:${bg};box-shadow:${selected ? 'none' : '1px 1px 3px rgba(0,0,0,0.10)'};"></div>
     </div>`,
   });
 }
@@ -185,9 +197,9 @@ const GoogleMapsView = forwardRef<GoogleMapsViewRef, GoogleMapsViewProps>(
           zoomControl={false}
           attributionControl={false}
         >
-          {/* Tiles CartoDB Positron — visual limpo, gratuito, sem API key */}
+          {/* Tiles CartoDB Voyager — colorido (parques verdes, água azul), gratuito, sem API key */}
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             subdomains="abcd"
             maxZoom={20}
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
