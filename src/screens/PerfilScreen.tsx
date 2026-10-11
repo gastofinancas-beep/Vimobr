@@ -18,6 +18,7 @@ interface PerfilScreenProps {
   uid: string;
   currentUser: UserProfile;
   onAbrirLugar: (placeOrId: Place | string) => void;
+  onAbrirPerfil?: (uid: string) => void;
   onEditarPerfil: () => void;
   onAvaliarLugar?: (p: Place) => void;
   onNovaAvaliacao?: () => void;
@@ -43,6 +44,7 @@ export default function PerfilScreen({
   uid,
   currentUser,
   onAbrirLugar,
+  onAbrirPerfil,
   onEditarPerfil,
   onNovaAvaliacao,
   onExplorar,
@@ -429,7 +431,10 @@ export default function PerfilScreen({
             setMostrarNotificacoes(false);
             onAbrirLugar(p);
           }}
-          onAbrirPerfil={() => setMostrarNotificacoes(false)}
+          onAbrirPerfil={(perfilUid) => {
+            setMostrarNotificacoes(false);
+            onAbrirPerfil?.(perfilUid);
+          }}
         />
       )}
     </div>

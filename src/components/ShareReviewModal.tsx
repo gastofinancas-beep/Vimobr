@@ -14,7 +14,6 @@ export default function ShareReviewModal({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [imagemGeradaUrl, setImagemGeradaUrl] = useState<string | null>(null);
   const [estiloIA, setEstiloIA] = useState<'editorial' | 'watercolor' | 'vintage' | 'neon_night'>('editorial');
-  const [gerandoIA, setGerandoIA] = useState(false);
   const [fotoFundoUrl, setFotoFundoUrl] = useState<string>(
     review.photos?.[0] || review.placePhotoUrl || photoUrl(review.placePhotoName, 800) || ''
   );
@@ -328,41 +327,10 @@ export default function ShareReviewModal({
   }
 
 
-  // Gera imagem personalizada usando a API Gemini
-  const handleGerarComIA = async () => {
-    setGerandoIA(true);
-    setStatusMsg('Gerando arte personalizada com a API Gemini...');
-
-    try {
-      const res = await fetch('/api/generate-social-card', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          placeName: review.placeName,
-          authorName: review.authorName,
-          text: review.text,
-          rating: review.overall,
-          style: estiloIA,
-          tipo: 'gastronomia',
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success && data.imageUrl) {
-        setFotoFundoUrl(data.imageUrl);
-        setStatusMsg('Imagem pronta');
-      } else {
-        setStatusMsg(data.message || 'Personalizando com estilo gráfico...');
-        renderizarCard(fotoFundoUrl);
-      }
-    } catch (err: any) {
-      console.warn('Erro ao chamar API de imagem:', err);
-      setStatusMsg('Modo gráfico otimizado aplicado.');
-      renderizarCard(fotoFundoUrl);
-    } finally {
-      setGerandoIA(false);
-      setTimeout(() => setStatusMsg(null), 3500);
-    }
+  const handleGerarCard = () => {
+    renderizarCard(fotoFundoUrl);
+    setStatusMsg('Card atualizado.');
+    setTimeout(() => setStatusMsg(null), 2000);
   };
 
   // 1. Download do Arquivo PNG
@@ -474,7 +442,7 @@ export default function ShareReviewModal({
         {/* Pré-visualização do cartão */}
         <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-s2 ring-1 ring-line">
           <canvas ref={canvasRef} className="h-full w-full object-contain" />
-          {gerandoIA && (
+          {false && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-s1/85">
               <RefreshCw size={22} className="animate-spin text-primary" />
               <p className="text-sm font-medium text-ink">Gerando o fundo…</p>
@@ -510,12 +478,11 @@ export default function ShareReviewModal({
           </div>
           <button
             type="button"
-            disabled={gerandoIA}
-            onClick={handleGerarComIA}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-s2 text-sm font-semibold text-ink hover:bg-s3 transition-colors disabled:opacity-50 cursor-pointer"
+            onClick={handleGerarCard}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-s2 text-sm font-semibold text-ink hover:bg-s3 transition-colors cursor-pointer"
           >
-            {gerandoIA ? <RefreshCw size={15} className="animate-spin" /> : <ImageIcon size={15} />}
-            Gerar fundo
+            <ImageIcon size={15} />
+            Atualizar card
           </button>
         </div>
 

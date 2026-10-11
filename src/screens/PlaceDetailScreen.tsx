@@ -17,6 +17,8 @@ import {
   obterListasUsuario,
   carregarReviewsDoLugar,
   obterScoreRestaurante,
+  alternarCurtida,
+  verificarCurtida,
 } from '../lib/reviews';
 import StarRating from '../components/StarRating';
 import MascotMessage from '../components/MascotMessage';
@@ -94,6 +96,11 @@ export default function PlaceDetailScreen({
         const filtradas = await carregarReviewsDoLugar(placeId);
         if (ativo) {
           setReviews(filtradas);
+          const liked: Record<string, boolean> = {};
+          filtradas.forEach((r) => {
+            if (verificarCurtida(r.id, currentUser.uid)) liked[r.id] = true;
+          });
+          setLikedReviews(liked);
         }
       } catch (err) {
         console.warn('Erro ao carregar avaliações:', err);
@@ -154,11 +161,17 @@ export default function PlaceDetailScreen({
   const handleToggleLike = (revId: string, initialLikes = 0) => {
     const isLiked = !!likedReviews[revId];
     const currentCount = reviewLikesCount[revId] ?? initialLikes;
-    setLikedReviews((prev) => ({ ...prev, [revId]: !isLiked }));
+    const novoEstado = !isLiked;
+    setLikedReviews((prev) => ({ ...prev, [revId]: novoEstado }));
     setReviewLikesCount((prev) => ({
       ...prev,
       [revId]: isLiked ? Math.max(0, currentCount - 1) : currentCount + 1,
     }));
+    alternarCurtida(revId, currentUser.uid).catch(() => {
+      // Reverte em caso de erro
+      setLikedReviews((prev) => ({ ...prev, [revId]: isLiked }));
+      setReviewLikesCount((prev) => ({ ...prev, [revId]: currentCount }));
+    });
   };
 
   // Score do Vimo e do Google

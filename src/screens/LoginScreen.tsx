@@ -112,18 +112,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
       } else if (err.code === 'auth/weak-password') {
         setErro('A senha deve ter pelo menos 6 caracteres.');
       } else {
-        const perfilFallback: UserProfile = {
-          uid: 'user-demo',
-          displayName: email.split('@')[0] || 'Gourmet',
-          handle: `@${email.split('@')[0] || 'gourmet'}`,
-          photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          bio: 'Explorador da gastronomia.',
-          homeCityKey: 'sao-paulo-sp',
-          homeCityName: 'São Paulo - SP',
-          followersCount: 0,
-          followingCount: 0,
-        };
-        setTimeout(() => onLoginSuccess(perfilFallback), 250);
+        setErro('Não foi possível entrar. Verifique sua conexão e tente novamente.');
       }
     } finally {
       setCarregando(false);
@@ -157,18 +146,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
         }
         setTimeout(() => onLoginSuccess(perfil), 250);
       } else {
-        const perfilGoogle: UserProfile = {
-          uid: 'user-google-demo',
-          displayName: 'Pedro Otávio',
-          handle: '@pedrootavio',
-          photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          bio: 'Explorador da gastronomia paulistana.',
-          homeCityKey: 'sao-paulo-sp',
-          homeCityName: 'São Paulo - SP',
-          followersCount: 0,
-          followingCount: 0,
-        };
-        setTimeout(() => onLoginSuccess(perfilGoogle), 250);
+        setErro('Firebase não configurado. Configure as variáveis de ambiente para usar login com Google.');
       }
     } catch (err: any) {
       console.warn('Login Google:', err);
@@ -203,22 +181,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
   };
 
   const handleAppleLogin = () => {
-    setCarregando(true);
-    setTimeout(() => {
-      const perfilApple: UserProfile = {
-        uid: 'user-apple-demo',
-        displayName: 'Pedro Otávio',
-        handle: '@pedrootavio',
-        photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-        bio: 'Explorador da gastronomia.',
-        homeCityKey: 'sao-paulo-sp',
-        homeCityName: 'São Paulo - SP',
-        followersCount: 0,
-        followingCount: 0,
-      };
-      setTimeout(() => onLoginSuccess(perfilApple), 250);
-      setCarregando(false);
-    }, 300);
+    setErro('Login com Apple ainda não está disponível. Use e-mail ou Google.');
   };
 
   const cobrindo = senhaFocada && !mostrarSenha;
