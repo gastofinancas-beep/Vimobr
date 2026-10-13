@@ -227,6 +227,12 @@ export default function PlaceDetailScreen({
 
   const fotosExibidas = mostrarTodasFotos ? todasFotos : todasFotos.slice(0, 8);
 
+  // Quantas vezes o usuário atual foi a este estabelecimento
+  const minhasVisitas = useMemo(
+    () => reviews.filter((r) => r.uid === currentUser.uid).length,
+    [reviews, currentUser.uid]
+  );
+
   // Amigos que já foram (autores de reviews ou companions aprovados)
   const amigosQueForam = useMemo(() => {
     const map = new Map<string, { uid: string; name: string; photo: string }>();
@@ -360,6 +366,15 @@ export default function PlaceDetailScreen({
                     : `${qtdGoogle.toLocaleString('pt-BR')} avaliações no Google`}
                 </p>
               </div>
+            </div>
+          )}
+
+          {minhasVisitas > 0 && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--s2)] border border-[var(--line)]">
+              <span className="text-sm">📍</span>
+              <span className="text-xs font-semibold text-ink-2">
+                Você foi {minhasVisitas} {minhasVisitas === 1 ? 'vez' : 'vezes'}
+              </span>
             </div>
           )}
         </header>

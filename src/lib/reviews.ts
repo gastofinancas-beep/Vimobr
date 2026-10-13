@@ -169,6 +169,7 @@ export async function salvarAvaliacao(a: {
   notaBebidas?: number;
   notaCustoBeneficio?: number;
   pratosAvaliados?: PratoAvaliado[];
+  modalidade?: 'presencial' | 'delivery';
 }) {
   const [photos, peoplePhotos, menuPhotos] = await Promise.all([
     Promise.all(a.fotos.slice(0, 6).map((f) => uploadFoto(a.autor.uid, f))),
@@ -221,6 +222,7 @@ export async function salvarAvaliacao(a: {
     notaBebidas: a.notaBebidas,
     notaCustoBeneficio: a.notaCustoBeneficio,
     pratosAvaliados: a.pratosAvaliados,
+    modalidade: a.modalidade,
   };
 
   // Local storage save first

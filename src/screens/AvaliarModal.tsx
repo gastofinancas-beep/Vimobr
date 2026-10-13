@@ -145,6 +145,8 @@ export default function AvaliarModal({
     Array<{ uid: string; name: string; handle: string; photo: string }>
   >([]);
 
+  const [modalidade, setModalidade] = useState<'presencial' | 'delivery' | ''>('');
+
   const [salvando, setSalvando] = useState(false);
   const [erroValidacao, setErroValidacao] = useState<string | null>(null);
   const [publicado, setPublicado] = useState(false);
@@ -158,6 +160,7 @@ export default function AvaliarModal({
   type PassoDef =
     | { tipo: 'lugar'; titulo: string; opcional: false }
     | { tipo: 'data'; titulo: string; opcional: false }
+    | { tipo: 'modalidade'; titulo: string; opcional: false }
     | { tipo: 'criterio'; criterioIndex: number; titulo: string; opcional: true }
     | { tipo: 'voltaria_preco'; titulo: string; opcional: true }
     | { tipo: 'destaque'; titulo: string; opcional: true }
@@ -170,9 +173,12 @@ export default function AvaliarModal({
     const list: PassoDef[] = [
       { tipo: 'lugar', titulo: 'Lugar', opcional: false },
       { tipo: 'data', titulo: 'Data', opcional: false },
+      { tipo: 'modalidade', titulo: 'Como foi', opcional: false },
     ];
 
     criterios.forEach((c, idx) => {
+      // Para delivery, pula critério de ambiente
+      if (modalidade === 'delivery' && c.key === 'ambiente') return;
       list.push({
         tipo: 'criterio',
         criterioIndex: idx,
@@ -191,7 +197,7 @@ export default function AvaliarModal({
     );
 
     return list;
-  }, [criterios]);
+  }, [criterios, modalidade]);
 
   const [passoIndex, setPassoIndex] = useState(0);
   const passoAtual = passos[passoIndex] || passos[0];
@@ -266,6 +272,14 @@ export default function AvaliarModal({
     if (passoAtual.tipo === 'data') {
       if (!dataVisita) {
         setErroValidacao('Informe a data da sua visita.');
+        return;
+      }
+    }
+
+    // 2.5. Passo Modalidade
+    if (passoAtual.tipo === 'modalidade') {
+      if (!modalidade) {
+        setErroValidacao('Selecione se foi presencial ou delivery para continuar.');
         return;
       }
     }
@@ -347,6 +361,7 @@ export default function AvaliarModal({
           photo: a.photo,
           status: 'aprovado_presenca',
         })),
+        modalidade: modalidade || undefined,
       });
 
       setReviewIdPublicado(revId);
@@ -585,7 +600,51 @@ export default function AvaliarModal({
           )}
 
           {/* =========================================================================
-              PASSO 3: CADA CRITÉRIO (UMA TELA POR ITEM)
+              PASSO 3: MODALIDADE (PRESENCIAL / DELIVERY)
+             ========================================================================= */}
+          {passoAtual.tipo === 'modalidade' && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="t-title text-ink">Como foi?</h2>
+                <p className="text-sm text-muted mt-1">
+                  Você foi pessoalmente ou pediu por delivery?
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModalidade('presencial')}
+                  className={`flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 transition cursor-pointer ${
+                    modalidade === 'presencial'
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/8 text-[var(--ink)]'
+                      : 'border-[var(--line)] bg-[var(--s2)] text-[var(--ink)]'
+                  }`}
+                >
+                  <span className="text-3xl">🪑</span>
+                  <span className="text-sm font-bold">Presencial</span>
+                  <span className="text-xs text-muted text-center leading-tight">Fui ao local</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setModalidade('delivery')}
+                  className={`flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 transition cursor-pointer ${
+                    modalidade === 'delivery'
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/8 text-[var(--ink)]'
+                      : 'border-[var(--line)] bg-[var(--s2)] text-[var(--ink)]'
+                  }`}
+                >
+                  <span className="text-3xl">📦</span>
+                  <span className="text-sm font-bold">Delivery</span>
+                  <span className="text-xs text-muted text-center leading-tight">Recebi em casa</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================================================
+              PASSO 4: CADA CRITÉRIO (UMA TELA POR ITEM)
              ========================================================================= */}
           {passoAtual.tipo === 'criterio' && (
             <div className="space-y-5 text-center py-2">
@@ -959,8 +1018,16 @@ export default function AvaliarModal({
                   </div>
                 </div>
 
-                {/* Data + Amigos + Voltaria + Preço */}
+                {/* Data + Modalidade + Amigos + Voltaria + Preço */}
                 <div className="space-y-1 text-xs text-[var(--muted)] pt-2 border-t border-[var(--line)]">
+                  {modalidade && (
+                    <div>
+                      Modalidade:{' '}
+                      <strong className="text-[var(--ink)]">
+                        {modalidade === 'presencial' ? '🪑 Presencial' : '📦 Delivery'}
+                      </strong>
+                    </div>
+                  )}
                   <div>
                     Data:{' '}
                     <strong className="text-[var(--ink)]">

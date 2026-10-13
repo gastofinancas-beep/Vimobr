@@ -150,6 +150,7 @@ export interface Review {
   notaBebidas?: number;
   notaCustoBeneficio?: number;
   pratosAvaliados?: PratoAvaliado[];
+  modalidade?: 'presencial' | 'delivery';
 }
 
 export interface FoodTweet {
