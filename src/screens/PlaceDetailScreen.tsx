@@ -338,6 +338,8 @@ export default function PlaceDetailScreen({
           loading="eager"
           className="aspect-[4/3] sm:aspect-[21/9] max-h-[420px] w-full"
         />
+        {/* Gradiente no topo para os botões flutuarem melhor */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent" />
         <div className="absolute top-0 inset-x-0 flex items-center justify-between p-4">
           <button type="button" onClick={onVoltar} aria-label="Voltar" className={botaoFoto}>
             <ArrowLeft size={19} strokeWidth={2} />

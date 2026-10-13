@@ -238,11 +238,16 @@ export default function ExplorarScreen({
           <div className="space-y-9">
             <section className="px-4">
               <CabecalhoSecao titulo="Em destaque" total={lugaresFiltrados.length} />
-              {/* Grade 2 colunas com cards maiores (3:4) para o destaque principal */}
-              <div className="grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
-                {populares.slice(0, 4).map((place, i) => (
-                  <PosterDestaque key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} grande={i === 0} />
-                ))}
+              {/* Layout editorial: 1 card grande à esquerda + 2 cards empilhados à direita */}
+              <div className="grid grid-cols-2 gap-3">
+                {populares[0] && (
+                  <PosterDestaque place={populares[0]} meta={metaDe(populares[0])} onAbrir={onAbrirLugar} grande />
+                )}
+                <div className="flex flex-col gap-3">
+                  {populares.slice(1, 3).map((place) => (
+                    <PosterDestaque key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} />
+                  ))}
+                </div>
               </div>
             </section>
 
@@ -380,7 +385,7 @@ function CabecalhoSecao({ titulo, total }: { titulo: string; total: number }) {
   );
 }
 
-/** Pôster em destaque: ocupa coluna inteira na grade 2x2, com nome e meta em overlay. */
+/** Pôster em destaque: card com nome e meta em overlay. Grande ocupa toda a altura do lado direito. */
 function PosterDestaque({
   place,
   meta,
@@ -397,17 +402,17 @@ function PosterDestaque({
       type="button"
       onClick={() => onAbrir(place)}
       aria-label={place.name}
-      className={`group block w-full text-left cursor-pointer ${grande ? 'row-span-2' : ''}`}
+      className={`group block w-full text-left cursor-pointer ${grande ? 'h-full' : ''}`}
     >
-      <div className={`relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98] ${grande ? 'h-full' : ''}`}>
+      <div className={`relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98] ${grande ? 'h-full min-h-[200px]' : 'aspect-[4/5]'}`}>
         <PlaceImage
           src={place.photoUrl}
           name={place.name}
-          className={`w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${grande ? 'h-full min-h-[260px]' : 'aspect-[4/5]'}`}
+          className={`w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${grande ? 'h-full absolute inset-0' : 'h-full'}`}
         />
         <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/85 via-black/35 to-transparent rounded-b-xl pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 px-3 pb-3 pointer-events-none">
-          <p className="font-bold text-[14px] leading-tight text-white" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
+          <p className="font-bold text-[13px] leading-tight text-white" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
             {place.name}
           </p>
           {meta && (
