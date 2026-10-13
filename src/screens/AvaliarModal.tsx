@@ -11,6 +11,8 @@ import {
   Users,
   Utensils,
   AlertCircle,
+  UtensilsCrossed,
+  Bike,
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
 import { autocomplete, getPlace, photoUrl, SAMPLE_PLACES } from '../lib/places';
@@ -621,7 +623,9 @@ export default function AvaliarModal({
                       : 'border-[var(--line)] bg-[var(--s2)] text-[var(--ink)]'
                   }`}
                 >
-                  <span className="text-3xl">🪑</span>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${modalidade === 'presencial' ? 'bg-[var(--primary)] text-white' : 'bg-[var(--s1)] text-[var(--ink)]'}`}>
+                    <UtensilsCrossed size={22} strokeWidth={1.8} />
+                  </div>
                   <span className="text-sm font-bold">Presencial</span>
                   <span className="text-xs text-muted text-center leading-tight">Fui ao local</span>
                 </button>
@@ -635,7 +639,9 @@ export default function AvaliarModal({
                       : 'border-[var(--line)] bg-[var(--s2)] text-[var(--ink)]'
                   }`}
                 >
-                  <span className="text-3xl">📦</span>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${modalidade === 'delivery' ? 'bg-[var(--primary)] text-white' : 'bg-[var(--s1)] text-[var(--ink)]'}`}>
+                    <Bike size={22} strokeWidth={1.8} />
+                  </div>
                   <span className="text-sm font-bold">Delivery</span>
                   <span className="text-xs text-muted text-center leading-tight">Recebi em casa</span>
                 </button>
@@ -1024,7 +1030,7 @@ export default function AvaliarModal({
                     <div>
                       Modalidade:{' '}
                       <strong className="text-[var(--ink)]">
-                        {modalidade === 'presencial' ? '🪑 Presencial' : '📦 Delivery'}
+                        {modalidade === 'presencial' ? 'Presencial' : 'Delivery'}
                       </strong>
                     </div>
                   )}

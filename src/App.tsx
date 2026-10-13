@@ -17,6 +17,7 @@ import PerfilScreen from './screens/PerfilScreen';
 import PlaceDetailScreen from './screens/PlaceDetailScreen';
 import AvaliarModal from './screens/AvaliarModal';
 import OnboardingModal from './components/OnboardingModal';
+import OnboardingSlides, { slidesJaVistos } from './components/OnboardingSlides';
 import EditarPerfilModal from './components/EditarPerfilModal';
 import SearchModal from './components/SearchModal';
 import TutorialModal, { tutorialJaVisto } from './components/TutorialModal';
@@ -97,6 +98,7 @@ export default function App() {
     }
   });
 
+  const [mostrarSlides, setMostrarSlides] = useState<boolean>(() => !slidesJaVistos());
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const [mostrarEditarPerfil, setMostrarEditarPerfil] = useState(false);
   const [lugarDetalheId, setLugarDetalheId] = useState<string | null>(null);
@@ -226,10 +228,17 @@ export default function App() {
 
   if (!isAutenticado) {
     return (
-      <LoginScreen
-        onLoginSuccess={handleLoginSuccess}
-        onExploreAsGuest={handleExploreAsGuest}
-      />
+      <>
+        {mostrarSlides && (
+          <OnboardingSlides onConcluir={() => setMostrarSlides(false)} />
+        )}
+        {!mostrarSlides && (
+          <LoginScreen
+            onLoginSuccess={handleLoginSuccess}
+            onExploreAsGuest={handleExploreAsGuest}
+          />
+        )}
+      </>
     );
   }
 

@@ -10,6 +10,7 @@ import {
   Plus,
   MessageCircle,
   X,
+  CalendarCheck,
 } from 'lucide-react';
 import { getPlace, SAMPLE_PLACES, formatarPrecoLabel } from '../lib/places';
 import {
@@ -371,7 +372,7 @@ export default function PlaceDetailScreen({
 
           {minhasVisitas > 0 && (
             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--s2)] border border-[var(--line)]">
-              <span className="text-sm">📍</span>
+              <CalendarCheck size={13} className="text-primary shrink-0" strokeWidth={2.2} />
               <span className="text-xs font-semibold text-ink-2">
                 Você foi {minhasVisitas} {minhasVisitas === 1 ? 'vez' : 'vezes'}
               </span>
