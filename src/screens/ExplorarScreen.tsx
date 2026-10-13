@@ -238,9 +238,10 @@ export default function ExplorarScreen({
           <div className="space-y-9">
             <section className="px-4">
               <CabecalhoSecao titulo="Em destaque" total={lugaresFiltrados.length} />
-              <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
-                {populares.slice(0, 4).map((place) => (
-                  <Poster key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} />
+              {/* Grade 2 colunas com cards maiores (3:4) para o destaque principal */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
+                {populares.slice(0, 4).map((place, i) => (
+                  <PosterDestaque key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} grande={i === 0} />
                 ))}
               </div>
             </section>
@@ -367,8 +368,11 @@ export default function ExplorarScreen({
 /** Título de seção com contagem à direita, como nas listas do Letterboxd. */
 function CabecalhoSecao({ titulo, total }: { titulo: string; total: number }) {
   return (
-    <div className="mb-3 flex items-baseline justify-between gap-3">
-      <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">{titulo}</h2>
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2.5">
+        <span className="w-1 h-5 rounded-full bg-primary shrink-0" />
+        <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">{titulo}</h2>
+      </div>
       <span className="text-xs font-medium text-muted tabular">
         {total} {total === 1 ? 'lugar' : 'lugares'}
       </span>
@@ -376,7 +380,46 @@ function CabecalhoSecao({ titulo, total }: { titulo: string; total: number }) {
   );
 }
 
-/** Pôster de lugar: foto em 4:5, nome embaixo. Sem nota: ela aparece ao abrir o lugar. */
+/** Pôster em destaque: ocupa coluna inteira na grade 2x2, com nome e meta em overlay. */
+function PosterDestaque({
+  place,
+  meta,
+  onAbrir,
+  grande = false,
+}: {
+  place: Place;
+  meta: string;
+  onAbrir: (p: Place) => void;
+  grande?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onAbrir(place)}
+      aria-label={place.name}
+      className={`group block w-full text-left cursor-pointer ${grande ? 'row-span-2' : ''}`}
+    >
+      <div className={`relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98] ${grande ? 'h-full' : ''}`}>
+        <PlaceImage
+          src={place.photoUrl}
+          name={place.name}
+          className={`w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${grande ? 'h-full min-h-[260px]' : 'aspect-[4/5]'}`}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/85 via-black/35 to-transparent rounded-b-xl pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 px-3 pb-3 pointer-events-none">
+          <p className="font-bold text-[14px] leading-tight text-white" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
+            {place.name}
+          </p>
+          {meta && (
+            <p className="mt-0.5 truncate text-[11px] text-white/70 leading-tight">{meta}</p>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/** Pôster de lugar: foto em 4:5, nome sobreposto. Sem nota: ela aparece ao abrir o lugar. */
 function Poster({
   place,
   meta,
@@ -401,11 +444,18 @@ function Poster({
           name={place.name}
           className="aspect-[4/5] w-full transition-transform duration-500 ease-out group-hover:scale-[1.04]"
         />
+        {/* Gradiente com nome sobreposto estilo Letterboxd */}
+        <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-b-xl pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 pointer-events-none">
+          <p className={`font-bold leading-tight text-white drop-shadow-sm ${pequeno ? 'text-[11px]' : 'text-[13px]'}`}
+            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+            {place.name}
+          </p>
+          {meta && !pequeno && (
+            <p className="mt-0.5 truncate text-[11px] text-white/75 leading-tight">{meta}</p>
+          )}
+        </div>
       </div>
-      <p className={`mt-2 truncate font-semibold tracking-tight text-ink ${pequeno ? 'text-[13px]' : 'text-[15px]'}`}>
-        {place.name}
-      </p>
-      {meta && <p className="truncate text-xs text-muted">{meta}</p>}
     </button>
   );
 }

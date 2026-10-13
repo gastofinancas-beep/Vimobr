@@ -4,8 +4,8 @@ import { Compass, Map, Plus, Users, User } from 'lucide-react';
 export type TabKey = 'explorar' | 'mapa' | 'amigos' | 'perfil';
 
 const tabClass = (ativa: boolean) =>
-  `flex-1 h-full flex flex-col items-center justify-center gap-1 pt-2 transition-colors cursor-pointer min-h-11 ${
-    ativa ? 'text-ink [&_span]:font-bold' : 'text-muted hover:text-ink'
+  `flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer min-h-11 relative ${
+    ativa ? 'text-primary [&_span]:font-bold' : 'text-muted hover:text-ink'
   }`;
 
 export default function Navigation({
@@ -28,7 +28,8 @@ export default function Navigation({
           aria-current={tabAtiva === 'explorar' ? 'page' : undefined}
           className={tabClass(tabAtiva === 'explorar')}
         >
-          <Compass size={24} strokeWidth={1.8} />
+          {tabAtiva === 'explorar' && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-primary" />}
+          <Compass size={24} strokeWidth={tabAtiva === 'explorar' ? 2.2 : 1.8} />
           <span className="text-2xs font-semibold leading-none">Explorar</span>
         </button>
 
@@ -40,7 +41,8 @@ export default function Navigation({
           aria-current={tabAtiva === 'mapa' ? 'page' : undefined}
           className={tabClass(tabAtiva === 'mapa')}
         >
-          <Map size={24} strokeWidth={1.8} />
+          {tabAtiva === 'mapa' && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-primary" />}
+          <Map size={24} strokeWidth={tabAtiva === 'mapa' ? 2.2 : 1.8} />
           <span className="text-2xs font-semibold leading-none">Mapa</span>
         </button>
 
@@ -64,7 +66,8 @@ export default function Navigation({
           aria-current={tabAtiva === 'amigos' ? 'page' : undefined}
           className={tabClass(tabAtiva === 'amigos')}
         >
-          <Users size={24} strokeWidth={1.8} />
+          {tabAtiva === 'amigos' && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-primary" />}
+          <Users size={24} strokeWidth={tabAtiva === 'amigos' ? 2.2 : 1.8} />
           <span className="text-2xs font-semibold leading-none">Amigos</span>
         </button>
 
@@ -76,7 +79,8 @@ export default function Navigation({
           aria-current={tabAtiva === 'perfil' ? 'page' : undefined}
           className={tabClass(tabAtiva === 'perfil')}
         >
-          <User size={24} strokeWidth={1.8} />
+          {tabAtiva === 'perfil' && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-primary" />}
+          <User size={24} strokeWidth={tabAtiva === 'perfil' ? 2.2 : 1.8} />
           <span className="text-2xs font-semibold leading-none">Perfil</span>
         </button>
       </div>
