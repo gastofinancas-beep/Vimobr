@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mascote, type MascoteAnimacao, type Reacao } from './Mascote';
-import { MascoteStarAnimation } from './MascoteStarAnimation';
 import { Logo, btn } from './ui';
 
 export const TUTORIAL_CHAVE = 'vimo_tutorial_v1';
@@ -175,11 +174,7 @@ export default function TutorialModal({
               key={`m-${idx}`}
               className="tut-mascot absolute bottom-0 left-1/2 -translate-x-1/2 z-10"
             >
-              {passo.reacao === 'avaliando' ? (
-                <MascoteStarAnimation tamanho={192} />
-              ) : (
-                <Mascote reacao={passo.reacao} tamanho={192} animacao={passo.animacao} />
-              )}
+              <Mascote reacao={passo.reacao} tamanho={192} animacao={passo.animacao} />
             </div>
 
             {/* Balão de fala: estoura de cima com mola */}
