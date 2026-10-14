@@ -382,23 +382,32 @@ export default function AvaliarModal({
   // Barra de progresso: ((passoAtual + 1) / total) * 100%, altura 3px, cor var(--star)
   const progressoPct = Math.round(((passoIndex + 1) / totalPassos) * 100);
 
+  // Tela de publicação em andamento
+  if (salvando) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg px-6 text-center animate-in fade-in duration-300">
+        <Mascote reacao="registrando" tamanho={120} animacao="respirar" className="mx-auto" />
+        <h2 className="mt-6 t-title text-ink">Publicando avaliação...</h2>
+        <p className="mt-2 text-sm text-muted">Quase lá, salvando sua experiência.</p>
+      </div>
+    );
+  }
+
   // Tela de sucesso após publicar
   if (publicado) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in">
-        <div role="status" className="w-full max-w-sm rounded-2xl bg-s1 px-6 py-8 text-center shadow-2xl animate-in zoom-in-95">
-          <Mascote reacao="comemorando" tamanho={104} animacao="pular" className="mx-auto" />
-          <h2 className="mt-4 t-title text-ink">Ida publicada</h2>
-          <p className="mt-1.5 text-sm text-muted">
-            {lugar?.name ? (
-              <>
-                Sua ida ao <span className="font-medium text-ink">{lugar.name}</span> já está no seu diário.
-              </>
-            ) : (
-              'Sua ida já está no seu diário.'
-            )}
-          </p>
-        </div>
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg px-6 text-center animate-in fade-in duration-300">
+        <Mascote reacao="comemorando" tamanho={120} animacao="pular" className="mx-auto" />
+        <h2 className="mt-6 t-title text-ink">Ida publicada!</h2>
+        <p className="mt-2 text-sm text-muted max-w-[280px]">
+          {lugar?.name ? (
+            <>
+              Sua ida ao <span className="font-medium text-ink">{lugar.name}</span> já está no seu diário.
+            </>
+          ) : (
+            'Sua ida já está no seu diário.'
+          )}
+        </p>
       </div>
     );
   }
