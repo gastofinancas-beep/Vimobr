@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mascote, type MascoteAnimacao, type Reacao } from './Mascote';
+import { MascoteStarAnimation } from './MascoteStarAnimation';
 import { Logo, btn } from './ui';
 
 export const TUTORIAL_CHAVE = 'vimo_tutorial_v1';
@@ -160,7 +161,7 @@ export default function TutorialModal({
           {/* Área do mascote com balão de fala */}
           <div
             className="relative mx-5 mt-5 rounded-3xl"
-            style={{ height: 'min(58vw, 296px)' }}
+            style={{ height: 'min(62vw, 310px)' }}
           >
             {/* Fundo colorido com transição */}
             <div
@@ -174,7 +175,11 @@ export default function TutorialModal({
               key={`m-${idx}`}
               className="tut-mascot absolute bottom-0 left-1/2 -translate-x-1/2 z-10"
             >
-              <Mascote reacao={passo.reacao} tamanho={168} animacao={passo.animacao} />
+              {passo.reacao === 'avaliando' ? (
+                <MascoteStarAnimation tamanho={192} />
+              ) : (
+                <Mascote reacao={passo.reacao} tamanho={192} animacao={passo.animacao} />
+              )}
             </div>
 
             {/* Balão de fala: estoura de cima com mola */}

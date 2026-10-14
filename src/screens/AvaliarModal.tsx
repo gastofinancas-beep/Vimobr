@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   X,
   ArrowLeft,
@@ -20,6 +20,7 @@ import { salvarAvaliacao } from '../lib/reviews';
 import { buscarUsuariosParaMarcar } from '../lib/companions';
 import { obterCriteriosParaLugar } from '../lib/criteriosEstabelecimento';
 import { Mascote } from '../components/Mascote';
+import { MascoteStarAnimation } from '../components/MascoteStarAnimation';
 import { btn } from '../components/ui';
 import type {
   Place,
@@ -119,35 +120,6 @@ function FotoPicker({
   );
 }
 
-// Sprite sheet: 5 colunas × 2 linhas = 10 frames, 1536×1024px
-// A cada `tamanho` (altura em px), escala proporcionalmente: frameW = tamanho*(307.2/512)
-function MascoteStarAnimation({ tamanho = 120 }: { tamanho?: number }) {
-  const [frame, setFrame] = useState(0);
-  useEffect(() => {
-    if (frame >= 9) return;
-    const t = setTimeout(() => setFrame((f) => f + 1), 140);
-    return () => clearTimeout(t);
-  }, [frame]);
-  const scale = tamanho / 512;
-  const frameW = Math.round(307.2 * scale);
-  const bgW = Math.round(1536 * scale);
-  const bgH = Math.round(1024 * scale);
-  const col = frame % 5;
-  const row = Math.floor(frame / 5);
-  return (
-    <div
-      className="mx-auto"
-      style={{
-        width: frameW,
-        height: tamanho,
-        backgroundImage: 'url(/mascote/sticker-estrelas.png)',
-        backgroundSize: `${bgW}px ${bgH}px`,
-        backgroundPosition: `${-col * frameW}px ${-row * tamanho}px`,
-        backgroundRepeat: 'no-repeat',
-      }}
-    />
-  );
-}
 
 export default function AvaliarModal({
   lugarInicial = null,
@@ -685,7 +657,7 @@ export default function AvaliarModal({
           {passoAtual.tipo === 'criterio' && (
             <div className="space-y-5 text-center py-2">
               {/* O mascote avalia junto */}
-              <MascoteStarAnimation key={passoAtual.criterioIndex} tamanho={108} />
+              <MascoteStarAnimation key={passoAtual.criterioIndex} tamanho={168} />
 
               {/* Badge do tipoNome apenas no primeiro critério */}
               {passoAtual.criterioIndex === 0 && (
