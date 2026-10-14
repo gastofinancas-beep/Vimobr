@@ -20,7 +20,6 @@ import { salvarAvaliacao } from '../lib/reviews';
 import { buscarUsuariosParaMarcar } from '../lib/companions';
 import { obterCriteriosParaLugar } from '../lib/criteriosEstabelecimento';
 import { Mascote } from '../components/Mascote';
-import { MascoteStarAnimation } from '../components/MascoteStarAnimation';
 import { btn } from '../components/ui';
 import type {
   Place,
@@ -344,7 +343,7 @@ export default function AvaliarModal({
   if (salvando) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg px-6 text-center animate-in fade-in duration-300">
-        <MascoteStarAnimation tamanho={180} />
+        <Mascote reacao="registrando" tamanho={140} animacao="respirar" className="mx-auto" />
         <h2 className="mt-6 t-title text-ink">Registrando sua avaliação...</h2>
         <p className="mt-2 text-sm text-muted">Quase lá! Estamos salvando sua experiência.</p>
       </div>
@@ -355,7 +354,7 @@ export default function AvaliarModal({
   if (publicado) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg px-6 text-center animate-in fade-in duration-300">
-        <MascoteStarAnimation tamanho={200} />
+        <Mascote reacao="comemorando" tamanho={160} animacao="pular" className="mx-auto" />
         <h2 className="mt-6 t-title text-ink">Avaliação publicada! 🎉</h2>
         <p className="mt-2 text-sm text-muted max-w-[280px]">
           Sua experiência já está disponível para seus amigos.
