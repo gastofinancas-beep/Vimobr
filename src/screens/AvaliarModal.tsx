@@ -160,48 +160,29 @@ export default function AvaliarModal({
   const criteriosObj = useMemo(() => obterCriteriosParaLugar(lugar), [lugar]);
   const criterios = criteriosObj.criterios;
 
-  // Definição dinâmica de passos
+  // Definição dos passos
   type PassoDef =
+    | { tipo: 'intro'; titulo: string; opcional: false }
     | { tipo: 'lugar'; titulo: string; opcional: false }
-    | { tipo: 'data'; titulo: string; opcional: false }
-    | { tipo: 'modalidade'; titulo: string; opcional: false }
-    | { tipo: 'criterio'; criterioIndex: number; titulo: string; opcional: true }
-    | { tipo: 'voltaria_preco'; titulo: string; opcional: true }
+    | { tipo: 'tipo_visita'; titulo: string; opcional: false }
+    | { tipo: 'criterios_lista'; titulo: string; opcional: false }
     | { tipo: 'destaque'; titulo: string; opcional: true }
-    | { tipo: 'comentario'; titulo: string; opcional: true }
     | { tipo: 'fotos'; titulo: string; opcional: true }
+    | { tipo: 'comentario'; titulo: string; opcional: true }
     | { tipo: 'amigos'; titulo: string; opcional: true }
     | { tipo: 'resumo'; titulo: string; opcional: false };
 
-  const passos = useMemo<PassoDef[]>(() => {
-    const list: PassoDef[] = [
-      { tipo: 'lugar', titulo: 'Lugar', opcional: false },
-      { tipo: 'data', titulo: 'Data', opcional: false },
-      { tipo: 'modalidade', titulo: 'Como foi', opcional: false },
-    ];
-
-    criterios.forEach((c, idx) => {
-      // Para delivery, pula critério de ambiente
-      if (modalidade === 'delivery' && c.key === 'ambiente') return;
-      list.push({
-        tipo: 'criterio',
-        criterioIndex: idx,
-        titulo: c.label,
-        opcional: true,
-      });
-    });
-
-    list.push(
-      { tipo: 'voltaria_preco', titulo: 'Voltaria & Preço', opcional: true },
-      { tipo: 'destaque', titulo: 'Prato destaque', opcional: true },
-      { tipo: 'comentario', titulo: 'Comentário', opcional: true },
-      { tipo: 'fotos', titulo: 'Fotos', opcional: true },
-      { tipo: 'amigos', titulo: 'Amigos', opcional: true },
-      { tipo: 'resumo', titulo: 'Resumo', opcional: false }
-    );
-
-    return list;
-  }, [criterios, modalidade]);
+  const passos = useMemo<PassoDef[]>(() => [
+    { tipo: 'intro', titulo: 'Boas-vindas', opcional: false },
+    { tipo: 'lugar', titulo: 'Restaurante', opcional: false },
+    { tipo: 'tipo_visita', titulo: 'Tipo de visita', opcional: false },
+    { tipo: 'criterios_lista', titulo: 'Notas', opcional: false },
+    { tipo: 'destaque', titulo: 'Prato destaque', opcional: true },
+    { tipo: 'fotos', titulo: 'Fotos', opcional: true },
+    { tipo: 'comentario', titulo: 'Comentário', opcional: true },
+    { tipo: 'amigos', titulo: 'Amigos', opcional: true },
+    { tipo: 'resumo', titulo: 'Resumo', opcional: false },
+  ], []);
 
   const [passoIndex, setPassoIndex] = useState(0);
   const passoAtual = passos[passoIndex] || passos[0];
@@ -264,7 +245,6 @@ export default function AvaliarModal({
   const handleAvancar = () => {
     setErroValidacao(null);
 
-    // 1. Passo Lugar
     if (passoAtual.tipo === 'lugar') {
       if (!lugar) {
         setErroValidacao('Selecione um restaurante ou estabelecimento para continuar.');
@@ -272,31 +252,22 @@ export default function AvaliarModal({
       }
     }
 
-    // 2. Passo Data
-    if (passoAtual.tipo === 'data') {
+    if (passoAtual.tipo === 'tipo_visita') {
+      if (!modalidade) {
+        setErroValidacao('Selecione se foi presencial ou delivery para continuar.');
+        return;
+      }
       if (!dataVisita) {
         setErroValidacao('Informe a data da sua visita.');
         return;
       }
     }
 
-    // 2.5. Passo Modalidade
-    if (passoAtual.tipo === 'modalidade') {
-      if (!modalidade) {
-        setErroValidacao('Selecione se foi presencial ou delivery para continuar.');
+    if (passoAtual.tipo === 'criterios_lista') {
+      const temPeloMenosUma = Object.values(notasCriterios).some((v) => v > 0);
+      if (!temPeloMenosUma) {
+        setErroValidacao('Dê nota a pelo menos um critério para continuar.');
         return;
-      }
-    }
-
-    // 3. Critérios: ao sair do último critério, exigir pelo menos uma nota > 0
-    if (passoAtual.tipo === 'criterio') {
-      const isUltimoCriterio = passoAtual.criterioIndex === criterios.length - 1;
-      if (isUltimoCriterio) {
-        const temPeloMenosUma = Object.values(notasCriterios).some((v) => v > 0);
-        if (!temPeloMenosUma) {
-          setErroValidacao('Dê nota a pelo menos um item para continuar.');
-          return;
-        }
       }
     }
 
@@ -307,19 +278,6 @@ export default function AvaliarModal({
 
   const handlePular = () => {
     setErroValidacao(null);
-
-    // Se estiver no último critério, também exige pelo menos uma nota dada no total
-    if (passoAtual.tipo === 'criterio') {
-      const isUltimoCriterio = passoAtual.criterioIndex === criterios.length - 1;
-      if (isUltimoCriterio) {
-        const temPeloMenosUma = Object.values(notasCriterios).some((v) => v > 0);
-        if (!temPeloMenosUma) {
-          setErroValidacao('Dê nota a pelo menos um item para continuar.');
-          return;
-        }
-      }
-    }
-
     if (passoIndex < totalPassos - 1) {
       setPassoIndex((p) => p + 1);
     }
@@ -370,7 +328,6 @@ export default function AvaliarModal({
 
       setReviewIdPublicado(revId);
       setPublicado(true);
-      setTimeout(() => onSucesso(revId), 2500);
     } catch (err: any) {
       console.warn('Erro ao salvar avaliação:', err);
       setErroValidacao('Ocorreu um erro ao publicar sua ida. Tente novamente.');
@@ -379,16 +336,17 @@ export default function AvaliarModal({
     }
   };
 
-  // Barra de progresso: ((passoAtual + 1) / total) * 100%, altura 3px, cor var(--star)
-  const progressoPct = Math.round(((passoIndex + 1) / totalPassos) * 100);
+  // Barra de progresso: o intro (index 0) não conta. Os 8 passos reais são índices 1–8.
+  const totalEtapas = totalPassos - 1; // 8
+  const progressoPct = passoIndex === 0 ? 0 : Math.round((passoIndex / totalEtapas) * 100);
 
   // Tela de publicação em andamento
   if (salvando) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg px-6 text-center animate-in fade-in duration-300">
-        <Mascote reacao="registrando" tamanho={120} animacao="respirar" className="mx-auto" />
-        <h2 className="mt-6 t-title text-ink">Publicando avaliação...</h2>
-        <p className="mt-2 text-sm text-muted">Quase lá, salvando sua experiência.</p>
+        <MascoteStarAnimation tamanho={180} />
+        <h2 className="mt-6 t-title text-ink">Registrando sua avaliação...</h2>
+        <p className="mt-2 text-sm text-muted">Quase lá! Estamos salvando sua experiência.</p>
       </div>
     );
   }
@@ -397,17 +355,27 @@ export default function AvaliarModal({
   if (publicado) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg px-6 text-center animate-in fade-in duration-300">
-        <Mascote reacao="comemorando" tamanho={120} animacao="pular" className="mx-auto" />
-        <h2 className="mt-6 t-title text-ink">Ida publicada!</h2>
+        <MascoteStarAnimation tamanho={200} />
+        <h2 className="mt-6 t-title text-ink">Avaliação publicada! 🎉</h2>
         <p className="mt-2 text-sm text-muted max-w-[280px]">
-          {lugar?.name ? (
-            <>
-              Sua ida ao <span className="font-medium text-ink">{lugar.name}</span> já está no seu diário.
-            </>
-          ) : (
-            'Sua ida já está no seu diário.'
-          )}
+          Sua experiência já está disponível para seus amigos.
         </p>
+        <div className="mt-8 w-full max-w-[320px] space-y-3">
+          <button
+            type="button"
+            onClick={() => reviewIdPublicado && onSucesso(reviewIdPublicado)}
+            className={`${btn.primary} w-full`}
+          >
+            Ver minha avaliação
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className={`${btn.outline} h-12 w-full`}
+          >
+            Avaliar outro lugar
+          </button>
+        </div>
       </div>
     );
   }
@@ -441,9 +409,13 @@ export default function AvaliarModal({
                 <ArrowLeft size={18} />
               </button>
             )}
-            <span className="text-sm text-muted truncate tabular">
-              <span className="font-semibold text-ink">{passoAtual.titulo}</span> · {passoIndex + 1} de {totalPassos}
-            </span>
+            {passoAtual.tipo === 'intro' ? (
+              <span className="text-sm font-semibold text-ink">Avaliar restaurante</span>
+            ) : (
+              <span className="text-sm text-muted truncate tabular">
+                Etapa <span className="font-semibold text-ink">{passoIndex}</span> de {totalEtapas}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -478,6 +450,36 @@ export default function AvaliarModal({
 
         {/* Conteúdo Dinâmico por Passo */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+          {/* =========================================================================
+              PASSO 0: INTRO / BOAS-VINDAS
+             ========================================================================= */}
+          {passoAtual.tipo === 'intro' && (
+            <div className="flex flex-col items-center text-center py-4 space-y-5">
+              <Mascote reacao="boas-vindas" tamanho={140} animacao="flutuar" className="mx-auto" />
+              <div className="space-y-2">
+                <h2 className="t-title text-ink">Avaliar restaurante</h2>
+                <p className="text-sm text-muted max-w-[300px] mx-auto">
+                  Registre sua experiência e ajude seus amigos a descobrirem novos lugares.
+                </p>
+              </div>
+              <div className="w-full max-w-[320px] space-y-2.5 text-left">
+                {[
+                  'Compartilhe sua experiência',
+                  'Avalie os principais pontos',
+                  'Adicione fotos e comentários',
+                  'Marque seus amigos',
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-3 text-sm text-ink">
+                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <Check size={12} strokeWidth={2.8} className="text-white" />
+                    </div>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* =========================================================================
               PASSO 1: LUGAR
              ========================================================================= */}
@@ -584,43 +586,14 @@ export default function AvaliarModal({
           )}
 
           {/* =========================================================================
-              PASSO 2: DATA
+              PASSO 2: TIPO DE VISITA (PRESENCIAL/DELIVERY + DATA)
              ========================================================================= */}
-          {passoAtual.tipo === 'data' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="t-title text-ink">Quando você foi?</h2>
-                <p className="text-sm text-muted mt-1">
-                  O dia da visita.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-2">Data da visita</label>
-                <div className="flex items-center gap-3">
-                  <Calendar size={18} className="text-muted shrink-0" />
-                  <input
-                    type="date"
-                    max={hojeISO()}
-                    value={dataVisita}
-                    onChange={(e) => setDataVisita(e.target.value)}
-                    aria-label="Data da visita"
-                    className="flex-1 h-11 px-3 rounded-lg bg-s2 text-base text-ink outline-none ring-1 ring-transparent focus:ring-primary"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* =========================================================================
-              PASSO 3: MODALIDADE (PRESENCIAL / DELIVERY)
-             ========================================================================= */}
-          {passoAtual.tipo === 'modalidade' && (
+          {passoAtual.tipo === 'tipo_visita' && (
             <div className="space-y-5">
               <div>
-                <h2 className="t-title text-ink">Como foi?</h2>
+                <h2 className="t-title text-ink">Como foi a sua experiência?</h2>
                 <p className="text-sm text-muted mt-1">
-                  Você foi pessoalmente ou pediu por delivery?
+                  Escolha o tipo de visita e a data.
                 </p>
               </div>
 
@@ -630,14 +603,14 @@ export default function AvaliarModal({
                   onClick={() => setModalidade('presencial')}
                   className={`flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 transition cursor-pointer ${
                     modalidade === 'presencial'
-                      ? 'border-[var(--primary)] bg-[var(--primary)]/8 text-[var(--ink)]'
-                      : 'border-[var(--line)] bg-[var(--s2)] text-[var(--ink)]'
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/8'
+                      : 'border-[var(--line)] bg-[var(--s2)]'
                   }`}
                 >
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${modalidade === 'presencial' ? 'bg-[var(--primary)] text-white' : 'bg-[var(--s1)] text-[var(--ink)]'}`}>
                     <UtensilsCrossed size={22} strokeWidth={1.8} />
                   </div>
-                  <span className="text-sm font-bold">Presencial</span>
+                  <span className="text-sm font-bold text-ink">Presencial</span>
                   <span className="text-xs text-muted text-center leading-tight">Fui ao local</span>
                 </button>
 
@@ -646,150 +619,73 @@ export default function AvaliarModal({
                   onClick={() => setModalidade('delivery')}
                   className={`flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 transition cursor-pointer ${
                     modalidade === 'delivery'
-                      ? 'border-[var(--primary)] bg-[var(--primary)]/8 text-[var(--ink)]'
-                      : 'border-[var(--line)] bg-[var(--s2)] text-[var(--ink)]'
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/8'
+                      : 'border-[var(--line)] bg-[var(--s2)]'
                   }`}
                 >
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${modalidade === 'delivery' ? 'bg-[var(--primary)] text-white' : 'bg-[var(--s1)] text-[var(--ink)]'}`}>
                     <Bike size={22} strokeWidth={1.8} />
                   </div>
-                  <span className="text-sm font-bold">Delivery</span>
+                  <span className="text-sm font-bold text-ink">Delivery</span>
                   <span className="text-xs text-muted text-center leading-tight">Recebi em casa</span>
                 </button>
               </div>
-            </div>
-          )}
 
-          {/* =========================================================================
-              PASSO 4: CADA CRITÉRIO (UMA TELA POR ITEM)
-             ========================================================================= */}
-          {passoAtual.tipo === 'criterio' && (
-            <div className="space-y-5 text-center py-2">
-              {/* O mascote avalia junto */}
-              <MascoteStarAnimation key={passoAtual.criterioIndex} tamanho={168} />
-
-              {/* Badge do tipoNome apenas no primeiro critério */}
-              {passoAtual.criterioIndex === 0 && (
-                <div className="flex justify-center">
-                  <span className="text-sm text-muted">{criteriosObj.tipoNome}</span>
-                </div>
-              )}
-
-              {/* Título e Dica do Critério */}
-              <div className="space-y-1">
-                <h2 className="t-title text-ink">
-                  {criterios[passoAtual.criterioIndex]?.label}
-                </h2>
-                {criterios[passoAtual.criterioIndex]?.dica && (
-                  <p className="text-sm text-muted max-w-sm mx-auto">
-                    {criterios[passoAtual.criterioIndex].dica}
-                  </p>
-                )}
-              </div>
-
-              {/* Meia-estrela grande em var(--star) */}
-              <div className="py-4 flex flex-col items-center justify-center gap-3">
-                <StarRating
-                  value={notasCriterios[criterios[passoAtual.criterioIndex]?.key] || 0}
-                  onChange={(v) => {
-                    const key = criterios[passoAtual.criterioIndex]?.key;
-                    if (key) {
-                      setNotasCriterios((prev) => ({ ...prev, [key]: v }));
-                      setErroValidacao(null);
-                    }
-                  }}
-                  size={36}
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-s2 border border-[var(--line)]">
+                <Calendar size={18} className="text-muted shrink-0" />
+                <input
+                  type="date"
+                  max={hojeISO()}
+                  value={dataVisita}
+                  onChange={(e) => setDataVisita(e.target.value)}
+                  aria-label="Data da visita"
+                  className="flex-1 bg-transparent text-sm text-ink outline-none"
                 />
-
-                <span
-                  className={
-                    (notasCriterios[criterios[passoAtual.criterioIndex]?.key] || 0) > 0
-                      ? 't-rating text-2xl text-ink'
-                      : 'text-sm text-muted'
-                  }
-                >
-                  {(
-                    notasCriterios[criterios[passoAtual.criterioIndex]?.key] || 0
-                  ) > 0
-                    ? (
-                        notasCriterios[criterios[passoAtual.criterioIndex]?.key]
-                      ).toFixed(1).replace('.', ',')
-                    : 'Toque para avaliar'}
-                </span>
               </div>
 
-              {/* Texto explicativo obrigatório */}
-              <p className="text-sm text-muted">
-                A nota geral é a média destas notas.
-              </p>
+              <div className="flex items-start gap-3 pt-1">
+                <div className="relative shrink-0">
+                  <Mascote reacao="animado" tamanho={64} />
+                </div>
+                <div className="bg-white rounded-2xl px-4 py-2.5 shadow-sm border border-[var(--line)] text-sm font-semibold text-ink leading-snug self-end mb-2">
+                  Legal! Me conta como foi 📝
+                  <div className="absolute" style={{ width: 0, height: 0, borderTop: '9px solid transparent', borderBottom: '9px solid transparent', borderRight: '9px solid white', left: -9, top: '50%', transform: 'translateY(-50%)' }} />
+                </div>
+              </div>
             </div>
           )}
 
           {/* =========================================================================
-              PASSO 4: VOLTARIA E PREÇO (MESMA TELA)
+              PASSO 3: CRITÉRIOS TODOS NA MESMA TELA
              ========================================================================= */}
-          {passoAtual.tipo === 'voltaria_preco' && (
-            <div className="space-y-5">
+          {passoAtual.tipo === 'criterios_lista' && (
+            <div className="space-y-4">
               <div>
-                <h2 className="t-title text-ink">Voltaria e Preço</h2>
-                <p className="text-sm text-muted mt-1">
-                  Compartilhe sua percepção sobre retorno e custo-benefício.
-                </p>
+                <h2 className="t-title text-ink">Avalie os principais pontos</h2>
+                <p className="text-sm text-muted mt-1">Dê notas de 1 a 5 para cada critério.</p>
               </div>
 
-              {/* Grupo 1: Voltaria */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-[var(--ink)]">
-                  Você voltaria?
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { val: 'com_certeza', label: 'Com certeza' },
-                    { val: 'talvez', label: 'Talvez' },
-                    { val: 'nao', label: 'Não' },
-                  ].map((item) => (
-                    <button
-                      key={item.val}
-                      type="button"
-                      onClick={() => setVoltaria(item.val as VoltariaOpcao)}
-                      className={`h-11 rounded-full text-sm font-semibold transition cursor-pointer ${
-                        voltaria === item.val
-                          ? 'bg-primary text-on-primary shadow-sm'
-                          : 'bg-s2 text-ink-2 hover:text-ink'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
+              <div className="rounded-2xl bg-s2 border border-[var(--line)] divide-y divide-[var(--line)] overflow-hidden">
+                {criterios
+                  .filter((c) => !(modalidade === 'delivery' && c.key === 'ambiente'))
+                  .map((c) => (
+                    <div key={c.key} className="flex items-center justify-between px-4 py-3.5 gap-3">
+                      <span className="text-sm font-medium text-ink">{c.label}</span>
+                      <StarRating
+                        value={notasCriterios[c.key] || 0}
+                        onChange={(v) => {
+                          setNotasCriterios((prev) => ({ ...prev, [c.key]: v }));
+                          setErroValidacao(null);
+                        }}
+                        size={22}
+                      />
+                    </div>
                   ))}
-                </div>
               </div>
 
-              {/* Grupo 2: Preço */}
-              <div className="space-y-2 pt-2 border-t border-[var(--line)]">
-                <label className="block text-xs font-bold text-[var(--ink)]">
-                  Como achou o preço?
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { val: 'caro', label: 'Caro' },
-                    { val: 'justo', label: 'Justo' },
-                    { val: 'economico', label: 'Econômico' },
-                  ].map((item) => (
-                    <button
-                      key={item.val}
-                      type="button"
-                      onClick={() => setPreco(item.val as PrecoPercepcao)}
-                      className={`h-11 rounded-full text-sm font-semibold transition cursor-pointer ${
-                        preco === item.val
-                          ? 'bg-primary text-on-primary shadow-sm'
-                          : 'bg-s2 text-ink-2 hover:text-ink'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-xs text-muted text-center">
+                A nota geral é calculada pela média dos critérios.
+              </p>
             </div>
           )}
 
@@ -823,14 +719,14 @@ export default function AvaliarModal({
           )}
 
           {/* =========================================================================
-              PASSO 6: COMENTÁRIO
+              PASSO 7: COMENTÁRIO
              ========================================================================= */}
           {passoAtual.tipo === 'comentario' && (
             <div className="space-y-4">
               <div>
-                <h2 className="t-title text-ink">Seu comentário</h2>
+                <h2 className="t-title text-ink">Conte mais sobre sua experiência</h2>
                 <p className="text-sm text-muted mt-1">
-                  Conte sobre a experiência, pratos marcantes, atendimento e atmosfera.
+                  O que você achou? Fale sobre os pontos positivos e negativos. Sua opinião ajuda seus amigos a decidir.
                 </p>
               </div>
 
@@ -840,7 +736,7 @@ export default function AvaliarModal({
                   rows={6}
                   value={comentario}
                   onChange={(e) => setComentario(e.target.value)}
-                  placeholder="Descreva detalhes da sua visita..."
+                  placeholder="Escreva sua opinião aqui..."
                   aria-label="Comentário sobre o restaurante"
                   className="w-full p-4 rounded-xl bg-[var(--s2)] border border-[var(--line)] text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] resize-none"
                 />
@@ -848,44 +744,48 @@ export default function AvaliarModal({
                   {comentario.length}/2000
                 </div>
               </div>
+
+              <div className="flex items-end gap-3 pt-1">
+                <Mascote reacao="apaixonado" tamanho={64} className="shrink-0" />
+                <div className="bg-white rounded-2xl px-4 py-2.5 shadow-sm border border-[var(--line)] text-sm font-semibold text-ink leading-snug mb-2">
+                  Adoro ler suas experiências! 💙
+                </div>
+              </div>
             </div>
           )}
 
           {/* =========================================================================
-              PASSO 7: FOTOS (3 FOTOPICKERS)
+              PASSO 6: FOTOS (3 FOTOPICKERS)
              ========================================================================= */}
           {passoAtual.tipo === 'fotos' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Mascote reacao="registrando" tamanho={60} />
-                <div className="min-w-0">
-                <h2 className="t-title text-ink">Fotos da visita</h2>
+              <div>
+                <h2 className="t-title text-ink">Adicione fotos</h2>
                 <p className="text-sm text-muted mt-1">
-                  Adicione fotos para registrar sua memória gastronômica.
+                  Ajuda a mostrar melhor sua experiência. Você pode adicionar até 10 fotos por categoria.
                 </p>
-                </div>
               </div>
 
               <FotoPicker
-                titulo="Fotos dos Pratos & Bebidas"
-                dica="Fotografe a comida"
-                max={6}
+                titulo="Comida"
+                dica="Pratos e bebidas"
+                max={10}
                 fotos={fotosPratos}
                 onChange={setFotosPratos}
               />
 
               <FotoPicker
-                titulo="Momento & Ambiente"
+                titulo="Ambiente"
                 dica="O salão, a mesa e o clima"
-                max={6}
+                max={10}
                 fotos={fotosMomento}
                 onChange={setFotosMomento}
               />
 
               <FotoPicker
-                titulo="Cardápio ou Conta"
-                dica="Preços e menu"
-                max={3}
+                titulo="Menu"
+                dica="Cardápio ou conta"
+                max={10}
                 fotos={fotosCardapio}
                 onChange={setFotosCardapio}
               />
@@ -1135,7 +1035,7 @@ export default function AvaliarModal({
               onClick={handleAvancar}
               className={`${btn.primary} w-full`}
             >
-              <span>Continuar</span>
+              <span>{passoAtual.tipo === 'intro' ? 'Começar' : 'Continuar'}</span>
             </button>
           )}
         </footer>
