@@ -646,9 +646,9 @@ export default function AvaliarModal({
                 <div className="relative shrink-0">
                   <Mascote reacao="animado" tamanho={64} />
                 </div>
-                <div className="bg-white rounded-2xl px-4 py-2.5 shadow-sm border border-[var(--line)] text-sm font-semibold text-ink leading-snug self-end mb-2">
+                <div className="bg-[var(--s1)] rounded-2xl px-4 py-2.5 shadow-sm border border-[var(--line)] text-sm font-semibold text-ink leading-snug self-end mb-2">
                   Legal! Me conta como foi 📝
-                  <div className="absolute" style={{ width: 0, height: 0, borderTop: '9px solid transparent', borderBottom: '9px solid transparent', borderRight: '9px solid white', left: -9, top: '50%', transform: 'translateY(-50%)' }} />
+                  <div className="absolute" style={{ width: 0, height: 0, borderTop: '9px solid transparent', borderBottom: '9px solid transparent', borderRight: '9px solid var(--s1)', left: -9, top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
               </div>
             </div>
@@ -746,7 +746,7 @@ export default function AvaliarModal({
 
               <div className="flex items-end gap-3 pt-1">
                 <Mascote reacao="apaixonado" tamanho={64} className="shrink-0" />
-                <div className="bg-white rounded-2xl px-4 py-2.5 shadow-sm border border-[var(--line)] text-sm font-semibold text-ink leading-snug mb-2">
+                <div className="bg-[var(--s1)] rounded-2xl px-4 py-2.5 shadow-sm border border-[var(--line)] text-sm font-semibold text-ink leading-snug mb-2">
                   Adoro ler suas experiências! 💙
                 </div>
               </div>
