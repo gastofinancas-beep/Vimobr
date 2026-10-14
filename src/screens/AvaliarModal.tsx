@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   X,
   ArrowLeft,
@@ -116,6 +116,32 @@ function FotoPicker({
         )}
       </div>
     </div>
+  );
+}
+
+// Sprite sheet: 5 colunas × 2 linhas = 10 frames, 1536×1024px
+// Display: altura 180px → frameW=108px, bgW=540px, bgH=360px
+function MascoteStarAnimation() {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    if (frame >= 9) return;
+    const t = setTimeout(() => setFrame((f) => f + 1), 140);
+    return () => clearTimeout(t);
+  }, [frame]);
+  const col = frame % 5;
+  const row = Math.floor(frame / 5);
+  return (
+    <div
+      className="mx-auto"
+      style={{
+        width: 108,
+        height: 180,
+        backgroundImage: 'url(/mascote/sticker-estrelas.png)',
+        backgroundSize: '540px 360px',
+        backgroundPosition: `${-col * 108}px ${-row * 180}px`,
+        backgroundRepeat: 'no-repeat',
+      }}
+    />
   );
 }
 
@@ -974,8 +1000,9 @@ export default function AvaliarModal({
              ========================================================================= */}
           {passoAtual.tipo === 'resumo' && (
             <div className="space-y-4">
-              <div>
-                <h2 className="t-title text-ink">Resumo da sua ida</h2>
+              <div className="text-center">
+                <MascoteStarAnimation />
+                <h2 className="t-title text-ink mt-3">Resumo da sua ida</h2>
                 <p className="text-sm text-muted mt-1">
                   Confira antes de publicar no seu diário.
                 </p>
