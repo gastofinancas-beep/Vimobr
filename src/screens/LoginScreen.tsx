@@ -14,7 +14,7 @@ interface LoginScreenProps {
 
 const ICONE = 'pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted';
 const CAMPO =
-  'h-[52px] w-full rounded-xl bg-s1 pl-11 pr-4 text-base text-ink outline-none ring-1 ring-inset ring-line transition placeholder:text-muted focus:ring-2 focus:ring-primary';
+  'h-[46px] w-full rounded-xl bg-s1 pl-11 pr-4 text-[15px] text-ink outline-none ring-1 ring-inset ring-line transition placeholder:text-muted focus:ring-2 focus:ring-primary';
 const CAMPO_SENHA = CAMPO.replace('pr-4', 'pr-12');
 const SOCIAL =
   'flex h-12 items-center justify-center gap-2 rounded-full bg-s1 px-3 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition hover:bg-s2 active:scale-[0.98] disabled:opacity-60 cursor-pointer';
@@ -250,32 +250,26 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
   }
 
   return (
-    <div className="min-h-[100dvh] w-full bg-bg text-ink flex justify-center">
-      <div className="flex w-full max-w-[420px] flex-col px-5 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pt-[calc(env(safe-area-inset-top,0px)+20px)]">
-        {/* Marca */}
-        <div className="flex justify-center">
-          <Logo altura={30} />
-        </div>
-
-        {/* Mascote: pisca e fecha os olhos enquanto a senha é digitada */}
-        <div className="mt-4 flex flex-col items-center text-center">
-          <MascoteHero tamanho={168} olhosFechados={cobrindo} />
-          <h1 className="mt-3 font-display text-[26px] font-bold leading-[1.15] tracking-[-0.025em] text-ink">
-            {modo === 'entrar' ? 'Boas comidas aproximam boas pessoas.' : 'Crie sua conta no VIMO'}
+    <div className="h-[100dvh] w-full bg-bg text-ink flex justify-center overflow-hidden">
+      <div className="flex w-full max-w-[420px] flex-col px-5 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-[calc(env(safe-area-inset-top,0px)+12px)]">
+        {/* Topo: marca + mascote + título */}
+        <div className="flex flex-col items-center text-center">
+          <Logo altura={26} />
+          <MascoteHero tamanho={108} olhosFechados={cobrindo} className="mt-2" />
+          <h1 className="mt-2 font-display text-[22px] font-bold leading-[1.2] tracking-[-0.02em] text-ink">
+            {modo === 'entrar' ? 'Boas comidas aproximam\nboas pessoas.' : 'Crie sua conta no VIMO'}
           </h1>
-          <p className="mt-2 max-w-[300px] text-[15px] text-muted">
-            Registre e descubra experiências gastronômicas com amigos.
-          </p>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-4 flex-1 flex flex-col justify-between">
+          <div>
           {erro && (
-            <div role="alert" className="mb-3 rounded-xl bg-danger/10 px-3 py-2.5 text-center text-sm font-medium text-danger">
+            <div role="alert" className="mb-3 rounded-xl bg-danger/10 px-3 py-2 text-center text-sm font-medium text-danger">
               {erro}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-2.5">
+          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-2">
             {modo === 'cadastrar' && (
               <div className="relative">
                 <UserIcon strokeWidth={1.8} className={ICONE} aria-hidden="true" />
@@ -339,13 +333,13 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
               </div>
             )}
 
-            <button type="submit" disabled={carregando} className={`${btn.primary} relative mt-1.5 w-full`}>
+            <button type="submit" disabled={carregando} className={`${btn.primary} relative mt-1 w-full`}>
               {carregando ? 'Entrando…' : modo === 'entrar' ? 'Entrar' : 'Criar conta'}
               {!carregando && <ArrowRight size={18} strokeWidth={2.2} className="absolute right-5" aria-hidden="true" />}
             </button>
           </form>
 
-          <div className="my-4 flex items-center gap-3 text-sm text-muted">
+          <div className="my-3 flex items-center gap-3 text-sm text-muted">
             <span className="h-px flex-1 bg-line" />
             <span>ou</span>
             <span className="h-px flex-1 bg-line" />
@@ -369,7 +363,9 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
             </button>
           </div>
 
-          <div className="mt-5 text-center text-sm text-muted">
+          </div>
+
+          <div className="mt-3 text-center text-sm text-muted">
             {modo === 'entrar' ? (
               <p>
                 Ainda não tem conta?{' '}
@@ -404,7 +400,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
               <button
                 type="button"
                 onClick={onExploreAsGuest}
-                className="mt-2 inline-flex min-h-10 items-center justify-center font-medium text-ink-2 underline underline-offset-4 decoration-line transition hover:text-ink cursor-pointer"
+                className="mt-2 inline-flex min-h-9 items-center justify-center text-sm font-medium text-muted hover:text-ink transition cursor-pointer"
               >
                 Entrar como convidado
               </button>
