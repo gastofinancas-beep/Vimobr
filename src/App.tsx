@@ -11,7 +11,7 @@ import Navigation, { type TabKey } from './components/Navigation';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import LoginScreen from './screens/LoginScreen';
 import ExplorarScreen from './screens/ExplorarScreen';
-import DescobrirPertoDeMimScreen from './screens/DescobrirPertoDeMimScreen';
+import DescobrirScreen from './screens/DescobrirScreen';
 import AmigosScreen from './screens/AmigosScreen';
 import PerfilScreen from './screens/PerfilScreen';
 import PlaceDetailScreen from './screens/PlaceDetailScreen';
@@ -302,11 +302,12 @@ export default function App() {
               />
             )}
 
-            {tabAtiva === 'mapa' && (
-              <DescobrirPertoDeMimScreen
-                onAbrirLugar={handleAbrirLugar}
+            {tabAtiva === 'descobrir' && (
+              <DescobrirScreen
                 currentUser={currentUser}
-                onAvaliar={handleAbrirAvaliarComLugar}
+                onAbrirLugar={handleAbrirLugar}
+                onAbrirPerfil={handleAbrirPerfil}
+                onAbrirBusca={() => setMostrarBusca(true)}
               />
             )}
 

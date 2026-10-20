@@ -1,7 +1,7 @@
 import React from 'react';
-import { Compass, Map, Plus, Users, User } from 'lucide-react';
+import { Compass, Telescope, Plus, Users, User } from 'lucide-react';
 
-export type TabKey = 'explorar' | 'mapa' | 'amigos' | 'perfil';
+export type TabKey = 'explorar' | 'descobrir' | 'amigos' | 'perfil';
 
 const tabClass = (ativa: boolean) =>
   `flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer min-h-11 relative ${
@@ -33,17 +33,17 @@ export default function Navigation({
           <span className="text-2xs font-semibold leading-none">Explorar</span>
         </button>
 
-        {/* 2. Mapa */}
+        {/* 2. Descobrir */}
         <button
           type="button"
-          onClick={() => onMudarTab('mapa')}
-          aria-label="Aba Mapa"
-          aria-current={tabAtiva === 'mapa' ? 'page' : undefined}
-          className={tabClass(tabAtiva === 'mapa')}
+          onClick={() => onMudarTab('descobrir')}
+          aria-label="Aba Descobrir"
+          aria-current={tabAtiva === 'descobrir' ? 'page' : undefined}
+          className={tabClass(tabAtiva === 'descobrir')}
         >
-          {tabAtiva === 'mapa' && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-primary" />}
-          <Map size={24} strokeWidth={tabAtiva === 'mapa' ? 2.2 : 1.8} />
-          <span className="text-2xs font-semibold leading-none">Mapa</span>
+          {tabAtiva === 'descobrir' && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-primary" />}
+          <Telescope size={24} strokeWidth={tabAtiva === 'descobrir' ? 2.2 : 1.8} />
+          <span className="text-2xs font-semibold leading-none">Descobrir</span>
         </button>
 
         {/* 3. Botão central de avaliar, elevado sobre a barra */}
