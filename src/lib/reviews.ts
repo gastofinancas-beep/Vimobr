@@ -698,3 +698,50 @@ export function obterScoreRestaurante(placeId: string, googleRatingFallback = 4.
     faltamParaDesbloquear: 0,
   };
 }
+
+export interface LugarDestaque {
+  placeId: string;
+  placeName: string;
+  mediaNotas: number;
+  totalAvaliacoes: number;
+}
+
+export async function carregarMelhoresAvaliados(limite = 5): Promise<LugarDestaque[]> {
+  const seteDiasAtras = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  let lista = getLocalReviews().filter((r) => r.createdAt >= seteDiasAtras && (r.overall ?? 0) > 0);
+
+  if (isFirebaseConfigured) {
+    try {
+      const q = query(
+        collection(db, 'reviews'),
+        where('createdAt', '>=', seteDiasAtras),
+        orderBy('createdAt', 'desc'),
+        limit(200)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        lista = snap.docs.map(toReview).filter((r) => (r.overall ?? 0) > 0);
+      }
+    } catch {
+      // fallback to local
+    }
+  }
+
+  const byPlace: Record<string, { placeName: string; sum: number; count: number }> = {};
+  for (const r of lista) {
+    if (!r.placeId) continue;
+    if (!byPlace[r.placeId]) byPlace[r.placeId] = { placeName: r.placeName ?? '', sum: 0, count: 0 };
+    byPlace[r.placeId].sum += r.overall ?? 0;
+    byPlace[r.placeId].count++;
+  }
+
+  return Object.entries(byPlace)
+    .map(([placeId, { placeName, sum, count }]) => ({
+      placeId,
+      placeName,
+      mediaNotas: Math.round((sum / count) * 2) / 2,
+      totalAvaliacoes: count,
+    }))
+    .sort((a, b) => b.mediaNotas - a.mediaNotas || b.totalAvaliacoes - a.totalAvaliacoes)
+    .slice(0, limite);
+}

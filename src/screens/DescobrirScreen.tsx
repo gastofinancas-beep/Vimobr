@@ -1,9 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, MapPin, ChevronRight, Star } from 'lucide-react';
+import { Search, MapPin, ChevronRight, LocateFixed, Star } from 'lucide-react';
 import { Avatar, PlaceImage } from '../components/ui';
-import { solicitarLocalizacaoAtual, obterCoordenadasSalvas } from '../services/locationService';
+import {
+  solicitarLocalizacaoAtual,
+  obterCoordenadasSalvas,
+  consultarPermissaoLocalizacao,
+} from '../services/locationService';
 import { buscarProximos, calcularDistanciaKm, SAMPLE_PLACES } from '../lib/places';
-import { carregarComunidade } from '../lib/reviews';
+import { carregarComunidade, carregarMelhoresAvaliados, type LugarDestaque } from '../lib/reviews';
 import type { Place, Review, UserProfile } from '../types';
 
 interface DescobrirScreenProps {
@@ -66,6 +70,15 @@ function tempoRelativo(ts: number): string {
   return meses === 1 ? '1 mês' : `${meses} meses`;
 }
 
+function estrelas(nota: number) {
+  return (
+    <span className="flex items-center gap-0.5 text-primary">
+      <Star size={10} fill="currentColor" strokeWidth={0} />
+      <span className="text-[11px] font-semibold tabular-nums">{nota.toFixed(1)}</span>
+    </span>
+  );
+}
+
 function SkeletonCard({ wide }: { wide?: boolean }) {
   return (
     <div className={`shrink-0 ${wide ? 'w-44' : 'w-36'} rounded-xl overflow-hidden bg-s2 animate-pulse`}>
@@ -114,12 +127,12 @@ function PlaceCard({ place, distancia, onClick, wide }: PlaceCardProps) {
 
 interface RankCardProps {
   rank: number;
-  place: Place;
-  avaliacoes: number;
+  place?: Place;
+  destaque: LugarDestaque;
   onClick: () => void;
 }
 
-function RankCard({ rank, place, avaliacoes, onClick }: RankCardProps) {
+function RankCard({ rank, place, destaque, onClick }: RankCardProps) {
   return (
     <button
       type="button"
@@ -128,14 +141,21 @@ function RankCard({ rank, place, avaliacoes, onClick }: RankCardProps) {
     >
       <span className="text-[22px] font-black text-muted/40 w-7 shrink-0 text-center leading-none tabular-nums">{rank}</span>
       <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-s2">
-        <PlaceImage src={place.photoUrl ?? ''} name={place.name} className="w-full h-full" showName={false} />
+        {place ? (
+          <PlaceImage src={place.photoUrl ?? ''} name={place.name} className="w-full h-full" showName={false} />
+        ) : (
+          <div className="w-full h-full bg-s3" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-ink leading-snug line-clamp-1">{place.name}</p>
-        <p className="text-[11px] text-muted mt-0.5">{tipoLabel(place.tipo ?? '')}</p>
+        <p className="text-[13px] font-semibold text-ink leading-snug line-clamp-1">
+          {place?.name ?? destaque.placeName}
+        </p>
+        <p className="text-[11px] text-muted mt-0.5">{tipoLabel(place?.tipo ?? '')}</p>
       </div>
-      <div className="shrink-0 text-right">
-        <p className="text-[11px] text-muted">{avaliacoes} avaliações</p>
+      <div className="shrink-0 text-right space-y-0.5">
+        {estrelas(destaque.mediaNotas)}
+        <p className="text-[10px] text-muted">{destaque.totalAvaliacoes} avaliações</p>
       </div>
     </button>
   );
@@ -219,41 +239,63 @@ export default function DescobrirScreen({
     return s || { lat: -23.561684, lng: -46.682371 };
   });
 
+  const [permissaoLoc, setPermissaoLoc] = useState<'desconhecida' | 'concedida' | 'negada' | 'solicitando'>('desconhecida');
+  const [temCoordsSalvas] = useState(() => !!obterCoordenadasSalvas());
+
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('todos');
 
   const [lugaresPerto, setLugaresPerto] = useState<Place[]>([]);
   const [carregandoPerto, setCarregandoPerto] = useState(true);
+
+  const [melhoresAvaliados, setMelhoresAvaliados] = useState<LugarDestaque[]>([]);
+  const [carregandoRanking, setCarregandoRanking] = useState(true);
 
   const [reviewsAmigos, setReviewsAmigos] = useState<Review[]>([]);
   const [carregandoAmigos, setCarregandoAmigos] = useState(true);
 
   const coordsCarregadasRef = useRef(false);
 
-  const lugaresFiltrados = categoriaSelecionada === 'todos'
-    ? SAMPLE_PLACES
-    : SAMPLE_PLACES.filter((p) => p.tipo === categoriaSelecionada);
-
-  const lugaresTendencia = SAMPLE_PLACES.slice(0, 5);
+  const lugaresNovidades = SAMPLE_PLACES.slice(5, 12);
+  const heroPrincipal = SAMPLE_PLACES[0];
   const contextHorario = getContextoHorario();
   const lugaresParaHoje = contextHorario.map((ctx) => ({
     ctx,
     places: SAMPLE_PLACES.filter((p) => p.tipo === ctx.tipo).slice(0, 4),
   }));
-
   const lugaresOcasiao = OCASIOES.map((oc) => ({
     ...oc,
     place: SAMPLE_PLACES.find((p) => p.tipo === oc.tipo),
   }));
 
-  const lugaresNovidades = SAMPLE_PLACES.slice(5, 12);
-
-  const heroPrincipal = SAMPLE_PLACES[0];
-
+  // Verificar permissão de localização ao montar
   useEffect(() => {
+    if (temCoordsSalvas) {
+      setPermissaoLoc('concedida');
+      return;
+    }
+    consultarPermissaoLocalizacao().then((estado) => {
+      if (estado === 'granted') setPermissaoLoc('concedida');
+      else if (estado === 'denied') setPermissaoLoc('negada');
+      else setPermissaoLoc('desconhecida');
+    });
+  }, [temCoordsSalvas]);
+
+  const solicitarLocalizacao = () => {
+    setPermissaoLoc('solicitando');
     solicitarLocalizacaoAtual()
-      .then((loc) => setCoords(loc))
-      .catch(() => {});
-  }, []);
+      .then((loc) => {
+        setCoords(loc);
+        setPermissaoLoc('concedida');
+        // Recarregar lugares próximos com a nova localização
+        coordsCarregadasRef.current = false;
+        setCarregandoPerto(true);
+        buscarProximos(loc.lat, loc.lng, 2500)
+          .then((lugares) => setLugaresPerto(lugares.slice(0, 10)))
+          .catch(() => setLugaresPerto(SAMPLE_PLACES.slice(0, 8)))
+          .finally(() => setCarregandoPerto(false));
+      })
+      .catch(() => setPermissaoLoc('negada'));
+  };
 
   useEffect(() => {
     if (coordsCarregadasRef.current) return;
@@ -264,6 +306,15 @@ export default function DescobrirScreen({
       .catch(() => setLugaresPerto(SAMPLE_PLACES.slice(0, 8)))
       .finally(() => setCarregandoPerto(false));
   }, [coords.lat, coords.lng]);
+
+  // Melhores avaliados da semana
+  useEffect(() => {
+    setCarregandoRanking(true);
+    carregarMelhoresAvaliados(5)
+      .then((lista) => setMelhoresAvaliados(lista))
+      .catch(() => setMelhoresAvaliados([]))
+      .finally(() => setCarregandoRanking(false));
+  }, []);
 
   useEffect(() => {
     if (!currentUser.uid) {
@@ -281,6 +332,19 @@ export default function DescobrirScreen({
     const km = calcularDistanciaKm(coords.lat, coords.lng, p.lat, p.lng);
     return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
   };
+
+  // Para o ranking: tenta cruzar placeId com SAMPLE_PLACES
+  const placeParaDestaque = (d: LugarDestaque): Place | undefined =>
+    SAMPLE_PLACES.find((p) => p.id === d.placeId);
+
+  // Fallback do ranking quando não há avaliações locais
+  const rankingFallback = SAMPLE_PLACES.slice(0, 5).map((p, i) => ({
+    placeId: p.id,
+    placeName: p.name,
+    mediaNotas: 4.5 - i * 0.2,
+    totalAvaliacoes: Math.max(3, 12 - i * 2),
+  }));
+  const rankingExibido = melhoresAvaliados.length > 0 ? melhoresAvaliados : rankingFallback;
 
   return (
     <div className="min-h-screen bg-bg pb-24">
@@ -358,6 +422,35 @@ export default function DescobrirScreen({
               Ver mapa <ChevronRight size={14} />
             </button>
           </div>
+
+          {/* Banner de permissão */}
+          {permissaoLoc !== 'concedida' && (
+            <div className="mx-4 mb-3 flex items-center gap-3 bg-s2 rounded-xl px-4 py-3">
+              <LocateFixed size={18} className="shrink-0 text-primary" />
+              <div className="flex-1 min-w-0">
+                {permissaoLoc === 'negada' ? (
+                  <p className="text-[12.5px] text-ink leading-snug">
+                    Permissão negada. Ative a localização nas configurações do navegador.
+                  </p>
+                ) : (
+                  <p className="text-[12.5px] text-ink leading-snug">
+                    Permita o acesso à localização para ver lugares perto de você.
+                  </p>
+                )}
+              </div>
+              {permissaoLoc !== 'negada' && (
+                <button
+                  type="button"
+                  onClick={solicitarLocalizacao}
+                  disabled={permissaoLoc === 'solicitando'}
+                  className="shrink-0 text-[12px] font-semibold text-primary disabled:opacity-50 cursor-pointer"
+                >
+                  {permissaoLoc === 'solicitando' ? 'Aguarde...' : 'Permitir'}
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-1">
             {carregandoPerto ? (
               Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
@@ -376,21 +469,43 @@ export default function DescobrirScreen({
           </div>
         </section>
 
-        {/* Em alta na VIMO — ranking */}
+        {/* Em alta na VIMO — melhores avaliados da semana */}
         <section>
           <div className="px-4 mb-1 flex items-center justify-between">
-            <h2 className="t-section text-base font-semibold text-ink">Em alta na Vimo</h2>
+            <div>
+              <h2 className="t-section text-base font-semibold text-ink">Em alta na Vimo</h2>
+              <p className="text-[11px] text-muted mt-0.5">Melhores avaliados esta semana</p>
+            </div>
           </div>
           <div className="px-4">
-            {lugaresTendencia.map((p, i) => (
-              <RankCard
-                key={p.id}
-                rank={i + 1}
-                place={p}
-                avaliacoes={Math.max(3, 18 - i * 3)}
-                onClick={() => onAbrirLugar(p)}
-              />
-            ))}
+            {carregandoRanking ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex gap-3 py-3 border-b border-line animate-pulse">
+                    <div className="w-7 h-6 bg-s3 rounded shrink-0" />
+                    <div className="w-12 h-12 rounded-lg bg-s3 shrink-0" />
+                    <div className="flex-1 space-y-1.5 pt-1">
+                      <div className="h-3 bg-s3 rounded w-2/3" />
+                      <div className="h-2.5 bg-s3 rounded w-1/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              rankingExibido.map((d, i) => (
+                <RankCard
+                  key={d.placeId}
+                  rank={i + 1}
+                  place={placeParaDestaque(d)}
+                  destaque={d}
+                  onClick={() => {
+                    const place = placeParaDestaque(d);
+                    if (place) onAbrirLugar(place);
+                    else onAbrirLugar(d.placeId);
+                  }}
+                />
+              ))
+            )}
           </div>
         </section>
 
