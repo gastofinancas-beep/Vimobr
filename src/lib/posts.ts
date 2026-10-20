@@ -70,20 +70,26 @@ function getLocalPostComments(postId: string): TweetComment[] {
 
 // ---------- Upload ----------
 
+async function toDataUrl(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+}
+
 async function uploadFotoPost(uid: string, file: File): Promise<string> {
-  if (!isFirebaseConfigured) {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.readAsDataURL(file);
-    });
-  }
+  // Gera DataURL primeiro — persiste no localStorage se o upload remoto falhar
+  const dataUrl = await toDataUrl(file);
+
+  if (!isFirebaseConfigured) return dataUrl;
+
   try {
     const r = ref(storage, `posts/${uid}/${crypto.randomUUID()}.jpg`);
     await uploadBytes(r, file, { contentType: file.type });
     return await getDownloadURL(r);
   } catch {
-    return URL.createObjectURL(file);
+    return dataUrl;
   }
 }
 

@@ -92,11 +92,11 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
             <textarea
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder="O que você está comendo?"
+              placeholder={foto ? 'Legenda (opcional)…' : 'O que você está comendo?'}
               rows={4}
               maxLength={500}
               className="w-full bg-transparent text-[15px] text-ink placeholder:text-muted resize-none focus:outline-none leading-relaxed"
-              autoFocus
+              autoFocus={!foto}
             />
 
             {/* Preview da foto */}
