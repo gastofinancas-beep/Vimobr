@@ -1,28 +1,19 @@
-import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, MapPin, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Heart, MessageCircle, MapPin, ChevronRight } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
-import { SAMPLE_PLACES, autocompleteCidade, formatarPrecoLabel } from '../lib/places';
-import type { Place, UserProfile } from '../types';
+import { carregarExplorar, carregarComunidade, alternarCurtida } from '../lib/reviews';
+import type { Review, UserProfile } from '../types';
 import MascotMessage from '../components/MascotMessage';
-import { PlaceImage, Logo, btn, chip } from '../components/ui';
-import { useEscape } from '../hooks/useEscape';
+import { Avatar, Logo, btn } from '../components/ui';
 
-type TipoRestauranteFiltro =
-  | 'todos'
-  | 'italiana'
-  | 'hamburguer'
-  | 'japonesa'
-  | 'cafe_padaria'
-  | 'bistro'
-  | 'carnes'
-  | 'bar';
+type AbaFeed = 'explorar' | 'seguindo';
 
 interface ExplorarScreenProps {
   currentUser: UserProfile;
-  onAbrirLugar: (place: Place | string) => void;
+  onAbrirLugar: (placeId: string) => void;
   onAbrirPerfil: (uid: string) => void;
-  onAbrirBusca: () => void;
+  onAbrirBusca?: () => void;
   onAbrirAvaliar?: () => void;
   onMudarTab?: (tab: 'explorar' | 'descobrir' | 'amigos' | 'perfil') => void;
   tema?: 'dark' | 'light';
@@ -39,324 +30,120 @@ export default function ExplorarScreen({
   tema: _tema,
   onToggleTema: _onToggleTema,
 }: ExplorarScreenProps) {
-  const [cidadeAtual, setCidadeAtual] = useState({
-    cityKey: currentUser.homeCityKey || 'sao-paulo-sp',
-    nome: currentUser.homeCityName || 'São Paulo - SP',
-  });
-  const [cidadeModalAberta, setCidadeModalAberta] = useState(false);
-  const [buscaCidade, setBuscaCidade] = useState('');
-  const [sugestoesCidade, setSugestoesCidade] = useState<{ texto: string; cityKey: string }[]>([]);
-
-  const [filtroTipo, setFiltroTipo] = useState<TipoRestauranteFiltro>('todos');
-  const [buscaTermo, setBuscaTermo] = useState('');
+  const [abaAtiva, setAbaAtiva] = useState<AbaFeed>('explorar');
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [carregando, setCarregando] = useState(true);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
-  useEscape(() => setCidadeModalAberta(false), cidadeModalAberta);
+  const carregouRef = useRef<AbaFeed | null>(null);
 
-  // Filtragem dos restaurantes por tipo
-  const lugaresFiltrados = useMemo(() => {
-    let list = SAMPLE_PLACES;
+  useEffect(() => {
+    if (carregouRef.current === abaAtiva) return;
+    carregouRef.current = abaAtiva;
+    setCarregando(true);
 
-    // Filtro por termo de busca digitado
-    if (buscaTermo.trim().length > 0) {
-      const q = buscaTermo.toLowerCase().trim();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.address?.toLowerCase().includes(q) ||
-          p.bairro?.toLowerCase().includes(q) ||
-          p.tipo?.toLowerCase().includes(q)
-      );
-    }
+    const carregar = abaAtiva === 'explorar'
+      ? carregarExplorar('algoritmo', currentUser.uid)
+      : carregarComunidade(currentUser.uid);
 
-    // Filtro por categoria — prioriza campos estruturados (tipo, cuisine, category), fallback por nome
-    if (filtroTipo !== 'todos') {
-      const corpus = (p: Place) =>
-        [p.name, p.cuisine, p.category, p.tipo].filter(Boolean).join(' ').toLowerCase();
-      const has = (p: Place, ...termos: string[]) => termos.some((t) => corpus(p).includes(t));
+    carregar
+      .then((lista) => setReviews(lista))
+      .catch(() => setReviews([]))
+      .finally(() => setCarregando(false));
+  }, [abaAtiva, currentUser.uid]);
 
-      if (filtroTipo === 'italiana') {
-        list = list.filter((p) => has(p, 'italiana', 'italian', 'trattoria', 'pizza', 'pasta', 'forno', 'napoletana', 'cantina'));
-      } else if (filtroTipo === 'hamburguer') {
-        list = list.filter((p) => has(p, 'burger', 'hamburguer', 'hamburger', 'lanche', 'sandwich'));
-      } else if (filtroTipo === 'japonesa') {
-        list = list.filter((p) => has(p, 'japones', 'japanese', 'sushi', 'omakase', 'ramen', 'temaki', 'izakaya'));
-      } else if (filtroTipo === 'cafe_padaria') {
-        list = list.filter((p) =>
-          p.tipo === 'cafe' || p.tipo === 'bakery' ||
-          has(p, 'café', 'cafe', 'coffee', 'padaria', 'panific', 'torra', 'confeitaria', 'croissant', 'espresso')
-        );
-      } else if (filtroTipo === 'bistro') {
-        list = list.filter((p) => has(p, 'bistro', 'bistrô', 'contemporâneo', 'contemporaneo', 'fusion', 'criativo'));
-      } else if (filtroTipo === 'carnes') {
-        list = list.filter((p) => has(p, 'parrilla', 'churrasco', 'carne', 'steak', 'fogo', 'espeto', 'assado', 'grill'));
-      } else if (filtroTipo === 'bar') {
-        list = list.filter((p) =>
-          p.tipo === 'bar' ||
-          has(p, 'bar', 'boteco', 'coquetelaria', 'pub', 'cervej', 'chopp', 'chope', 'craft beer')
-        );
-      }
-    }
-
-    return list;
-  }, [filtroTipo, buscaTermo]);
-
-  const chips: { id: TipoRestauranteFiltro; label: string }[] = [
-    { id: 'todos', label: 'Todos' },
-    { id: 'italiana', label: 'Italiana' },
-    { id: 'hamburguer', label: 'Hambúrguer' },
-    { id: 'japonesa', label: 'Japonesa' },
-    { id: 'cafe_padaria', label: 'Cafés e padarias' },
-    { id: 'bistro', label: 'Bistrôs' },
-    { id: 'carnes', label: 'Carnes' },
-    { id: 'bar', label: 'Bares' },
-  ];
-
-  const cidadeCurta = cidadeAtual.nome.replace(/\s*-\s*[A-Z]{2}$/, '');
-  const limparFiltros = () => {
-    setFiltroTipo('todos');
-    setBuscaTermo('');
+  const handleCurtir = async (reviewId: string) => {
+    const curtida = await alternarCurtida(reviewId, currentUser.uid);
+    setReviews((prev) =>
+      prev.map((r) =>
+        r.id === reviewId
+          ? { ...r, userLiked: curtida, likesCount: r.likesCount + (curtida ? 1 : -1) }
+          : r
+      )
+    );
   };
-
-  const TIPOS: Record<string, string> = { restaurant: 'Restaurante', cafe: 'Café', bakery: 'Padaria', bar: 'Bar' };
-  const metaDe = (p: Place) =>
-    [p.cuisine || (p.tipo ? TIPOS[p.tipo] || p.tipo : null), p.bairro, p.priceLevel ? formatarPrecoLabel(p.priceLevel) : null]
-      .filter(Boolean)
-      .join(' · ');
-
-  // Em destaque: melhor combinação de nota e volume de avaliações
-  const populares = useMemo(
-    () =>
-      [...lugaresFiltrados].sort((a, b) => {
-        const notaA = a.vimoRating ?? a.googleRating ?? 0;
-        const notaB = b.vimoRating ?? b.googleRating ?? 0;
-        const volA = a.vimoReviewsCount ?? a.googleUserRatingCount ?? a.reviewsCount ?? 0;
-        const volB = b.vimoReviewsCount ?? b.googleUserRatingCount ?? b.reviewsCount ?? 0;
-        return notaB * Math.log(volB + 1) - notaA * Math.log(volA + 1);
-      }),
-    [lugaresFiltrados]
-  );
-
-  // Fileiras por tipo (só aparecem com pelo menos 3 lugares)
-  const secoesPorTipo = useMemo(() => {
-    const grupos: { titulo: string; tipos: string[] }[] = [
-      { titulo: 'Restaurantes', tipos: ['restaurant'] },
-      { titulo: 'Cafés e padarias', tipos: ['cafe', 'bakery'] },
-      { titulo: 'Bares', tipos: ['bar'] },
-    ];
-    return grupos
-      .map((g) => ({ titulo: g.titulo, lugares: lugaresFiltrados.filter((p) => g.tipos.includes(p.tipo || '')) }))
-      .filter((g) => g.lugares.length >= 3);
-  }, [lugaresFiltrados]);
 
   return (
     <div className="flex-1 w-full bg-bg text-ink min-h-screen pb-28">
-      {/* Cabeçalho: marca, cidade e notificações */}
       <header className="sticky top-0 z-30 bg-bg/95 backdrop-blur-md">
-        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="max-w-2xl mx-auto flex items-center justify-between px-4 pt-4 pb-3">
           <Logo altura={24} />
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setCidadeModalAberta(true)}
-              aria-label={`Cidade: ${cidadeAtual.nome}. Trocar cidade`}
-              className="flex h-9 min-w-0 items-center gap-1 rounded-full bg-s2 pl-3 pr-2.5 text-sm font-semibold text-ink-2 hover:text-ink transition-colors cursor-pointer"
-            >
-              <MapPin size={14} strokeWidth={2} className="shrink-0 text-primary" />
-              <span className="truncate max-w-[120px]">{cidadeCurta}</span>
-              <ChevronDown size={14} className="shrink-0" />
-            </button>
-            <NotificationBell
-              currentUserUid={currentUser.uid}
-              onClick={() => setMostrarNotificacoes(true)}
-              className={btn.icon}
-            />
-          </div>
+          <NotificationBell
+            currentUserUid={currentUser.uid}
+            onClick={() => setMostrarNotificacoes(true)}
+            className={btn.icon}
+          />
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 pb-3">
-          {/* Busca */}
-          <label className="flex h-12 items-center gap-2.5 rounded-xl bg-s1 px-4 shadow-xs ring-1 ring-inset ring-line focus-within:ring-2 focus-within:ring-primary transition">
-            <Search size={18} strokeWidth={1.9} className="shrink-0 text-muted" />
-            <input
-              type="search"
-              value={buscaTermo}
-              onChange={(e) => setBuscaTermo(e.target.value)}
-              placeholder="Buscar restaurantes, cozinhas…"
-              aria-label="Buscar restaurantes"
-              className="w-full bg-transparent text-base text-ink placeholder:text-muted outline-none [&::-webkit-search-cancel-button]:hidden"
-            />
-            {buscaTermo && (
-              <button
-                type="button"
-                onClick={() => setBuscaTermo('')}
-                aria-label="Limpar busca"
-                className="-mr-1 p-1 text-muted hover:text-ink cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </label>
-
-          {/* Filtros em pílula */}
-          <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto no-scrollbar px-4">
-            {chips.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setFiltroTipo(c.id)}
-                aria-pressed={filtroTipo === c.id}
-                className={chip(filtroTipo === c.id)}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
+        {/* Abas */}
+        <div className="max-w-2xl mx-auto flex border-b border-line">
+          {(['explorar', 'seguindo'] as AbaFeed[]).map((aba) => (
+            <button
+              key={aba}
+              type="button"
+              onClick={() => {
+                carregouRef.current = null;
+                setReviews([]);
+                setAbaAtiva(aba);
+              }}
+              className={`flex-1 py-2.5 text-[14px] font-semibold transition-colors cursor-pointer ${
+                abaAtiva === aba
+                  ? 'text-ink border-b-2 border-ink -mb-px'
+                  : 'text-muted hover:text-ink-2'
+              }`}
+            >
+              {aba === 'explorar' ? 'Explorar' : 'Seguindo'}
+            </button>
+          ))}
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto pt-2">
-        {lugaresFiltrados.length === 0 ? (
+      <main className="max-w-2xl mx-auto pt-3">
+        {carregando ? (
+          <div className="space-y-4 px-4 pt-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-s2" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-3.5 w-28 rounded bg-s2" />
+                    <div className="h-3 w-16 rounded bg-s2" />
+                  </div>
+                </div>
+                <div className="aspect-[4/3] rounded-2xl bg-s2" />
+                <div className="h-3.5 w-3/4 rounded bg-s2" />
+              </div>
+            ))}
+          </div>
+        ) : reviews.length === 0 ? (
           <MascotMessage
             reaction="pensativo"
-            title={buscaTermo ? `Nada encontrado para "${buscaTermo.trim()}"` : 'Nenhum lugar neste filtro'}
-            subtitle="Tente outro nome, bairro ou cozinha."
-            ctaLabel="Limpar filtros"
-            onCta={limparFiltros}
+            title={abaAtiva === 'seguindo' ? 'Nenhuma avaliação de quem você segue' : 'Nenhuma avaliação por aqui ainda'}
+            subtitle={
+              abaAtiva === 'seguindo'
+                ? 'Siga pessoas para ver as avaliações delas aqui.'
+                : 'Seja o primeiro a avaliar um lugar.'
+            }
           />
-        ) : buscaTermo || filtroTipo !== 'todos' ? (
-          /* Busca ou filtro: uma grade só, sem seções */
-          <section className="px-4">
-            <CabecalhoSecao titulo={buscaTermo ? 'Resultados' : chips.find((c) => c.id === filtroTipo)?.label || 'Lugares'} total={lugaresFiltrados.length} />
-            <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
-              {lugaresFiltrados.map((place) => (
-                <Poster key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} />
-              ))}
-            </div>
-          </section>
         ) : (
-          /* Início: estilo Letterboxd, muitos pôsteres e nenhuma nota (a nota aparece no lugar) */
-          <div className="space-y-9">
-            <section className="px-4">
-              <CabecalhoSecao titulo="Em destaque" total={lugaresFiltrados.length} />
-              {/* Layout editorial: 1 card grande à esquerda + 2 cards empilhados à direita */}
-              <div className="grid grid-cols-2 gap-3">
-                {populares[0] && (
-                  <PosterDestaque place={populares[0]} meta={metaDe(populares[0])} onAbrir={onAbrirLugar} grande />
+          <div className="divide-y divide-line">
+            {reviews.map((review, idx) => (
+              <React.Fragment key={review.id}>
+                <PostCard
+                  review={review}
+                  currentUserUid={currentUser.uid}
+                  onCurtir={handleCurtir}
+                  onAbrirLugar={onAbrirLugar}
+                  onAbrirPerfil={onAbrirPerfil}
+                />
+                {/* Seção "Pessoas para seguir" a cada 4 posts */}
+                {(idx + 1) % 4 === 0 && idx < reviews.length - 1 && (
+                  <PessoasParaSeguir reviews={reviews} meuUid={currentUser.uid} onAbrirPerfil={onAbrirPerfil} />
                 )}
-                <div className="flex flex-col gap-3">
-                  {populares.slice(1, 3).map((place) => (
-                    <PosterDestaque key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} />
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {secoesPorTipo.map((sec) => (
-              <section key={sec.titulo}>
-                <div className="px-4">
-                  <CabecalhoSecao titulo={sec.titulo} total={sec.lugares.length} />
-                </div>
-                <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1">
-                  {sec.lugares.map((place) => (
-                    <div key={place.id} className="w-[34%] max-w-[150px] shrink-0 snap-start">
-                      <Poster place={place} meta={place.bairro || ''} onAbrir={onAbrirLugar} pequeno />
-                    </div>
-                  ))}
-                </div>
-              </section>
+              </React.Fragment>
             ))}
-
-            <section className="px-4">
-              <CabecalhoSecao titulo="Todos os lugares" total={lugaresFiltrados.length} />
-              <div className="grid grid-cols-3 gap-x-2.5 gap-y-4 sm:grid-cols-4 lg:grid-cols-5">
-                {lugaresFiltrados.map((place) => (
-                  <Poster key={place.id} place={place} meta="" onAbrir={onAbrirLugar} pequeno />
-                ))}
-              </div>
-            </section>
           </div>
         )}
       </main>
-
-      {/* Trocar cidade: folha inferior */}
-      {cidadeModalAberta && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60"
-          onClick={() => setCidadeModalAberta(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="titulo-cidade"
-            onClick={(e) => e.stopPropagation()}
-            className="animate-in slide-in-from-bottom w-full max-w-md rounded-t-3xl sm:rounded-2xl bg-s1 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] shadow-2xl"
-          >
-            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-s3 sm:hidden" />
-            <div className="flex items-center justify-between pb-3">
-              <h3 id="titulo-cidade" className="t-section text-ink">Trocar cidade</h3>
-              <button type="button" onClick={() => setCidadeModalAberta(false)} aria-label="Fechar" className={btn.icon}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <label className="flex h-11 items-center gap-2.5 rounded-lg bg-s2 px-3 ring-1 ring-transparent focus-within:ring-primary transition">
-              <Search size={17} strokeWidth={1.8} className="shrink-0 text-muted" />
-              <input
-                type="text"
-                autoFocus
-                value={buscaCidade}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setBuscaCidade(val);
-                  if (val.trim().length > 1) {
-                    autocompleteCidade(val)
-                      .then((res) => setSugestoesCidade(res))
-                      .catch(() => setSugestoesCidade([]));
-                  } else {
-                    setSugestoesCidade([]);
-                  }
-                }}
-                placeholder="Nome da cidade"
-                aria-label="Buscar cidade"
-                className="w-full bg-transparent text-base text-ink placeholder:text-muted outline-none"
-              />
-            </label>
-
-            <ul className="mt-2 max-h-64 overflow-y-auto">
-              {(buscaCidade.trim().length > 1
-                ? sugestoesCidade
-                : [
-                    { texto: 'São Paulo - SP', cityKey: 'sao-paulo-sp' },
-                    { texto: 'Rio de Janeiro - RJ', cityKey: 'rio-de-janeiro-rj' },
-                    { texto: 'Curitiba - PR', cityKey: 'curitiba-pr' },
-                    { texto: 'Belo Horizonte - MG', cityKey: 'belo-horizonte-mg' },
-                  ]
-              ).map((cid) => {
-                const atual = cid.cityKey === cidadeAtual.cityKey;
-                return (
-                  <li key={cid.cityKey}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCidadeAtual({ cityKey: cid.cityKey, nome: cid.texto });
-                        setCidadeModalAberta(false);
-                        setBuscaCidade('');
-                        setSugestoesCidade([]);
-                      }}
-                      className={`flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left text-base transition-colors hover:bg-s2 cursor-pointer ${
-                        atual ? 'font-semibold text-ink' : 'text-ink-2'
-                      }`}
-                    >
-                      <MapPin size={16} strokeWidth={1.8} className={atual ? 'text-star' : 'text-muted'} />
-                      <span>{cid.texto}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </div>
-      )}
 
       {mostrarNotificacoes && (
         <NotificationsModal
@@ -370,97 +157,237 @@ export default function ExplorarScreen({
   );
 }
 
-/** Título de seção com contagem à direita, como nas listas do Letterboxd. */
-function CabecalhoSecao({ titulo, total }: { titulo: string; total: number }) {
+/** Card de post individual com carrossel de fotos e card do lugar como último slide */
+function PostCard({
+  review,
+  currentUserUid,
+  onCurtir,
+  onAbrirLugar,
+  onAbrirPerfil,
+}: {
+  review: Review;
+  currentUserUid: string;
+  onCurtir: (id: string) => void;
+  onAbrirLugar: (id: string) => void;
+  onAbrirPerfil: (uid: string) => void;
+}) {
+  const [slideAtual, setSlideAtual] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Monta slides: fotos de pessoas + fotos do lugar + card do restaurante
+  const fotosPessoas = review.peoplePhotos ?? [];
+  const fotosLugar = review.photos ?? [];
+  const todasFotos = [...fotosPessoas, ...fotosLugar];
+  // Total de slides = fotos + 1 (card do restaurante)
+  const totalSlides = todasFotos.length + 1;
+
+  const onScroll = () => {
+    if (!scrollRef.current) return;
+    const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
+    setSlideAtual(idx);
+  };
+
+  const agora = Date.now();
+  const diffMin = Math.floor((agora - review.createdAt) / 60000);
+  const diffH = Math.floor(diffMin / 60);
+  const diffD = Math.floor(diffH / 24);
+  const tempo =
+    diffMin < 1 ? 'agora'
+    : diffMin < 60 ? `${diffMin}min`
+    : diffH < 24 ? `${diffH}h`
+    : diffD < 7 ? `${diffD}d`
+    : new Date(review.createdAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+
   return (
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2.5">
-        <span className="w-1 h-5 rounded-full bg-primary shrink-0" />
-        <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">{titulo}</h2>
+    <article className="py-4">
+      {/* Cabeçalho do post */}
+      <div className="flex items-center gap-3 px-4 mb-3">
+        <button
+          type="button"
+          onClick={() => onAbrirPerfil(review.uid)}
+          aria-label={`Ver perfil de ${review.authorName}`}
+          className="shrink-0 cursor-pointer"
+        >
+          <Avatar src={review.authorPhoto} name={review.authorName} size={40} />
+        </button>
+        <div className="flex-1 min-w-0">
+          <button
+            type="button"
+            onClick={() => onAbrirPerfil(review.uid)}
+            className="font-semibold text-[14px] text-ink hover:underline cursor-pointer block truncate text-left"
+          >
+            {review.authorName}
+          </button>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <MapPin size={11} strokeWidth={2} className="text-muted shrink-0" />
+            <button
+              type="button"
+              onClick={() => onAbrirLugar(review.placeId)}
+              className="text-[12px] text-muted hover:text-primary transition-colors cursor-pointer truncate text-left"
+            >
+              {review.placeName}
+            </button>
+            <span className="text-muted text-[11px] shrink-0">· {tempo}</span>
+          </div>
+        </div>
       </div>
-      <span className="text-xs font-medium text-muted tabular">
-        {total} {total === 1 ? 'lugar' : 'lugares'}
-      </span>
+
+      {/* Carrossel de fotos */}
+      <div className="relative">
+        <div
+          ref={scrollRef}
+          onScroll={onScroll}
+          className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
+        >
+          {todasFotos.map((url, i) => (
+            <div key={i} className="shrink-0 w-full snap-start aspect-[4/3] bg-s2">
+              <img
+                src={url}
+                alt=""
+                loading="lazy"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+
+          {/* Último slide: card do restaurante */}
+          <div className="shrink-0 w-full snap-start aspect-[4/3] bg-ink flex flex-col items-center justify-center gap-4 px-6">
+            {review.placePhotoUrl ? (
+              <img
+                src={review.placePhotoUrl}
+                alt={review.placeName}
+                className="w-20 h-20 rounded-2xl object-cover ring-2 ring-white/20"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-2xl bg-s2/20 flex items-center justify-center">
+                <MapPin size={28} strokeWidth={1.5} className="text-white/40" />
+              </div>
+            )}
+            <div className="text-center">
+              <p className="font-display font-bold text-[20px] text-white leading-tight">{review.placeName}</p>
+              {review.cityName && (
+                <p className="mt-1 text-[13px] text-white/50">{review.cityName}</p>
+              )}
+              {review.overall > 0 && (
+                <p className="mt-2 text-[28px] font-bold text-white leading-none">
+                  {review.overall.toFixed(1)}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => onAbrirLugar(review.placeId)}
+              className="flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors px-5 py-2 text-[13px] font-semibold text-white cursor-pointer"
+            >
+              Ver lugar
+              <ChevronRight size={14} strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+
+        {/* Indicadores de slide */}
+        {totalSlides > 1 && (
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
+            {Array.from({ length: totalSlides }).map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-200 ${
+                  i === slideAtual ? 'w-4 bg-white' : 'w-1.5 bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Texto da avaliação */}
+      {review.text && (
+        <p className="px-4 mt-3 text-[14px] text-ink-2 leading-relaxed line-clamp-3">
+          {review.text}
+        </p>
+      )}
+
+      {/* Ações */}
+      <div className="flex items-center gap-5 px-4 mt-3">
+        <button
+          type="button"
+          onClick={() => onCurtir(review.id)}
+          aria-label={review.userLiked ? 'Descurtir' : 'Curtir'}
+          className={`flex items-center gap-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
+            review.userLiked ? 'text-red-500' : 'text-muted hover:text-ink'
+          }`}
+        >
+          <Heart
+            size={18}
+            strokeWidth={1.8}
+            className={review.userLiked ? 'fill-current' : ''}
+          />
+          {review.likesCount > 0 && <span>{review.likesCount}</span>}
+        </button>
+        <button
+          type="button"
+          onClick={() => onAbrirLugar(review.placeId)}
+          aria-label="Ver comentários"
+          className="flex items-center gap-1.5 text-[13px] font-medium text-muted hover:text-ink transition-colors cursor-pointer"
+        >
+          <MessageCircle size={18} strokeWidth={1.8} />
+          {review.commentsCount > 0 && <span>{review.commentsCount}</span>}
+        </button>
+        <div className="flex-1" />
+        {currentUserUid !== review.uid && (
+          <button
+            type="button"
+            onClick={() => onAbrirLugar(review.placeId)}
+            className="text-[12px] font-semibold text-primary hover:opacity-75 transition-opacity cursor-pointer"
+          >
+            Ver lugar
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+/** Seção horizontal de sugestões de quem seguir, baseada nos autores do feed */
+function PessoasParaSeguir({
+  reviews,
+  meuUid,
+  onAbrirPerfil,
+}: {
+  reviews: Review[];
+  meuUid: string;
+  onAbrirPerfil: (uid: string) => void;
+}) {
+  // Deduplicar autores que não sou eu
+  const visto = new Set<string>();
+  const autores: { uid: string; nome: string; handle: string; foto: string }[] = [];
+  for (const r of reviews) {
+    if (r.uid !== meuUid && !visto.has(r.uid)) {
+      visto.add(r.uid);
+      autores.push({ uid: r.uid, nome: r.authorName, handle: r.authorHandle, foto: r.authorPhoto });
+    }
+    if (autores.length >= 6) break;
+  }
+  if (autores.length === 0) return null;
+
+  return (
+    <div className="py-4 bg-s1">
+      <p className="px-4 mb-3 text-[13px] font-semibold text-ink-2">Pessoas para seguir</p>
+      <div className="flex gap-3 overflow-x-auto no-scrollbar px-4">
+        {autores.map((a) => (
+          <button
+            key={a.uid}
+            type="button"
+            onClick={() => onAbrirPerfil(a.uid)}
+            className="shrink-0 flex flex-col items-center gap-2 w-[76px] cursor-pointer group"
+          >
+            <Avatar src={a.foto} name={a.nome} size={52} />
+            <p className="text-center text-[11px] font-medium text-ink leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+              {a.nome}
+            </p>
+          </button>
+        ))}
+      </div>
     </div>
-  );
-}
-
-/** Pôster em destaque: card com nome e meta em overlay. Grande ocupa toda a altura do lado direito. */
-function PosterDestaque({
-  place,
-  meta,
-  onAbrir,
-  grande = false,
-}: {
-  place: Place;
-  meta: string;
-  onAbrir: (p: Place) => void;
-  grande?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onAbrir(place)}
-      aria-label={place.name}
-      className={`group block w-full text-left cursor-pointer ${grande ? 'h-full' : ''}`}
-    >
-      <div className={`relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98] ${grande ? 'h-full min-h-[200px]' : 'aspect-[4/5]'}`}>
-        <PlaceImage
-          src={place.photoUrl}
-          name={place.name}
-          className={`w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${grande ? 'h-full absolute inset-0' : 'h-full'}`}
-        />
-        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/85 via-black/35 to-transparent rounded-b-xl pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 px-3 pb-3 pointer-events-none">
-          <p className="font-bold text-[13px] leading-tight text-white" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
-            {place.name}
-          </p>
-          {meta && (
-            <p className="mt-0.5 truncate text-[11px] text-white/70 leading-tight">{meta}</p>
-          )}
-        </div>
-      </div>
-    </button>
-  );
-}
-
-/** Pôster de lugar: foto em 4:5, nome sobreposto. Sem nota: ela aparece ao abrir o lugar. */
-function Poster({
-  place,
-  meta,
-  onAbrir,
-  pequeno = false,
-}: {
-  place: Place;
-  meta: string;
-  onAbrir: (p: Place) => void;
-  pequeno?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onAbrir(place)}
-      aria-label={place.name}
-      className="group block w-full text-left cursor-pointer"
-    >
-      <div className="relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98]">
-        <PlaceImage
-          src={place.photoUrl}
-          name={place.name}
-          className="aspect-[4/5] w-full transition-transform duration-500 ease-out group-hover:scale-[1.04]"
-        />
-        {/* Gradiente com nome sobreposto estilo Letterboxd */}
-        <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-b-xl pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 pointer-events-none">
-          <p className={`font-bold leading-tight text-white drop-shadow-sm ${pequeno ? 'text-[11px]' : 'text-[13px]'}`}
-            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
-            {place.name}
-          </p>
-          {meta && !pequeno && (
-            <p className="mt-0.5 truncate text-[11px] text-white/75 leading-tight">{meta}</p>
-          )}
-        </div>
-      </div>
-    </button>
   );
 }

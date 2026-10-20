@@ -1,634 +1,450 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Search, MapPin, ChevronRight, LocateFixed, Star } from 'lucide-react';
-import { Avatar, PlaceImage } from '../components/ui';
-import {
-  solicitarLocalizacaoAtual,
-  obterCoordenadasSalvas,
-  consultarPermissaoLocalizacao,
-} from '../services/locationService';
-import { buscarProximos, calcularDistanciaKm, SAMPLE_PLACES } from '../lib/places';
-import { carregarComunidade, carregarMelhoresAvaliados, type LugarDestaque } from '../lib/reviews';
-import type { Place, Review, UserProfile } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Search, ChevronDown, MapPin, X } from 'lucide-react';
+import NotificationBell from '../components/NotificationBell';
+import NotificationsModal from '../components/NotificationsModal';
+import { SAMPLE_PLACES, autocompleteCidade, formatarPrecoLabel } from '../lib/places';
+import type { Place, UserProfile } from '../types';
+import MascotMessage from '../components/MascotMessage';
+import { PlaceImage, Logo, btn, chip } from '../components/ui';
+import { useEscape } from '../hooks/useEscape';
+
+type TipoRestauranteFiltro =
+  | 'todos'
+  | 'italiana'
+  | 'hamburguer'
+  | 'japonesa'
+  | 'cafe_padaria'
+  | 'bistro'
+  | 'carnes'
+  | 'bar';
 
 interface DescobrirScreenProps {
   currentUser: UserProfile;
   onAbrirLugar: (place: Place | string) => void;
   onAbrirPerfil: (uid: string) => void;
   onAbrirBusca: () => void;
-}
-
-const CATEGORIAS = [
-  { id: 'todos', label: 'Todos' },
-  { id: 'cafe', label: 'Cafés' },
-  { id: 'bakery', label: 'Padarias' },
-  { id: 'bar', label: 'Bares' },
-  { id: 'restaurant', label: 'Restaurantes' },
-];
-
-const REGIOES = [
-  'Próximo de você',
-  'Vila Olímpia',
-  'Itaim Bibi',
-  'Pinheiros',
-  'Jardins',
-  'Moema',
-  'Vila Madalena',
-];
-
-const OCASIOES = [
-  { label: 'Encontro romântico', tipo: 'restaurant' },
-  { label: 'Com amigos', tipo: 'bar' },
-  { label: 'Família', tipo: 'restaurant' },
-  { label: 'Happy hour', tipo: 'bar' },
-];
-
-function getContextoHorario() {
-  const h = new Date().getHours();
-  if (h < 11) return [{ label: 'Café da manhã', tipo: 'cafe' }, { label: 'Padaria', tipo: 'bakery' }];
-  if (h < 15) return [{ label: 'Almoço', tipo: 'restaurant' }, { label: 'Cafés', tipo: 'cafe' }];
-  if (h < 18) return [{ label: 'Cafés', tipo: 'cafe' }, { label: 'Lanche', tipo: 'bakery' }];
-  if (h < 22) return [{ label: 'Jantar', tipo: 'restaurant' }, { label: 'Drinks', tipo: 'bar' }];
-  return [{ label: 'Drinks', tipo: 'bar' }, { label: 'Jantar', tipo: 'restaurant' }];
-}
-
-function tipoLabel(tipo: string) {
-  if (tipo === 'cafe') return 'Cafeteria';
-  if (tipo === 'bakery') return 'Padaria';
-  if (tipo === 'bar') return 'Bar';
-  return 'Restaurante';
-}
-
-function tempoRelativo(ts: number): string {
-  const d = Date.now() - ts;
-  const min = Math.floor(d / 60000);
-  if (min < 60) return min < 1 ? 'agora' : `${min} min`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `${h} h`;
-  const dias = Math.floor(h / 24);
-  if (dias < 30) return dias === 1 ? 'ontem' : `${dias} dias`;
-  const meses = Math.floor(dias / 30);
-  return meses === 1 ? '1 mês' : `${meses} meses`;
-}
-
-function estrelas(nota: number) {
-  return (
-    <span className="flex items-center gap-0.5 text-primary">
-      <Star size={10} fill="currentColor" strokeWidth={0} />
-      <span className="text-[11px] font-semibold tabular-nums">{nota.toFixed(1)}</span>
-    </span>
-  );
-}
-
-function SkeletonCard({ wide }: { wide?: boolean }) {
-  return (
-    <div className={`shrink-0 ${wide ? 'w-44' : 'w-36'} rounded-xl overflow-hidden bg-s2 animate-pulse`}>
-      <div className="h-24 w-full bg-s3" />
-      <div className="p-2.5 space-y-1.5">
-        <div className="h-3 bg-s3 rounded w-4/5" />
-        <div className="h-2.5 bg-s3 rounded w-3/5" />
-      </div>
-    </div>
-  );
-}
-
-interface PlaceCardProps {
-  place: Place;
-  distancia?: string;
-  onClick: () => void;
-  wide?: boolean;
-}
-
-function PlaceCard({ place, distancia, onClick, wide }: PlaceCardProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`shrink-0 ${wide ? 'w-44' : 'w-36'} rounded-xl overflow-hidden bg-s1 ring-1 ring-line text-left transition-transform active:scale-95 cursor-pointer`}
-    >
-      <PlaceImage
-        src={place.photoUrl ?? ''}
-        name={place.name}
-        className="h-24 w-full"
-        showName={!place.photoUrl}
-      />
-      <div className="p-2.5">
-        <p className="text-[12.5px] font-semibold text-ink leading-snug line-clamp-2">{place.name}</p>
-        <p className="text-[11px] text-muted mt-0.5 truncate">{tipoLabel(place.tipo ?? '')}</p>
-        {distancia && (
-          <p className="text-[11px] text-muted mt-0.5 flex items-center gap-0.5">
-            <MapPin size={10} className="shrink-0" />
-            {distancia}
-          </p>
-        )}
-      </div>
-    </button>
-  );
-}
-
-interface RankCardProps {
-  rank: number;
-  place?: Place;
-  destaque: LugarDestaque;
-  onClick: () => void;
-}
-
-function RankCard({ rank, place, destaque, onClick }: RankCardProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full flex items-center gap-3 py-3 border-b border-line last:border-0 text-left cursor-pointer active:opacity-70 transition-opacity"
-    >
-      <span className="text-[22px] font-black text-muted/40 w-7 shrink-0 text-center leading-none tabular-nums">{rank}</span>
-      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-s2">
-        {place ? (
-          <PlaceImage src={place.photoUrl ?? ''} name={place.name} className="w-full h-full" showName={false} />
-        ) : (
-          <div className="w-full h-full bg-s3" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-ink leading-snug line-clamp-1">
-          {place?.name ?? destaque.placeName}
-        </p>
-        <p className="text-[11px] text-muted mt-0.5">{tipoLabel(place?.tipo ?? '')}</p>
-      </div>
-      <div className="shrink-0 text-right space-y-0.5">
-        {estrelas(destaque.mediaNotas)}
-        <p className="text-[10px] text-muted">{destaque.totalAvaliacoes} avaliações</p>
-      </div>
-    </button>
-  );
-}
-
-interface OcasiaoCardProps {
-  label: string;
-  place?: Place;
-  onClick: () => void;
-}
-
-function OcasiaoCard({ label, place, onClick }: OcasiaoCardProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="relative h-28 rounded-xl overflow-hidden flex-1 min-w-0 cursor-pointer active:scale-95 transition-transform"
-    >
-      {place?.photoUrl != null ? (
-        <img src={place.photoUrl} alt={label} className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full bg-s3" />
-      )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-      <p className="absolute bottom-2.5 left-3 right-3 text-[12.5px] font-semibold text-white leading-snug text-left">{label}</p>
-    </button>
-  );
-}
-
-interface ReviewRowProps {
-  review: Review;
-  onAbrirLugar: (id: string) => void;
-  onAbrirPerfil: (uid: string) => void;
-}
-
-function ReviewRow({ review, onAbrirLugar, onAbrirPerfil }: ReviewRowProps) {
-  return (
-    <div className="flex gap-3 py-3 border-b border-line last:border-0">
-      <button
-        type="button"
-        onClick={() => onAbrirPerfil(review.uid)}
-        className="shrink-0 cursor-pointer"
-        aria-label={`Ver perfil de ${review.authorName}`}
-      >
-        <Avatar src={review.authorPhoto} name={review.authorName} size={36} />
-      </button>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-1.5 flex-wrap">
-          <button
-            type="button"
-            onClick={() => onAbrirPerfil(review.uid)}
-            className="text-[13px] font-semibold text-ink hover:underline cursor-pointer"
-          >
-            {review.authorName}
-          </button>
-          <span className="text-[11px] text-muted">{tempoRelativo(review.createdAt)}</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => onAbrirLugar(review.placeId)}
-          className="text-[12.5px] font-medium text-primary hover:underline cursor-pointer leading-snug"
-        >
-          {review.placeName}
-        </button>
-        {review.text ? (
-          <p className="text-[12px] text-ink-2 mt-0.5 line-clamp-2 leading-snug">{review.text}</p>
-        ) : null}
-      </div>
-    </div>
-  );
+  onAbrirAvaliar?: () => void;
+  onMudarTab?: (tab: 'explorar' | 'descobrir' | 'amigos' | 'perfil') => void;
+  tema?: 'dark' | 'light';
+  onToggleTema?: () => void;
 }
 
 export default function DescobrirScreen({
   currentUser,
   onAbrirLugar,
   onAbrirPerfil,
-  onAbrirBusca,
+  onAbrirBusca: _onAbrirBusca,
+  onAbrirAvaliar: _onAbrirAvaliar,
+  onMudarTab: _onMudarTab,
+  tema: _tema,
+  onToggleTema: _onToggleTema,
 }: DescobrirScreenProps) {
-  const [coords, setCoords] = useState(() => {
-    const s = obterCoordenadasSalvas();
-    return s || { lat: -23.561684, lng: -46.682371 };
+  const [cidadeAtual, setCidadeAtual] = useState({
+    cityKey: currentUser.homeCityKey || 'sao-paulo-sp',
+    nome: currentUser.homeCityName || 'São Paulo - SP',
   });
+  const [cidadeModalAberta, setCidadeModalAberta] = useState(false);
+  const [buscaCidade, setBuscaCidade] = useState('');
+  const [sugestoesCidade, setSugestoesCidade] = useState<{ texto: string; cityKey: string }[]>([]);
 
-  const [permissaoLoc, setPermissaoLoc] = useState<'desconhecida' | 'concedida' | 'negada' | 'solicitando'>('desconhecida');
-  const [temCoordsSalvas] = useState(() => !!obterCoordenadasSalvas());
+  const [filtroTipo, setFiltroTipo] = useState<TipoRestauranteFiltro>('todos');
+  const [buscaTermo, setBuscaTermo] = useState('');
+  const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
+  useEscape(() => setCidadeModalAberta(false), cidadeModalAberta);
 
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState('todos');
+  const lugaresFiltrados = useMemo(() => {
+    let list = SAMPLE_PLACES;
 
-  const [lugaresPerto, setLugaresPerto] = useState<Place[]>([]);
-  const [carregandoPerto, setCarregandoPerto] = useState(true);
-
-  const [melhoresAvaliados, setMelhoresAvaliados] = useState<LugarDestaque[]>([]);
-  const [carregandoRanking, setCarregandoRanking] = useState(true);
-
-  const [reviewsAmigos, setReviewsAmigos] = useState<Review[]>([]);
-  const [carregandoAmigos, setCarregandoAmigos] = useState(true);
-
-  const coordsCarregadasRef = useRef(false);
-
-  const lugaresNovidades = SAMPLE_PLACES.slice(5, 12);
-  const heroPrincipal = SAMPLE_PLACES[0];
-  const contextHorario = getContextoHorario();
-  const lugaresParaHoje = contextHorario.map((ctx) => ({
-    ctx,
-    places: SAMPLE_PLACES.filter((p) => p.tipo === ctx.tipo).slice(0, 4),
-  }));
-  const lugaresOcasiao = OCASIOES.map((oc) => ({
-    ...oc,
-    place: SAMPLE_PLACES.find((p) => p.tipo === oc.tipo),
-  }));
-
-  // Verificar permissão de localização ao montar
-  useEffect(() => {
-    if (temCoordsSalvas) {
-      setPermissaoLoc('concedida');
-      return;
+    if (buscaTermo.trim().length > 0) {
+      const q = buscaTermo.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.address?.toLowerCase().includes(q) ||
+          p.bairro?.toLowerCase().includes(q) ||
+          p.tipo?.toLowerCase().includes(q)
+      );
     }
-    consultarPermissaoLocalizacao().then((estado) => {
-      if (estado === 'granted') setPermissaoLoc('concedida');
-      else if (estado === 'denied') setPermissaoLoc('negada');
-      else setPermissaoLoc('desconhecida');
-    });
-  }, [temCoordsSalvas]);
 
-  const solicitarLocalizacao = () => {
-    setPermissaoLoc('solicitando');
-    solicitarLocalizacaoAtual()
-      .then((loc) => {
-        setCoords(loc);
-        setPermissaoLoc('concedida');
-        // Recarregar lugares próximos com a nova localização
-        coordsCarregadasRef.current = false;
-        setCarregandoPerto(true);
-        buscarProximos(loc.lat, loc.lng, 2500)
-          .then((lugares) => setLugaresPerto(lugares.slice(0, 10)))
-          .catch(() => setLugaresPerto(SAMPLE_PLACES.slice(0, 8)))
-          .finally(() => setCarregandoPerto(false));
-      })
-      .catch(() => setPermissaoLoc('negada'));
+    if (filtroTipo !== 'todos') {
+      const corpus = (p: Place) =>
+        [p.name, p.cuisine, p.category, p.tipo].filter(Boolean).join(' ').toLowerCase();
+      const has = (p: Place, ...termos: string[]) => termos.some((t) => corpus(p).includes(t));
+
+      if (filtroTipo === 'italiana') {
+        list = list.filter((p) => has(p, 'italiana', 'italian', 'trattoria', 'pizza', 'pasta', 'forno', 'napoletana', 'cantina'));
+      } else if (filtroTipo === 'hamburguer') {
+        list = list.filter((p) => has(p, 'burger', 'hamburguer', 'hamburger', 'lanche', 'sandwich'));
+      } else if (filtroTipo === 'japonesa') {
+        list = list.filter((p) => has(p, 'japones', 'japanese', 'sushi', 'omakase', 'ramen', 'temaki', 'izakaya'));
+      } else if (filtroTipo === 'cafe_padaria') {
+        list = list.filter((p) =>
+          p.tipo === 'cafe' || p.tipo === 'bakery' ||
+          has(p, 'café', 'cafe', 'coffee', 'padaria', 'panific', 'torra', 'confeitaria', 'croissant', 'espresso')
+        );
+      } else if (filtroTipo === 'bistro') {
+        list = list.filter((p) => has(p, 'bistro', 'bistrô', 'contemporâneo', 'contemporaneo', 'fusion', 'criativo'));
+      } else if (filtroTipo === 'carnes') {
+        list = list.filter((p) => has(p, 'parrilla', 'churrasco', 'carne', 'steak', 'fogo', 'espeto', 'assado', 'grill'));
+      } else if (filtroTipo === 'bar') {
+        list = list.filter((p) =>
+          p.tipo === 'bar' ||
+          has(p, 'bar', 'boteco', 'coquetelaria', 'pub', 'cervej', 'chopp', 'chope', 'craft beer')
+        );
+      }
+    }
+
+    return list;
+  }, [filtroTipo, buscaTermo]);
+
+  const chips: { id: TipoRestauranteFiltro; label: string }[] = [
+    { id: 'todos', label: 'Todos' },
+    { id: 'italiana', label: 'Italiana' },
+    { id: 'hamburguer', label: 'Hambúrguer' },
+    { id: 'japonesa', label: 'Japonesa' },
+    { id: 'cafe_padaria', label: 'Cafés e padarias' },
+    { id: 'bistro', label: 'Bistrôs' },
+    { id: 'carnes', label: 'Carnes' },
+    { id: 'bar', label: 'Bares' },
+  ];
+
+  const cidadeCurta = cidadeAtual.nome.replace(/\s*-\s*[A-Z]{2}$/, '');
+  const limparFiltros = () => {
+    setFiltroTipo('todos');
+    setBuscaTermo('');
   };
 
-  useEffect(() => {
-    if (coordsCarregadasRef.current) return;
-    coordsCarregadasRef.current = true;
-    setCarregandoPerto(true);
-    buscarProximos(coords.lat, coords.lng, 2500)
-      .then((lugares) => setLugaresPerto(lugares.slice(0, 10)))
-      .catch(() => setLugaresPerto(SAMPLE_PLACES.slice(0, 8)))
-      .finally(() => setCarregandoPerto(false));
-  }, [coords.lat, coords.lng]);
+  const TIPOS: Record<string, string> = { restaurant: 'Restaurante', cafe: 'Café', bakery: 'Padaria', bar: 'Bar' };
+  const metaDe = (p: Place) =>
+    [p.cuisine || (p.tipo ? TIPOS[p.tipo] || p.tipo : null), p.bairro, p.priceLevel ? formatarPrecoLabel(p.priceLevel) : null]
+      .filter(Boolean)
+      .join(' · ');
 
-  // Melhores avaliados da semana
-  useEffect(() => {
-    setCarregandoRanking(true);
-    carregarMelhoresAvaliados(5)
-      .then((lista) => setMelhoresAvaliados(lista))
-      .catch(() => setMelhoresAvaliados([]))
-      .finally(() => setCarregandoRanking(false));
-  }, []);
+  const populares = useMemo(
+    () =>
+      [...lugaresFiltrados].sort((a, b) => {
+        const notaA = a.vimoRating ?? a.googleRating ?? 0;
+        const notaB = b.vimoRating ?? b.googleRating ?? 0;
+        const volA = a.vimoReviewsCount ?? a.googleUserRatingCount ?? a.reviewsCount ?? 0;
+        const volB = b.vimoReviewsCount ?? b.googleUserRatingCount ?? b.reviewsCount ?? 0;
+        return notaB * Math.log(volB + 1) - notaA * Math.log(volA + 1);
+      }),
+    [lugaresFiltrados]
+  );
 
-  useEffect(() => {
-    if (!currentUser.uid) {
-      setCarregandoAmigos(false);
-      return;
-    }
-    setCarregandoAmigos(true);
-    carregarComunidade(currentUser.uid)
-      .then((lista) => setReviewsAmigos(lista.slice(0, 5)))
-      .catch(() => setReviewsAmigos([]))
-      .finally(() => setCarregandoAmigos(false));
-  }, [currentUser.uid]);
-
-  const distanciaFormatada = (p: Place) => {
-    const km = calcularDistanciaKm(coords.lat, coords.lng, p.lat, p.lng);
-    return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
-  };
-
-  // Para o ranking: tenta cruzar placeId com SAMPLE_PLACES
-  const placeParaDestaque = (d: LugarDestaque): Place | undefined =>
-    SAMPLE_PLACES.find((p) => p.id === d.placeId);
-
-  // Fallback do ranking quando não há avaliações locais
-  const rankingFallback = SAMPLE_PLACES.slice(0, 5).map((p, i) => ({
-    placeId: p.id,
-    placeName: p.name,
-    mediaNotas: 4.5 - i * 0.2,
-    totalAvaliacoes: Math.max(3, 12 - i * 2),
-  }));
-  const rankingExibido = melhoresAvaliados.length > 0 ? melhoresAvaliados : rankingFallback;
+  const secoesPorTipo = useMemo(() => {
+    const grupos: { titulo: string; tipos: string[] }[] = [
+      { titulo: 'Restaurantes', tipos: ['restaurant'] },
+      { titulo: 'Cafés e padarias', tipos: ['cafe', 'bakery'] },
+      { titulo: 'Bares', tipos: ['bar'] },
+    ];
+    return grupos
+      .map((g) => ({ titulo: g.titulo, lugares: lugaresFiltrados.filter((p) => g.tipos.includes(p.tipo || '')) }))
+      .filter((g) => g.lugares.length >= 3);
+  }, [lugaresFiltrados]);
 
   return (
-    <div className="min-h-screen bg-bg pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-md border-b border-line px-4 pt-12 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="t-display text-2xl">Descobrir</h1>
-          <button
-            type="button"
-            onClick={onAbrirBusca}
-            aria-label="Buscar"
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 text-ink transition-colors cursor-pointer"
-          >
-            <Search size={20} strokeWidth={1.8} />
-          </button>
+    <div className="flex-1 w-full bg-bg text-ink min-h-screen pb-28">
+      <header className="sticky top-0 z-30 bg-bg/95 backdrop-blur-md">
+        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 pt-4 pb-2">
+          <Logo altura={24} />
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setCidadeModalAberta(true)}
+              aria-label={`Cidade: ${cidadeAtual.nome}. Trocar cidade`}
+              className="flex h-9 min-w-0 items-center gap-1 rounded-full bg-s2 pl-3 pr-2.5 text-sm font-semibold text-ink-2 hover:text-ink transition-colors cursor-pointer"
+            >
+              <MapPin size={14} strokeWidth={2} className="shrink-0 text-primary" />
+              <span className="truncate max-w-[120px]">{cidadeCurta}</span>
+              <ChevronDown size={14} className="shrink-0" />
+            </button>
+            <NotificationBell
+              currentUserUid={currentUser.uid}
+              onClick={() => setMostrarNotificacoes(true)}
+              className={btn.icon}
+            />
+          </div>
         </div>
-        {/* Filtros de categoria */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-0.5">
-          {CATEGORIAS.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setCategoriaSelecionada(cat.id)}
-              className={`shrink-0 px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors cursor-pointer ${
-                categoriaSelecionada === cat.id
-                  ? 'bg-ink text-bg border-ink'
-                  : 'bg-transparent text-ink border-line hover:border-ink/50'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      <div className="space-y-8 pt-6">
-
-        {/* Hero — Em alta */}
-        {heroPrincipal && (
-          <section className="px-4">
-            <button
-              type="button"
-              onClick={() => onAbrirLugar(heroPrincipal)}
-              className="w-full rounded-2xl overflow-hidden relative h-52 cursor-pointer active:scale-[0.98] transition-transform"
-            >
-              <PlaceImage
-                src={heroPrincipal.photoUrl ?? ''}
-                name={heroPrincipal.name}
-                className="w-full h-full"
-                showName={false}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="absolute top-3 left-3">
-                <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                  Em alta
-                </span>
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <p className="text-white font-bold text-lg leading-tight line-clamp-1">{heroPrincipal.name}</p>
-                <p className="text-white/75 text-[12.5px] mt-0.5">{tipoLabel(heroPrincipal.tipo ?? '')}</p>
-              </div>
-            </button>
-          </section>
-        )}
-
-        {/* Perto de você */}
-        <section>
-          <div className="px-4 mb-3 flex items-center justify-between">
-            <h2 className="t-section text-base font-semibold text-ink">Perto de você</h2>
-            <button
-              type="button"
-              onClick={() => {}}
-              className="flex items-center gap-0.5 text-xs text-muted hover:text-ink transition-colors cursor-pointer"
-            >
-              Ver mapa <ChevronRight size={14} />
-            </button>
-          </div>
-
-          {/* Banner de permissão */}
-          {permissaoLoc !== 'concedida' && (
-            <div className="mx-4 mb-3 flex items-center gap-3 bg-s2 rounded-xl px-4 py-3">
-              <LocateFixed size={18} className="shrink-0 text-primary" />
-              <div className="flex-1 min-w-0">
-                {permissaoLoc === 'negada' ? (
-                  <p className="text-[12.5px] text-ink leading-snug">
-                    Permissão negada. Ative a localização nas configurações do navegador.
-                  </p>
-                ) : (
-                  <p className="text-[12.5px] text-ink leading-snug">
-                    Permita o acesso à localização para ver lugares perto de você.
-                  </p>
-                )}
-              </div>
-              {permissaoLoc !== 'negada' && (
-                <button
-                  type="button"
-                  onClick={solicitarLocalizacao}
-                  disabled={permissaoLoc === 'solicitando'}
-                  className="shrink-0 text-[12px] font-semibold text-primary disabled:opacity-50 cursor-pointer"
-                >
-                  {permissaoLoc === 'solicitando' ? 'Aguarde...' : 'Permitir'}
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-1">
-            {carregandoPerto ? (
-              Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
-            ) : lugaresPerto.length === 0 ? (
-              <p className="text-sm text-muted py-2">Nenhum lugar encontrado perto de você.</p>
-            ) : (
-              lugaresPerto.map((p) => (
-                <PlaceCard
-                  key={p.id}
-                  place={p}
-                  distancia={distanciaFormatada(p)}
-                  onClick={() => onAbrirLugar(p)}
-                />
-              ))
-            )}
-          </div>
-        </section>
-
-        {/* Em alta na VIMO — melhores avaliados da semana */}
-        <section>
-          <div className="px-4 mb-1 flex items-center justify-between">
-            <div>
-              <h2 className="t-section text-base font-semibold text-ink">Em alta na Vimo</h2>
-              <p className="text-[11px] text-muted mt-0.5">Melhores avaliados esta semana</p>
-            </div>
-          </div>
-          <div className="px-4">
-            {carregandoRanking ? (
-              <div className="space-y-2">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex gap-3 py-3 border-b border-line animate-pulse">
-                    <div className="w-7 h-6 bg-s3 rounded shrink-0" />
-                    <div className="w-12 h-12 rounded-lg bg-s3 shrink-0" />
-                    <div className="flex-1 space-y-1.5 pt-1">
-                      <div className="h-3 bg-s3 rounded w-2/3" />
-                      <div className="h-2.5 bg-s3 rounded w-1/3" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              rankingExibido.map((d, i) => (
-                <RankCard
-                  key={d.placeId}
-                  rank={i + 1}
-                  place={placeParaDestaque(d)}
-                  destaque={d}
-                  onClick={() => {
-                    const place = placeParaDestaque(d);
-                    if (place) onAbrirLugar(place);
-                    else onAbrirLugar(d.placeId);
-                  }}
-                />
-              ))
-            )}
-          </div>
-        </section>
-
-        {/* Para hoje */}
-        {lugaresParaHoje.map(({ ctx, places }) =>
-          places.length > 0 ? (
-            <section key={ctx.label}>
-              <div className="px-4 mb-3 flex items-center justify-between">
-                <h2 className="t-section text-base font-semibold text-ink">Para hoje — {ctx.label}</h2>
-              </div>
-              <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-1">
-                {places.map((p) => (
-                  <PlaceCard
-                    key={p.id}
-                    place={p}
-                    wide
-                    onClick={() => onAbrirLugar(p)}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null
-        )}
-
-        {/* Explorar por ocasião */}
-        <section>
-          <div className="px-4 mb-3">
-            <h2 className="t-section text-base font-semibold text-ink">Explorar por ocasião</h2>
-          </div>
-          <div className="px-4 grid grid-cols-2 gap-2.5">
-            {lugaresOcasiao.map((oc) => (
-              <OcasiaoCard
-                key={oc.label}
-                label={oc.label}
-                place={oc.place}
-                onClick={() => oc.place && onAbrirLugar(oc.place)}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* Explorar por região */}
-        <section>
-          <div className="px-4 mb-3">
-            <h2 className="t-section text-base font-semibold text-ink">Explorar por região</h2>
-          </div>
-          <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-4 pb-1">
-            {REGIOES.map((regiao) => (
+        <div className="max-w-4xl mx-auto px-4 pb-3">
+          <label className="flex h-12 items-center gap-2.5 rounded-xl bg-s1 px-4 shadow-xs ring-1 ring-inset ring-line focus-within:ring-2 focus-within:ring-primary transition">
+            <Search size={18} strokeWidth={1.9} className="shrink-0 text-muted" />
+            <input
+              type="search"
+              value={buscaTermo}
+              onChange={(e) => setBuscaTermo(e.target.value)}
+              placeholder="Buscar restaurantes, cozinhas…"
+              aria-label="Buscar restaurantes"
+              className="w-full bg-transparent text-base text-ink placeholder:text-muted outline-none [&::-webkit-search-cancel-button]:hidden"
+            />
+            {buscaTermo && (
               <button
-                key={regiao}
                 type="button"
-                onClick={() => {}}
-                className="shrink-0 px-4 py-2 rounded-full text-[12.5px] font-semibold border border-line text-ink hover:border-ink/50 transition-colors cursor-pointer bg-s1"
+                onClick={() => setBuscaTermo('')}
+                aria-label="Limpar busca"
+                className="-mr-1 p-1 text-muted hover:text-ink cursor-pointer"
               >
-                {regiao}
+                <X size={16} />
+              </button>
+            )}
+          </label>
+
+          <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto no-scrollbar px-4">
+            {chips.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setFiltroTipo(c.id)}
+                aria-pressed={filtroTipo === c.id}
+                className={chip(filtroTipo === c.id)}
+              >
+                {c.label}
               </button>
             ))}
           </div>
-        </section>
+        </div>
+      </header>
 
-        {/* Novidades na sua região */}
-        <section>
-          <div className="px-4 mb-3">
-            <h2 className="t-section text-base font-semibold text-ink">Novidades na sua região</h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-1">
-            {lugaresNovidades.map((p) => (
-              <PlaceCard
-                key={p.id}
-                place={p}
-                onClick={() => onAbrirLugar(p)}
-              />
-            ))}
-          </div>
-        </section>
+      <main className="max-w-4xl mx-auto pt-2">
+        {lugaresFiltrados.length === 0 ? (
+          <MascotMessage
+            reaction="pensativo"
+            title={buscaTermo ? `Nada encontrado para "${buscaTermo.trim()}"` : 'Nenhum lugar neste filtro'}
+            subtitle="Tente outro nome, bairro ou cozinha."
+            ctaLabel="Limpar filtros"
+            onCta={limparFiltros}
+          />
+        ) : buscaTermo || filtroTipo !== 'todos' ? (
+          <section className="px-4">
+            <CabecalhoSecao titulo={buscaTermo ? 'Resultados' : chips.find((c) => c.id === filtroTipo)?.label || 'Lugares'} total={lugaresFiltrados.length} />
+            <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
+              {lugaresFiltrados.map((place) => (
+                <Poster key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} />
+              ))}
+            </div>
+          </section>
+        ) : (
+          <div className="space-y-9">
+            <section className="px-4">
+              <CabecalhoSecao titulo="Em destaque" total={lugaresFiltrados.length} />
+              <div className="grid grid-cols-2 gap-3">
+                {populares[0] && (
+                  <PosterDestaque place={populares[0]} meta={metaDe(populares[0])} onAbrir={onAbrirLugar} grande />
+                )}
+                <div className="flex flex-col gap-3">
+                  {populares.slice(1, 3).map((place) => (
+                    <PosterDestaque key={place.id} place={place} meta={metaDe(place)} onAbrir={onAbrirLugar} />
+                  ))}
+                </div>
+              </div>
+            </section>
 
-        {/* Amigos foram */}
-        <section>
-          <div className="px-4 mb-1 flex items-center justify-between">
-            <h2 className="t-section text-base font-semibold text-ink">Amigos foram</h2>
-            <button
-              type="button"
-              onClick={() => {}}
-              className="flex items-center gap-0.5 text-xs text-muted hover:text-ink transition-colors cursor-pointer"
-              aria-label="Ver todos"
-            >
-              Ver todos <ChevronRight size={14} />
-            </button>
-          </div>
-          <div className="px-4">
-            {carregandoAmigos ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="flex gap-3 py-3 border-b border-line animate-pulse">
-                    <div className="w-9 h-9 rounded-full bg-s3 shrink-0" />
-                    <div className="flex-1 space-y-1.5 pt-0.5">
-                      <div className="h-3 bg-s3 rounded w-1/3" />
-                      <div className="h-3 bg-s3 rounded w-2/3" />
-                      <div className="h-2.5 bg-s3 rounded w-4/5" />
+            {secoesPorTipo.map((sec) => (
+              <section key={sec.titulo}>
+                <div className="px-4">
+                  <CabecalhoSecao titulo={sec.titulo} total={sec.lugares.length} />
+                </div>
+                <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1">
+                  {sec.lugares.map((place) => (
+                    <div key={place.id} className="w-[34%] max-w-[150px] shrink-0 snap-start">
+                      <Poster place={place} meta={place.bairro || ''} onAbrir={onAbrirLugar} pequeno />
                     </div>
-                  </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+
+            <section className="px-4">
+              <CabecalhoSecao titulo="Todos os lugares" total={lugaresFiltrados.length} />
+              <div className="grid grid-cols-3 gap-x-2.5 gap-y-4 sm:grid-cols-4 lg:grid-cols-5">
+                {lugaresFiltrados.map((place) => (
+                  <Poster key={place.id} place={place} meta="" onAbrir={onAbrirLugar} pequeno />
                 ))}
               </div>
-            ) : reviewsAmigos.length === 0 ? (
-              <p className="text-sm text-muted py-2">
-                {currentUser.uid
-                  ? 'Siga amigos para ver onde eles foram.'
-                  : 'Faça login para ver o que seus amigos avaliaram.'}
-              </p>
-            ) : (
-              reviewsAmigos.map((r) => (
-                <ReviewRow
-                  key={r.id}
-                  review={r}
-                  onAbrirLugar={onAbrirLugar}
-                  onAbrirPerfil={onAbrirPerfil}
-                />
-              ))
-            )}
+            </section>
           </div>
-        </section>
+        )}
+      </main>
 
-      </div>
+      {cidadeModalAberta && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60"
+          onClick={() => setCidadeModalAberta(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="titulo-cidade-descobrir"
+            onClick={(e) => e.stopPropagation()}
+            className="animate-in slide-in-from-bottom w-full max-w-md rounded-t-3xl sm:rounded-2xl bg-s1 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] shadow-2xl"
+          >
+            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-s3 sm:hidden" />
+            <div className="flex items-center justify-between pb-3">
+              <h3 id="titulo-cidade-descobrir" className="t-section text-ink">Trocar cidade</h3>
+              <button type="button" onClick={() => setCidadeModalAberta(false)} aria-label="Fechar" className={btn.icon}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <label className="flex h-11 items-center gap-2.5 rounded-lg bg-s2 px-3 ring-1 ring-transparent focus-within:ring-primary transition">
+              <Search size={17} strokeWidth={1.8} className="shrink-0 text-muted" />
+              <input
+                type="text"
+                autoFocus
+                value={buscaCidade}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setBuscaCidade(val);
+                  if (val.trim().length > 1) {
+                    autocompleteCidade(val)
+                      .then((res) => setSugestoesCidade(res))
+                      .catch(() => setSugestoesCidade([]));
+                  } else {
+                    setSugestoesCidade([]);
+                  }
+                }}
+                placeholder="Nome da cidade"
+                aria-label="Buscar cidade"
+                className="w-full bg-transparent text-base text-ink placeholder:text-muted outline-none"
+              />
+            </label>
+
+            <ul className="mt-2 max-h-64 overflow-y-auto">
+              {(buscaCidade.trim().length > 1
+                ? sugestoesCidade
+                : [
+                    { texto: 'São Paulo - SP', cityKey: 'sao-paulo-sp' },
+                    { texto: 'Rio de Janeiro - RJ', cityKey: 'rio-de-janeiro-rj' },
+                    { texto: 'Curitiba - PR', cityKey: 'curitiba-pr' },
+                    { texto: 'Belo Horizonte - MG', cityKey: 'belo-horizonte-mg' },
+                  ]
+              ).map((cid) => {
+                const atual = cid.cityKey === cidadeAtual.cityKey;
+                return (
+                  <li key={cid.cityKey}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCidadeAtual({ cityKey: cid.cityKey, nome: cid.texto });
+                        setCidadeModalAberta(false);
+                        setBuscaCidade('');
+                        setSugestoesCidade([]);
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left text-base transition-colors hover:bg-s2 cursor-pointer ${
+                        atual ? 'font-semibold text-ink' : 'text-ink-2'
+                      }`}
+                    >
+                      <MapPin size={16} strokeWidth={1.8} className={atual ? 'text-star' : 'text-muted'} />
+                      <span>{cid.texto}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {mostrarNotificacoes && (
+        <NotificationsModal
+          currentUserUid={currentUser.uid}
+          onClose={() => setMostrarNotificacoes(false)}
+          onAbrirLugar={(id) => onAbrirLugar(id)}
+          onAbrirPerfil={onAbrirPerfil}
+        />
+      )}
     </div>
+  );
+}
+
+function CabecalhoSecao({ titulo, total }: { titulo: string; total: number }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2.5">
+        <span className="w-1 h-5 rounded-full bg-primary shrink-0" />
+        <h2 className="font-display text-[17px] font-bold tracking-tight text-ink">{titulo}</h2>
+      </div>
+      <span className="text-xs font-medium text-muted tabular">
+        {total} {total === 1 ? 'lugar' : 'lugares'}
+      </span>
+    </div>
+  );
+}
+
+function PosterDestaque({
+  place,
+  meta,
+  onAbrir,
+  grande = false,
+}: {
+  place: Place;
+  meta: string;
+  onAbrir: (p: Place) => void;
+  grande?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onAbrir(place)}
+      aria-label={place.name}
+      className={`group block w-full text-left cursor-pointer ${grande ? 'h-full' : ''}`}
+    >
+      <div className={`relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98] ${grande ? 'h-full min-h-[200px]' : 'aspect-[4/5]'}`}>
+        <PlaceImage
+          src={place.photoUrl}
+          name={place.name}
+          className={`w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${grande ? 'h-full absolute inset-0' : 'h-full'}`}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/85 via-black/35 to-transparent rounded-b-xl pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 px-3 pb-3 pointer-events-none">
+          <p className="font-bold text-[13px] leading-tight text-white" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
+            {place.name}
+          </p>
+          {meta && (
+            <p className="mt-0.5 truncate text-[11px] text-white/70 leading-tight">{meta}</p>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function Poster({
+  place,
+  meta,
+  onAbrir,
+  pequeno = false,
+}: {
+  place: Place;
+  meta: string;
+  onAbrir: (p: Place) => void;
+  pequeno?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onAbrir(place)}
+      aria-label={place.name}
+      className="group block w-full text-left cursor-pointer"
+    >
+      <div className="relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98]">
+        <PlaceImage
+          src={place.photoUrl}
+          name={place.name}
+          className="aspect-[4/5] w-full transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+        />
+        <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-b-xl pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 pointer-events-none">
+          <p className={`font-bold leading-tight text-white drop-shadow-sm ${pequeno ? 'text-[11px]' : 'text-[13px]'}`}
+            style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+            {place.name}
+          </p>
+          {meta && !pequeno && (
+            <p className="mt-0.5 truncate text-[11px] text-white/75 leading-tight">{meta}</p>
+          )}
+        </div>
+      </div>
+    </button>
   );
 }
