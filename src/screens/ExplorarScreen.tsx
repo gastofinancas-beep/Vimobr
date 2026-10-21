@@ -203,6 +203,8 @@ function PostCard({
   onAbrirPerfil: (uid: string) => void;
   onComentar: () => void;
 }) {
+  const [curtidoAnimando, setCurtidoAnimando] = useState(false);
+
   const agora = Date.now();
   const diffMin = Math.floor((agora - post.createdAt) / 60000);
   const diffH = Math.floor(diffMin / 60);
@@ -216,32 +218,36 @@ function PostCard({
       ? `${diffH}h`
       : diffD < 7
       ? `${diffD}d`
-      : new Date(post.createdAt).toLocaleDateString('pt-BR', {
-          day: 'numeric',
-          month: 'short',
-        });
+      : new Date(post.createdAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+
+  const handleCurtir = () => {
+    setCurtidoAnimando(true);
+    setTimeout(() => setCurtidoAnimando(false), 300);
+    onCurtir(post.id);
+  };
 
   return (
-    <article className="border-b border-line py-4">
+    <article className="border-b border-line">
       {/* Cabeçalho */}
-      <div className="flex items-center gap-3 px-4 mb-3">
+      <div className="flex items-center gap-3 px-4 py-3">
         <button
           type="button"
           onClick={() => onAbrirPerfil(post.uid)}
           aria-label={`Ver perfil de ${post.authorName}`}
           className="shrink-0 cursor-pointer"
         >
-          <Avatar src={post.authorPhoto} name={post.authorName} size={40} />
+          <Avatar src={post.authorPhoto} name={post.authorName} size={38} />
         </button>
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => onAbrirPerfil(post.uid)}
-              className="font-semibold text-[14px] text-ink hover:underline cursor-pointer text-left"
+              className="font-semibold text-[14px] text-ink hover:underline cursor-pointer"
             >
               {post.authorName}
             </button>
+            <span className="text-muted text-[12px]">·</span>
             <span className="text-[12px] text-muted">{tempo}</span>
           </div>
           {post.placeName && (
@@ -250,19 +256,21 @@ function PostCard({
               onClick={() => post.placeId && onAbrirLugar(post.placeId)}
               className="flex items-center gap-1 mt-0.5 cursor-pointer group"
             >
-              <MapPin size={11} strokeWidth={2} className="text-primary shrink-0" />
-              <span className="text-[12px] text-ink-2 group-hover:text-primary transition-colors truncate">
-                {post.placeName}
-                {post.cityName ? ` · ${post.cityName}` : ''}
+              <MapPin size={10} strokeWidth={2.5} className="text-primary shrink-0" />
+              <span className="text-[12px] text-muted group-hover:text-primary transition-colors truncate">
+                {post.placeName}{post.cityName ? ` · ${post.cityName}` : ''}
               </span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Foto */}
+      {/* Foto — toque duplo curte */}
       {post.photoUrl && (
-        <div className="w-full aspect-square bg-s2">
+        <div
+          className="w-full aspect-square bg-s2"
+          onDoubleClick={handleCurtir}
+        >
           <img
             src={post.photoUrl}
             alt=""
@@ -273,44 +281,52 @@ function PostCard({
       )}
 
       {/* Ações */}
-      <div className="flex items-center gap-4 px-4 mt-3">
+      <div className="flex items-center gap-1 px-3 pt-2 pb-1">
         <button
           type="button"
-          onClick={() => onCurtir(post.id)}
+          onClick={handleCurtir}
           aria-label={post.userLiked ? 'Descurtir' : 'Curtir'}
-          className={`flex items-center gap-1.5 text-[14px] transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
             post.userLiked ? 'text-red-500' : 'text-muted hover:text-ink'
           }`}
         >
           <Heart
-            size={22}
+            size={24}
             strokeWidth={1.8}
-            className={post.userLiked ? 'fill-current' : ''}
+            className={`transition-transform duration-150 ${curtidoAnimando ? 'scale-125' : 'scale-100'} ${post.userLiked ? 'fill-current' : ''}`}
           />
           {post.likesCount > 0 && (
-            <span className="font-medium text-[13px]">{post.likesCount}</span>
+            <span className="font-semibold text-[13px]">{post.likesCount}</span>
           )}
         </button>
         <button
           type="button"
           onClick={onComentar}
           aria-label="Comentar"
-          className="flex items-center gap-1.5 text-[14px] text-muted hover:text-ink transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-muted hover:text-ink transition-colors cursor-pointer"
         >
-          <MessageCircle size={22} strokeWidth={1.8} />
+          <MessageCircle size={24} strokeWidth={1.8} />
           {post.commentsCount > 0 && (
-            <span className="font-medium text-[13px]">{post.commentsCount}</span>
+            <span className="font-semibold text-[13px]">{post.commentsCount}</span>
           )}
         </button>
       </div>
 
-      {/* Texto */}
+      {/* Legenda */}
       {post.text ? (
-        <p className="px-4 mt-2 text-[14px] text-ink leading-relaxed">
-          <span className="font-semibold">{post.authorName.split(' ')[0]}</span>{' '}
+        <p className="px-4 pb-3 text-[14px] text-ink leading-relaxed">
+          <button
+            type="button"
+            onClick={() => onAbrirPerfil(post.uid)}
+            className="font-semibold hover:underline cursor-pointer"
+          >
+            {post.authorName.split(' ')[0]}
+          </button>{' '}
           <TruncatedText texto={post.text} />
         </p>
-      ) : null}
+      ) : (
+        <div className="pb-3" />
+      )}
     </article>
   );
 }
