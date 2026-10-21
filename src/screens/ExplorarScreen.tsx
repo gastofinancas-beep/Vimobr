@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Heart, MessageCircle, MapPin, PenSquare } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, PenSquare, MoreHorizontal, Bookmark } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
 import CriarPostModal from '../components/CriarPostModal';
@@ -204,6 +204,7 @@ function PostCard({
   onComentar: () => void;
 }) {
   const [curtidoAnimando, setCurtidoAnimando] = useState(false);
+  const [salvo, setSalvo] = useState(false);
 
   const agora = Date.now();
   const diffMin = Math.floor((agora - post.createdAt) / 60000);
@@ -236,10 +237,10 @@ function PostCard({
           aria-label={`Ver perfil de ${post.authorName}`}
           className="shrink-0 cursor-pointer"
         >
-          <Avatar src={post.authorPhoto} name={post.authorName} size={38} />
+          <Avatar src={post.authorPhoto} name={post.authorName} size={40} />
         </button>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-baseline gap-2">
             <button
               type="button"
               onClick={() => onAbrirPerfil(post.uid)}
@@ -247,8 +248,7 @@ function PostCard({
             >
               {post.authorName}
             </button>
-            <span className="text-muted text-[12px]">·</span>
-            <span className="text-[12px] text-muted">{tempo}</span>
+            <span className="text-[13px] text-muted shrink-0">{tempo}</span>
           </div>
           {post.placeName && (
             <button
@@ -256,19 +256,26 @@ function PostCard({
               onClick={() => post.placeId && onAbrirLugar(post.placeId)}
               className="flex items-center gap-1 mt-0.5 cursor-pointer group"
             >
-              <MapPin size={10} strokeWidth={2.5} className="text-primary shrink-0" />
+              <MapPin size={11} strokeWidth={2} className="text-primary shrink-0" />
               <span className="text-[12px] text-muted group-hover:text-primary transition-colors truncate">
                 {post.placeName}{post.cityName ? ` · ${post.cityName}` : ''}
               </span>
             </button>
           )}
         </div>
+        <button
+          type="button"
+          aria-label="Mais opções"
+          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted"
+        >
+          <MoreHorizontal size={20} strokeWidth={1.8} />
+        </button>
       </div>
 
-      {/* Foto — toque duplo curte */}
+      {/* Foto */}
       {post.photoUrl && (
         <div
-          className="w-full aspect-square bg-s2"
+          className="relative w-full aspect-[4/3] bg-s2"
           onDoubleClick={handleCurtir}
         >
           <img
@@ -277,51 +284,67 @@ function PostCard({
             loading="lazy"
             className="w-full h-full object-cover"
           />
+          {/* Contador de slides (futuro carrossel) */}
+          <span className="absolute bottom-2.5 right-3 bg-black/50 text-white text-[12px] font-medium px-2 py-0.5 rounded-full">
+            1/1
+          </span>
         </div>
       )}
 
       {/* Ações */}
-      <div className="flex items-center gap-1 px-3 pt-2 pb-1">
+      <div className="flex items-center px-3 pt-2 pb-1">
         <button
           type="button"
           onClick={handleCurtir}
           aria-label={post.userLiked ? 'Descurtir' : 'Curtir'}
-          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
-            post.userLiked ? 'text-red-500' : 'text-muted hover:text-ink'
+          className={`flex items-center gap-1.5 px-1.5 py-2 cursor-pointer ${
+            post.userLiked ? 'text-red-500' : 'text-ink'
           }`}
         >
           <Heart
             size={24}
-            strokeWidth={1.8}
+            strokeWidth={1.6}
             className={`transition-transform duration-150 ${curtidoAnimando ? 'scale-125' : 'scale-100'} ${post.userLiked ? 'fill-current' : ''}`}
           />
           {post.likesCount > 0 && (
-            <span className="font-semibold text-[13px]">{post.likesCount}</span>
+            <span className="font-medium text-[14px]">{post.likesCount}</span>
           )}
         </button>
         <button
           type="button"
           onClick={onComentar}
           aria-label="Comentar"
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-muted hover:text-ink transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-1.5 py-2 ml-3 text-ink cursor-pointer"
         >
-          <MessageCircle size={24} strokeWidth={1.8} />
+          <MessageCircle size={24} strokeWidth={1.6} />
           {post.commentsCount > 0 && (
-            <span className="font-semibold text-[13px]">{post.commentsCount}</span>
+            <span className="font-medium text-[14px]">{post.commentsCount}</span>
           )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSalvo((v) => !v)}
+          aria-label={salvo ? 'Remover dos salvos' : 'Salvar'}
+          className={`ml-auto px-1.5 py-2 cursor-pointer ${salvo ? 'text-ink' : 'text-ink'}`}
+        >
+          <Bookmark
+            size={24}
+            strokeWidth={1.6}
+            className={salvo ? 'fill-current' : ''}
+          />
         </button>
       </div>
 
       {/* Legenda */}
       {post.text ? (
-        <p className="px-4 pb-3 text-[14px] text-ink leading-relaxed">
+        <p className="px-4 pb-4 text-[14px] text-ink leading-relaxed">
           <button
             type="button"
             onClick={() => onAbrirPerfil(post.uid)}
-            className="font-semibold hover:underline cursor-pointer"
+            className="font-semibold hover:underline cursor-pointer mr-1"
           >
             {post.authorName.split(' ')[0]}
-          </button>{' '}
+          </button>
           <TruncatedText texto={post.text} />
         </p>
       ) : (
