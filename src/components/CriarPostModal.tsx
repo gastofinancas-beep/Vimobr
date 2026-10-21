@@ -86,7 +86,6 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
           <input
             type="file"
             accept="image/*"
-            capture="environment"
             className="sr-only"
             onChange={handleFoto}
           />
@@ -120,7 +119,7 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
               </div>
               <div className="text-center">
                 <p className="font-semibold text-[15px] text-ink">Adicionar foto</p>
-                <p className="text-[13px] text-muted mt-0.5">Toque para selecionar da galeria</p>
+                <p className="text-[13px] text-muted mt-0.5">Toque para escolher ou fotografar</p>
               </div>
             </div>
           )}
