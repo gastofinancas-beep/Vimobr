@@ -165,6 +165,7 @@ export interface FoodTweet {
   placeId?: string;
   placeName?: string;
   cityName?: string;
+  visibilidade?: 'publico' | 'amigos' | 'privado';
   createdAt: number;
   likesCount: number;
   repostsCount: number;

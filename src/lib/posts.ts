@@ -111,6 +111,7 @@ export async function criarPost(
   placeId?: string,
   placeName?: string,
   cityName?: string,
+  visibilidade: FoodTweet['visibilidade'] = 'publico',
 ): Promise<FoodTweet> {
   const arquivos = fotos
     ? Array.isArray(fotos) ? fotos : [fotos]
@@ -132,6 +133,7 @@ export async function criarPost(
     placeId,
     placeName,
     cityName,
+    visibilidade,
     createdAt: Date.now(),
     likesCount: 0,
     repostsCount: 0,
