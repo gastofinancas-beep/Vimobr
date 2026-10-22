@@ -60,8 +60,14 @@ qualquer coisa nova.
 - `DescobrirPertoDeMimScreen` — aba Mapa, pinos por proximidade, filtros por categoria
 - `ComunidadeScreen` — aba Comunidade: Clubes (meus clubes, destaque do mês, populares, ranking do
   mês, públicos, privados com código de convite) e Eventos (idas marcadas com o clube). Detalhe do
-  clube em `ClubeScreen` (Feed só de membros, Eventos, Ranking, Membros). Ranking = avaliações
-  ("idas") dos membros no mês. Dados em `src/lib/clubes.ts` e `src/lib/eventos.ts`.
+  clube em `ClubeScreen` no formato Fitfolio: foto, "Você é membro", atalhos Membros / Ranking /
+  Eventos / Regras, mini pódio, Host, Membros, Sobre e botão flutuante Convidar. Criar/editar
+  clube (`CriarClubeModal`, engrenagem só para o criador): foto, local, descrição, privacidade,
+  sistema de pontuação e tags. Pontuação do ranking interno: Mais idas, Lugares diferentes ou Dias
+  ativos (`PONTUACOES` em clubes.ts). Ranking em `RankingClubeScreen` (Mensal/Geral, pódio com o
+  mascote, demais posições). O ranking entre clubes continua por idas no mês. Clube **não tem feed
+  próprio**: post para o clube aparece no feed principal só para membros, com a tag do clube.
+  Dados em `src/lib/clubes.ts` e `src/lib/eventos.ts`.
 - `PerfilScreen` — capa + foto, números (idas, seguidores, seguindo), bio, favoritos, abas
   Diário / Paladar / Conquistas; medalhas em destaque só para PRO (ver abaixo)
 - `PlaceDetailScreen` — tela única de detalhe do lugar (ações, como chegar, fotos, notas

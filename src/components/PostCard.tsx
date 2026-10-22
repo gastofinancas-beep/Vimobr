@@ -148,12 +148,19 @@ export function PostCard({
       ? { Icon: Lock, texto: 'Só eu' }
       : v === 'amigos'
       ? { Icon: Users, texto: 'Melhores amigos' }
-      : { Icon: Shield, texto: post.clubeNome ?? 'Clube' };
+      : null;
+  const clubeTag = v === 'clube' ? post.clubeNome ?? 'Clube' : null;
 
   const fotos = post.photoUrls ?? (post.photoUrl ? [post.photoUrl] : []);
 
   return (
     <article className="border-b border-line px-4 py-4">
+      {clubeTag && (
+        <p className="mb-2.5 flex items-center gap-1.5 text-[13px] font-semibold text-ink-2">
+          <Shield size={14} strokeWidth={2} className="shrink-0 text-primary" />
+          <span className="truncate">{clubeTag}</span>
+        </p>
+      )}
       <div className="flex items-start gap-3">
         <button
           type="button"

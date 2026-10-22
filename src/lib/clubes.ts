@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { getLocalReviews } from './reviews';
-import type { Clube, ClubeMembro, Review } from '../types';
+import type { Clube, ClubeMembro, PontuacaoClube, Review } from '../types';
 
 const LS_CLUBES_KEY = 'vimo_clubes_v1';
 const LS_CONVITES_KEY = 'vimo_clube_convites_v1';
@@ -103,22 +103,36 @@ export async function carregarClubes(): Promise<Clube[]> {
   }
 }
 
-export async function criarClube(
-  autor: Omit<ClubeMembro, 'entrouEm'>,
-  dados: { nome: string; descricao: string; cidade?: string; privado?: boolean },
-): Promise<Clube> {
+export interface DadosClube {
+  nome: string;
+  descricao: string;
+  cidade?: string;
+  privado?: boolean;
+  foto?: string;
+  pontuacao?: PontuacaoClube;
+  tags?: string[];
+}
+
+function semVazios<T extends object>(obj: T): T {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+}
+
+export async function criarClube(autor: Omit<ClubeMembro, 'entrouEm'>, dados: DadosClube): Promise<Clube> {
   const agora = Date.now();
-  const clube: Clube = {
+  const clube: Clube = semVazios({
     id: crypto.randomUUID(),
     nome: dados.nome.trim(),
     descricao: dados.descricao.trim(),
+    cidade: dados.cidade?.trim() || undefined,
+    foto: dados.foto,
+    pontuacao: dados.pontuacao ?? 'idas',
+    tags: dados.tags?.length ? dados.tags : undefined,
     criadorUid: autor.uid,
     privado: !!dados.privado,
     membros: { [autor.uid]: { ...autor, entrouEm: agora } },
     membrosUids: [autor.uid],
     createdAt: agora,
-  };
-  if (dados.cidade?.trim()) clube.cidade = dados.cidade.trim();
+  });
   const codigo = clube.privado ? gerarCodigo() : null;
   if (codigo) guardarConvite(clube.id, codigo);
 
@@ -130,6 +144,60 @@ export async function criarClube(
     if (codigo) await setDoc(doc(db, 'clubeConvites', id), { codigo });
   });
   return clube;
+}
+
+/** Só o criador edita: nome, foto, descrição, cidade, privacidade, pontuação e tags. */
+export async function editarClube(clube: Clube, dados: DadosClube): Promise<Clube> {
+  const atualizado: Clube = {
+    ...clube,
+    nome: dados.nome.trim(),
+    descricao: dados.descricao.trim(),
+    cidade: dados.cidade?.trim() || undefined,
+    foto: dados.foto || undefined,
+    pontuacao: dados.pontuacao ?? 'idas',
+    tags: dados.tags?.length ? dados.tags : undefined,
+    privado: !!dados.privado,
+  };
+  const precisaCodigo = atualizado.privado && !lerConvites()[clube.id];
+  const codigo = precisaCodigo ? gerarCodigo() : null;
+  if (codigo) guardarConvite(clube.id, codigo);
+  substituirLocal(atualizado);
+  sincronizar(async () => {
+    await updateDoc(doc(db, 'clubes', clube.id), {
+      nome: atualizado.nome,
+      descricao: atualizado.descricao,
+      cidade: atualizado.cidade ?? deleteField(),
+      foto: atualizado.foto ?? deleteField(),
+      pontuacao: atualizado.pontuacao,
+      tags: atualizado.tags ?? deleteField(),
+      privado: atualizado.privado,
+    });
+    if (codigo) await setDoc(doc(db, 'clubeConvites', clube.id), { codigo });
+  });
+  return atualizado;
+}
+
+/** Foto do clube pequena (até 400 px) para caber no documento do Firestore. */
+export async function comprimirFotoClube(file: File, lado = 400): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolver, rejeitar) => {
+      const i = new Image();
+      i.onload = () => resolver(i);
+      i.onerror = rejeitar;
+      i.src = url;
+    });
+    // recorte quadrado no centro
+    const menor = Math.min(img.width, img.height);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = Math.min(lado, menor);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('canvas');
+    ctx.drawImage(img, (img.width - menor) / 2, (img.height - menor) / 2, menor, menor, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export async function entrarNoClube(clube: Clube, membro: Omit<ClubeMembro, 'entrouEm'>): Promise<Clube> {
@@ -280,7 +348,25 @@ export interface PlacarMembro {
   membro: ClubeMembro;
   idas: number;
   lugares: number;
+  dias: number;
+  /** Pontos pelo sistema de pontuação do clube. */
+  valor: number;
 }
+
+export const PONTUACOES: { valor: PontuacaoClube; titulo: string; descricao: string; unidade: [string, string] }[] = [
+  { valor: 'idas', titulo: 'Mais idas', descricao: 'Quem mais registra idas. Cada avaliação vale um ponto.', unidade: ['ida', 'idas'] },
+  {
+    valor: 'lugares',
+    titulo: 'Lugares diferentes',
+    descricao: 'Quem mais conhece lugares novos. Voltar ao mesmo lugar não soma.',
+    unidade: ['lugar', 'lugares'],
+  },
+  { valor: 'dias', titulo: 'Dias ativos', descricao: 'Dias com pelo menos uma ida registrada. Premia a constância.', unidade: ['dia', 'dias'] },
+];
+
+export const infoPontuacao = (p?: PontuacaoClube) => PONTUACOES.find((x) => x.valor === p) ?? PONTUACOES[0];
+
+export const unidadePontos = (p: PontuacaoClube | undefined, n: number) => infoPontuacao(p).unidade[n === 1 ? 0 : 1];
 
 export interface PlacarClube {
   clube: Clube;
@@ -311,10 +397,30 @@ export async function rankingDosClubes(clubes: Clube[]): Promise<PlacarClube[]> 
   return ordenarClubes(clubes, await reviewsDesde(todos, inicioDoMes()));
 }
 
-/** Ranking interno: quem do clube mais visitou no mês. */
-export async function rankingDoClube(clube: Clube): Promise<PlacarMembro[]> {
-  const reviews = await reviewsDesde(clube.membrosUids, inicioDoMes());
+export type PeriodoRanking = 'mensal' | 'geral';
+
+function placarDoClube(clube: Clube, reviews: Review[]): PlacarMembro[] {
+  const pont = clube.pontuacao ?? 'idas';
   return Object.values(clube.membros)
-    .map((membro) => ({ membro, ...contar(reviews, [membro.uid]) }))
-    .sort((a, b) => b.idas - a.idas || b.lugares - a.lugares);
+    .map((membro) => {
+      const minhas = reviews.filter((r) => r.uid === membro.uid);
+      const idas = minhas.length;
+      const lugares = new Set(minhas.map((r) => r.placeId)).size;
+      const dias = new Set(minhas.map((r) => new Date(r.visitedAt).toDateString())).size;
+      const valor = pont === 'lugares' ? lugares : pont === 'dias' ? dias : idas;
+      return { membro, idas, lugares, dias, valor };
+    })
+    .sort((a, b) => b.valor - a.valor || b.idas - a.idas || b.lugares - a.lugares || a.membro.entrouEm - b.membro.entrouEm);
+}
+
+const desdeDo = (periodo: PeriodoRanking) => (periodo === 'mensal' ? inicioDoMes() : 0);
+
+/** Placar imediato com as idas salvas no aparelho. */
+export function rankingLocalDoClube(clube: Clube, periodo: PeriodoRanking = 'mensal'): PlacarMembro[] {
+  return placarDoClube(clube, reviewsLocaisDesde(clube.membrosUids, desdeDo(periodo)));
+}
+
+/** Ranking interno do clube pelo sistema de pontuação escolhido. */
+export async function rankingDoClube(clube: Clube, periodo: PeriodoRanking = 'mensal'): Promise<PlacarMembro[]> {
+  return placarDoClube(clube, await reviewsDesde(clube.membrosUids, desdeDo(periodo)));
 }

@@ -285,7 +285,7 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado, club
                   key={c.id}
                   Icon={Shield}
                   label={c.nome}
-                  descricao="Só membros do clube, no feed do clube"
+                  descricao="Só membros veem, no feed com a tag do clube"
                   ativo={visibilidade === 'clube' && clubeId === c.id}
                   onClick={() => { setVisibilidade('clube'); setClubeId(c.id); setMostrarVisibilidade(false); }}
                 />

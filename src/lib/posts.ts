@@ -15,6 +15,7 @@ import {
 import { db, isFirebaseConfigured, storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { seguindoLocais } from './follows';
+import { meusClubesLocais } from './clubes';
 import type { FoodTweet, TweetComment } from '../types';
 
 const LS_POSTS_KEY = 'vimo_posts_v1';
@@ -253,11 +254,12 @@ export async function criarPost(autor: AutorPost, dados: NovoPost): Promise<Food
   return post;
 }
 
-/** Regra de quem vê o quê no feed geral: clube e "só eu" ficam fora. */
-function visivelNoFeed(p: FoodTweet, meuUid: string, seguindo: Set<string>): boolean {
+/** Regra de quem vê o quê no feed geral: post de clube só para os membros; "só eu" fica fora. */
+function visivelNoFeed(p: FoodTweet, meuUid: string, seguindo: Set<string>, meusClubes: Set<string>): boolean {
   const v = p.visibilidade ?? 'publico';
   if (v === 'publico') return true;
   if (v === 'amigos') return p.uid === meuUid || seguindo.has(p.uid);
+  if (v === 'clube') return !!p.clubeId && meusClubes.has(p.clubeId);
   return false;
 }
 
@@ -270,7 +272,8 @@ export async function carregarPosts(meuUid: string, limite = 30): Promise<FoodTw
     } catch {}
   }
   const seguindo = new Set(seguindoLocais(meuUid));
-  const lista = mesclar(getLocalPosts(), remotos).filter((p) => visivelNoFeed(p, meuUid, seguindo));
+  const meusClubes = new Set(meusClubesLocais(meuUid).map((c) => c.id));
+  const lista = mesclar(getLocalPosts(), remotos).filter((p) => visivelNoFeed(p, meuUid, seguindo, meusClubes));
   return comEstadoDoUsuario(lista, meuUid);
 }
 
@@ -300,18 +303,6 @@ export async function carregarPostsDoUsuario(
     if (v === 'clube') return !!p.clubeId && clubes.has(p.clubeId);
     return false;
   });
-  return comEstadoDoUsuario(lista, meuUid);
-}
-
-export async function carregarPostsDoClube(clubeId: string, meuUid: string): Promise<FoodTweet[]> {
-  let remotos: FoodTweet[] = [];
-  if (isFirebaseConfigured) {
-    try {
-      const snap = await getDocs(query(collection(db, 'posts'), where('clubeId', '==', clubeId), limit(60)));
-      remotos = snap.docs.map((d) => ({ ...d.data(), id: d.id } as FoodTweet));
-    } catch {}
-  }
-  const lista = mesclar(getLocalPosts().filter((p) => p.clubeId === clubeId), remotos);
   return comEstadoDoUsuario(lista, meuUid);
 }
 

@@ -54,7 +54,10 @@ export default function ClubesTab({
   const meus = clubes.filter((c) => ehMembro(c, currentUser.uid));
   const termo = busca.trim().toLowerCase();
   const casa = (c: Clube) =>
-    !termo || c.nome.toLowerCase().includes(termo) || (c.cidade ?? '').toLowerCase().includes(termo);
+    !termo ||
+    c.nome.toLowerCase().includes(termo) ||
+    (c.cidade ?? '').toLowerCase().includes(termo) ||
+    (c.tags ?? []).some((t) => t.toLowerCase().includes(termo));
   const porMembros = [...clubes].sort((a, b) => b.membrosUids.length - a.membrosUids.length);
   const populares = porMembros.filter((c) => !c.privado).slice(0, 8);
   const publicos = porMembros.filter((c) => !c.privado && casa(c));
@@ -87,7 +90,7 @@ export default function ClubesTab({
               <li key={c.id} className="w-[92px] shrink-0">
                 <button type="button" onClick={() => abrir(c)} className="w-full text-left cursor-pointer">
                   <span className="relative block">
-                    <EscudoClube nome={c.nome} tamanho={92} />
+                    <EscudoClube nome={c.nome} foto={c.foto} tamanho={92} />
                     <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-bg px-2.5 py-0.5 text-[11px] font-semibold text-primary ring-1 ring-line">
                       {c.criadorUid === currentUser.uid ? 'Criador' : 'Membro'}
                     </span>
@@ -135,7 +138,7 @@ export default function ClubesTab({
                   onClick={() => abrir(c)}
                   className="flex w-[148px] flex-col gap-2 rounded-2xl bg-s1 p-3 text-left ring-1 ring-line cursor-pointer active:scale-[0.98] transition-transform"
                 >
-                  <EscudoClube nome={c.nome} tamanho={48} />
+                  <EscudoClube nome={c.nome} foto={c.foto} tamanho={48} />
                   <span className="w-full truncate text-[14px] font-semibold text-ink">{c.nome}</span>
                   <span className="truncate text-[12px] text-muted">
                     {membrosTexto(c.membrosUids.length)}
@@ -161,7 +164,7 @@ export default function ClubesTab({
             <li key={p.clube.id}>
               <button type="button" onClick={() => abrir(p.clube)} className="w-full flex items-center gap-3 px-4 py-3 text-left cursor-pointer">
                 <Posicao n={i + 1} />
-                <EscudoClube nome={p.clube.nome} tamanho={36} />
+                <EscudoClube nome={p.clube.nome} foto={p.clube.foto} tamanho={36} />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1 text-[14px] font-semibold text-ink">
                     <span className="truncate">{p.clube.nome}</span>
@@ -193,7 +196,7 @@ export default function ClubesTab({
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar clube ou cidade"
+          placeholder="Buscar clube, cidade ou tag"
           className={`${inputClass} h-11 pl-10`}
         />
       </div>
@@ -264,7 +267,7 @@ function ListaClubes({
           {clubes.map((c) => (
             <li key={c.id}>
               <button type="button" onClick={() => onAbrir(c)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-s2 transition-colors cursor-pointer">
-                <EscudoClube nome={c.nome} tamanho={44} />
+                <EscudoClube nome={c.nome} foto={c.foto} tamanho={44} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-semibold text-ink">{c.nome}</span>
                   <span className="block truncate text-[12px] text-muted">

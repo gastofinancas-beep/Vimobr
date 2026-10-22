@@ -185,11 +185,18 @@ export interface ClubeMembro {
   entrouEm: number;
 }
 
+/** Como o ranking interno do clube conta pontos. */
+export type PontuacaoClube = 'idas' | 'lugares' | 'dias';
+
 export interface Clube {
   id: string;
   nome: string;
   descricao: string;
   cidade?: string;
+  /** Foto do clube em DataURL comprimida (pequena, cabe no documento). */
+  foto?: string;
+  pontuacao?: PontuacaoClube;
+  tags?: string[];
   criadorUid: string;
   /** Privado: só entra quem tem o código de convite. */
   privado?: boolean;
