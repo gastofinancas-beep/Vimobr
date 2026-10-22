@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { X, Camera, Image, Globe, Lock, Users, ChevronDown } from 'lucide-react';
+import { X, Camera, Image, Globe, Lock, Users, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { criarPost } from '../lib/posts';
 import type { FoodTweet, UserProfile } from '../types';
 import { Avatar } from './ui';
@@ -29,7 +29,7 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
   const inputCameraRef = useRef<HTMLInputElement>(null);
 
   const podePubilcar = texto.trim().length > 0 || fotos.length > 0;
-  const MAX_FOTOS = 5;
+  const MAX_FOTOS = 4;
 
   const opcaoAtual = OPCOES_VISIBILIDADE.find((o) => o.value === visibilidade)!;
 
@@ -66,7 +66,7 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
         visibilidade,
       );
     } catch {
-      // post salvo localmente
+      // salvo localmente
     } finally {
       setPublicando(false);
       onPublicado();
@@ -88,51 +88,40 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
             Cancelar
           </button>
           <span className="font-semibold text-[15px] text-ink">Nova publicação</span>
-          <button
-            type="button"
-            onClick={handlePublicar}
-            disabled={!podePubilcar || publicando}
-            className="bg-primary text-white text-[14px] font-semibold px-5 py-1.5 rounded-full disabled:opacity-40 transition-opacity cursor-pointer"
-          >
-            {publicando ? 'Publicando…' : 'Publicar'}
-          </button>
+          <div className="w-16" />
         </header>
 
         {/* Corpo */}
         <div className="flex-1 overflow-y-auto">
-          {/* Autor + texto */}
-          <div className="flex gap-3 px-4 pt-4 pb-3">
-            <div className="flex flex-col items-center gap-1">
-              <Avatar src={currentUser.photoURL} name={currentUser.displayName} size={42} />
-              {fotos.length > 0 && <div className="w-px flex-1 bg-line min-h-[16px]" />}
-            </div>
-            <div className="flex-1 min-w-0 pt-0.5">
-              <p className="font-semibold text-[14px] text-ink leading-tight">{currentUser.displayName}</p>
-              <textarea
-                autoFocus
-                value={texto}
-                onChange={(e) => setTexto(e.target.value)}
-                placeholder="O que você comeu hoje?"
-                rows={fotos.length > 0 ? 2 : 5}
-                maxLength={500}
-                className="w-full bg-transparent text-[16px] text-ink placeholder:text-muted resize-none focus:outline-none leading-relaxed mt-1.5"
-              />
-              {texto.length > 400 && (
-                <p className={`text-right text-[12px] mt-0.5 ${texto.length >= 500 ? 'text-red-500' : 'text-muted'}`}>
-                  {500 - texto.length}
-                </p>
-              )}
-            </div>
+          {/* Autor */}
+          <div className="flex items-center gap-2.5 px-4 pt-4 pb-2">
+            <Avatar src={currentUser.photoURL} name={currentUser.displayName} size={38} />
+            <span className="font-semibold text-[14px] text-ink">{currentUser.handle || currentUser.displayName}</span>
+          </div>
+
+          {/* Texto */}
+          <div className="px-4 pb-3">
+            <textarea
+              autoFocus
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder="O que você comeu hoje?"
+              rows={3}
+              maxLength={500}
+              className="w-full bg-transparent text-[17px] text-ink placeholder:text-muted resize-none focus:outline-none leading-relaxed"
+            />
+            {texto.length > 400 && (
+              <p className={`text-right text-[12px] ${texto.length >= 500 ? 'text-red-500' : 'text-muted'}`}>
+                {500 - texto.length}
+              </p>
+            )}
           </div>
 
           {/* Grid de fotos */}
           {previews.length > 0 && (
             <div className="px-4 pb-4 grid grid-cols-2 gap-1.5">
               {previews.map((src, idx) => (
-                <div
-                  key={idx}
-                  className="relative rounded-xl overflow-hidden bg-s2 aspect-square"
-                >
+                <div key={idx} className="relative rounded-xl overflow-hidden bg-s2 aspect-square">
                   <img src={src} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
@@ -144,24 +133,13 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
                   </button>
                 </div>
               ))}
-              {fotos.length < MAX_FOTOS && (
-                <button
-                  type="button"
-                  onClick={() => inputGaleriaRef.current?.click()}
-                  className="aspect-square rounded-xl border-2 border-dashed border-line flex items-center justify-center cursor-pointer hover:bg-s2 transition-colors"
-                  aria-label="Adicionar mais fotos"
-                >
-                  <Image size={20} strokeWidth={1.5} className="text-muted" />
-                </button>
-              )}
             </div>
           )}
         </div>
 
-        {/* Rodapé */}
-        <div className="border-t border-line shrink-0">
-          {/* Toolbar de mídia */}
-          <div className="flex items-center px-3 py-2 gap-0.5">
+        {/* Toolbar de mídia */}
+        <div className="border-t border-line flex items-center px-3 py-2 gap-1 shrink-0">
+          <div className="relative">
             <button
               type="button"
               onClick={() => inputGaleriaRef.current?.click()}
@@ -169,34 +147,51 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
               className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted disabled:opacity-30"
               aria-label="Galeria"
             >
-              <Image size={21} strokeWidth={1.8} />
-            </button>
-            <button
-              type="button"
-              onClick={() => inputCameraRef.current?.click()}
-              disabled={fotos.length >= MAX_FOTOS}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted disabled:opacity-30"
-              aria-label="Câmera"
-            >
-              <Camera size={21} strokeWidth={1.8} />
+              <Image size={22} strokeWidth={1.8} />
             </button>
             {fotos.length > 0 && (
-              <span className="text-[12px] text-muted ml-0.5">{fotos.length}/{MAX_FOTOS}</span>
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 pointer-events-none">
+                {fotos.length}/{MAX_FOTOS}
+              </span>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => inputCameraRef.current?.click()}
+            disabled={fotos.length >= MAX_FOTOS}
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted disabled:opacity-30"
+            aria-label="Câmera"
+          >
+            <Camera size={22} strokeWidth={1.8} />
+          </button>
+          <button
+            type="button"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted"
+            aria-label="Mais opções"
+          >
+            <MoreHorizontal size={22} strokeWidth={1.8} />
+          </button>
+        </div>
 
-          {/* Seletor de visibilidade */}
-          <div className="px-4 pb-safe pb-3">
-            <button
-              type="button"
-              onClick={() => setMostrarVisibilidade(true)}
-              className="flex items-center gap-2 text-[13px] text-muted cursor-pointer"
-            >
-              <opcaoAtual.Icon size={14} strokeWidth={2} />
-              <span className="font-medium">{opcaoAtual.label}</span>
-              <ChevronDown size={14} strokeWidth={2} />
-            </button>
-          </div>
+        {/* Rodapé: visibilidade + publicar */}
+        <div className="flex items-center gap-2 px-4 pb-safe pb-4 pt-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setMostrarVisibilidade(true)}
+            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-full border border-line text-[14px] font-medium text-ink cursor-pointer hover:bg-s2 transition-colors"
+          >
+            <opcaoAtual.Icon size={16} strokeWidth={2} />
+            <span>{opcaoAtual.label}</span>
+            <ChevronDown size={15} strokeWidth={2} className="text-muted" />
+          </button>
+          <button
+            type="button"
+            onClick={handlePublicar}
+            disabled={!podePubilcar || publicando}
+            className="flex-shrink-0 h-11 px-6 bg-primary text-white text-[14px] font-semibold rounded-full disabled:opacity-40 transition-opacity cursor-pointer"
+          >
+            {publicando ? 'Publicando…' : 'Publicar'}
+          </button>
         </div>
       </div>
 
