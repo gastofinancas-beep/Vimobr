@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Heart, MessageCircle, MapPin, Lock, Users, Shield, Star } from 'lucide-react';
 import AvaliacaoSheet from './AvaliacaoSheet';
 import ComentariosModal from './ComentariosModal';
@@ -221,25 +221,55 @@ export function PostCard({
   );
 }
 
-/** Fotos em fileira horizontal com cantos arredondados; a próxima aparece pela metade. */
+/** Uma foto por vez; arrasta para o lado e as bolinhas mostram a posição. */
 function CarrosselFotos({ fotos, onDoubleClick }: { fotos: string[]; onDoubleClick: () => void }) {
-  if (fotos.length === 1) {
-    return (
-      <div className="mt-3 aspect-[4/5] max-h-[460px] w-full overflow-hidden rounded-2xl bg-s2" onDoubleClick={onDoubleClick}>
-        <img src={fotos[0]} alt="" loading="lazy" className="h-full w-full object-cover" />
-      </div>
-    );
-  }
+  const [atual, setAtual] = useState(0);
+  const trilhoRef = useRef<HTMLDivElement>(null);
+  const varios = fotos.length > 1;
+
+  const aoRolar = () => {
+    const el = trilhoRef.current;
+    if (!el || !el.clientWidth) return;
+    setAtual(Math.round(el.scrollLeft / el.clientWidth));
+  };
+
+  const irPara = (i: number) => {
+    const el = trilhoRef.current;
+    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
+  };
+
   return (
-    <div
-      className="no-scrollbar -mr-4 mt-3 flex snap-x snap-mandatory gap-2 overflow-x-auto pr-4 scroll-pr-4"
-      onDoubleClick={onDoubleClick}
-    >
-      {fotos.map((src, i) => (
-        <div key={i} className="aspect-[4/5] w-[74%] shrink-0 snap-start overflow-hidden rounded-2xl bg-s2">
-          <img src={src} alt={`Foto ${i + 1} de ${fotos.length}`} loading="lazy" className="h-full w-full object-cover" />
+    <div className="relative mt-3 overflow-hidden rounded-2xl bg-s2" onDoubleClick={onDoubleClick}>
+      <div
+        ref={trilhoRef}
+        onScroll={varios ? aoRolar : undefined}
+        className="no-scrollbar flex aspect-square max-h-[480px] w-full snap-x snap-mandatory overflow-x-auto"
+      >
+        {fotos.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt={varios ? `Foto ${i + 1} de ${fotos.length}` : ''}
+            loading="lazy"
+            draggable={false}
+            className="h-full w-full shrink-0 snap-center object-cover"
+          />
+        ))}
+      </div>
+      {varios && (
+        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1.5">
+          {fotos.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => irPara(i)}
+              aria-label={`Ver foto ${i + 1}`}
+              aria-current={i === atual}
+              className={`h-1.5 w-1.5 rounded-full transition-colors cursor-pointer ${i === atual ? 'bg-white' : 'bg-white/45'}`}
+            />
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -271,10 +301,7 @@ export function SkeletonPosts() {
             <div className="h-3.5 w-36 rounded bg-s2" />
             <div className="h-3 w-24 rounded bg-s2" />
             <div className="h-3.5 w-4/5 rounded bg-s2" />
-            <div className="flex gap-2 overflow-hidden pt-1">
-              <div className="aspect-[4/5] w-[74%] shrink-0 rounded-2xl bg-s2" />
-              <div className="aspect-[4/5] w-[74%] shrink-0 rounded-2xl bg-s2" />
-            </div>
+            <div className="mt-1 aspect-square w-full rounded-2xl bg-s2" />
           </div>
         </div>
       ))}
