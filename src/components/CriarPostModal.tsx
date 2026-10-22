@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { X, Camera, Image, Send } from 'lucide-react';
+import { X, Camera, Image } from 'lucide-react';
 import { criarPost } from '../lib/posts';
 import type { UserProfile } from '../types';
 import { Avatar } from './ui';
@@ -12,26 +12,28 @@ interface CriarPostModalProps {
 
 export default function CriarPostModal({ currentUser, onClose, onPublicado }: CriarPostModalProps) {
   const [texto, setTexto] = useState('');
-  const [foto, setFoto] = useState<File | null>(null);
-  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [fotos, setFotos] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [publicando, setPublicando] = useState(false);
   const inputGaleriaRef = useRef<HTMLInputElement>(null);
   const inputCameraRef = useRef<HTMLInputElement>(null);
 
-  const podePubilcar = texto.trim().length > 0 || foto !== null;
+  const podePubilcar = texto.trim().length > 0 || fotos.length > 0;
+  const MAX_FOTOS = 5;
 
-  const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (fotoPreview) URL.revokeObjectURL(fotoPreview);
-    setFoto(file);
-    setFotoPreview(URL.createObjectURL(file));
-    e.target.value = '';
+  const adicionarFotos = (arquivos: FileList | null) => {
+    if (!arquivos) return;
+    const novos = Array.from(arquivos).slice(0, MAX_FOTOS - fotos.length);
+    if (novos.length === 0) return;
+    const novosPreviews = novos.map((f) => URL.createObjectURL(f));
+    setFotos((prev) => [...prev, ...novos]);
+    setPreviews((prev) => [...prev, ...novosPreviews]);
   };
 
-  const removerFoto = () => {
-    setFoto(null);
-    if (fotoPreview) { URL.revokeObjectURL(fotoPreview); setFotoPreview(null); }
+  const removerFoto = (idx: number) => {
+    URL.revokeObjectURL(previews[idx]);
+    setFotos((prev) => prev.filter((_, i) => i !== idx));
+    setPreviews((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handlePublicar = async () => {
@@ -46,7 +48,7 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
           photo: currentUser.photoURL,
         },
         texto.trim(),
-        foto ?? undefined,
+        fotos.length > 0 ? fotos : undefined,
       );
     } catch {
       // post salvo localmente
@@ -63,8 +65,9 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
         ref={inputGaleriaRef}
         type="file"
         accept="image/*"
+        multiple
         className="sr-only"
-        onChange={handleFoto}
+        onChange={(e) => adicionarFotos(e.target.files)}
       />
       <input
         ref={inputCameraRef}
@@ -72,7 +75,7 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
         accept="image/*"
         capture="environment"
         className="sr-only"
-        onChange={handleFoto}
+        onChange={(e) => adicionarFotos(e.target.files)}
       />
 
       {/* Cabeçalho */}
@@ -118,22 +121,37 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
           </div>
         </div>
 
-        {/* Preview da foto */}
-        {fotoPreview && (
-          <div className="relative mx-4 mt-3 rounded-xl overflow-hidden bg-black aspect-[4/3]">
-            <img
-              src={fotoPreview}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-            <button
-              type="button"
-              onClick={removerFoto}
-              className="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center cursor-pointer"
-              aria-label="Remover foto"
-            >
-              <X size={14} strokeWidth={2.5} className="text-white" />
-            </button>
+        {/* Preview das fotos */}
+        {previews.length > 0 && (
+          <div className="flex gap-2 px-4 mt-3 overflow-x-auto pb-1">
+            {previews.map((src, idx) => (
+              <div key={idx} className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-s2">
+                <img src={src} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removerFoto(idx)}
+                  className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center cursor-pointer"
+                  aria-label="Remover foto"
+                >
+                  <X size={11} strokeWidth={2.5} className="text-white" />
+                </button>
+                {idx === 0 && previews.length > 1 && (
+                  <span className="absolute bottom-1 left-1 bg-black/50 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+                    capa
+                  </span>
+                )}
+              </div>
+            ))}
+            {fotos.length < MAX_FOTOS && (
+              <button
+                type="button"
+                onClick={() => inputGaleriaRef.current?.click()}
+                className="shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-line flex items-center justify-center cursor-pointer hover:bg-s2 transition-colors"
+                aria-label="Adicionar mais fotos"
+              >
+                <Image size={22} strokeWidth={1.5} className="text-muted" />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -143,7 +161,8 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
         <button
           type="button"
           onClick={() => inputGaleriaRef.current?.click()}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted"
+          disabled={fotos.length >= MAX_FOTOS}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted disabled:opacity-30"
           aria-label="Galeria"
         >
           <Image size={22} strokeWidth={1.8} />
@@ -151,22 +170,14 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
         <button
           type="button"
           onClick={() => inputCameraRef.current?.click()}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted"
+          disabled={fotos.length >= MAX_FOTOS}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted disabled:opacity-30"
           aria-label="Câmera"
         >
           <Camera size={22} strokeWidth={1.8} />
         </button>
-
-        {podePubilcar && (
-          <button
-            type="button"
-            onClick={handlePublicar}
-            disabled={publicando}
-            className="ml-auto flex items-center gap-2 bg-primary text-white text-[14px] font-semibold px-5 py-2 rounded-full disabled:opacity-40 cursor-pointer"
-          >
-            <Send size={14} strokeWidth={2} />
-            {publicando ? 'Publicando…' : 'Publicar'}
-          </button>
+        {fotos.length > 0 && (
+          <span className="text-[13px] text-muted ml-1">{fotos.length}/{MAX_FOTOS}</span>
         )}
       </div>
     </div>

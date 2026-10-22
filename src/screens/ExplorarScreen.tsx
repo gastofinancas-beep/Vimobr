@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Heart, MessageCircle, MapPin, PenSquare, MoreHorizontal, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, PenSquare, MoreHorizontal, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
 import CriarPostModal from '../components/CriarPostModal';
@@ -272,24 +272,13 @@ function PostCard({
         </button>
       </div>
 
-      {/* Foto */}
-      {post.photoUrl && (
-        <div
-          className="relative w-full aspect-[4/3] bg-s2"
+      {/* Carrossel de fotos */}
+      {(post.photoUrls?.length ?? 0) > 0 || post.photoUrl ? (
+        <Carrossel
+          fotos={post.photoUrls ?? (post.photoUrl ? [post.photoUrl] : [])}
           onDoubleClick={handleCurtir}
-        >
-          <img
-            src={post.photoUrl}
-            alt=""
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
-          {/* Contador de slides (futuro carrossel) */}
-          <span className="absolute bottom-2.5 right-3 bg-black/50 text-white text-[12px] font-medium px-2 py-0.5 rounded-full">
-            1/1
-          </span>
-        </div>
-      )}
+        />
+      ) : null}
 
       {/* Ações */}
       <div className="flex items-center px-3 pt-2 pb-1">
@@ -351,6 +340,80 @@ function PostCard({
         <div className="pb-3" />
       )}
     </article>
+  );
+}
+
+function Carrossel({ fotos, onDoubleClick }: { fotos: string[]; onDoubleClick: () => void }) {
+  const [slide, setSlide] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const total = fotos.length;
+
+  const irPara = (idx: number) => {
+    const clamped = Math.max(0, Math.min(total - 1, idx));
+    setSlide(clamped);
+    trackRef.current?.children[clamped]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+  };
+
+  const handleScroll = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    setSlide(idx);
+  };
+
+  return (
+    <div className="relative w-full aspect-[4/3] bg-s2 overflow-hidden" onDoubleClick={onDoubleClick}>
+      {/* track */}
+      <div
+        ref={trackRef}
+        onScroll={handleScroll}
+        className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-none"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {fotos.map((src, i) => (
+          <div key={i} className="shrink-0 w-full h-full snap-start">
+            <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+          </div>
+        ))}
+      </div>
+
+      {/* setas */}
+      {total > 1 && slide > 0 && (
+        <button
+          type="button"
+          onClick={() => irPara(slide - 1)}
+          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center cursor-pointer"
+          aria-label="Foto anterior"
+        >
+          <ChevronLeft size={18} className="text-white" />
+        </button>
+      )}
+      {total > 1 && slide < total - 1 && (
+        <button
+          type="button"
+          onClick={() => irPara(slide + 1)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center cursor-pointer"
+          aria-label="Próxima foto"
+        >
+          <ChevronRight size={18} className="text-white" />
+        </button>
+      )}
+
+      {/* indicador */}
+      {total > 1 ? (
+        <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1">
+          {fotos.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => irPara(i)}
+              className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${i === slide ? 'bg-white w-3' : 'bg-white/50'}`}
+              aria-label={`Foto ${i + 1}`}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

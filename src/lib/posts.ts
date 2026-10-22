@@ -107,15 +107,18 @@ export interface AutorPost {
 export async function criarPost(
   autor: AutorPost,
   texto: string,
-  foto?: File,
+  fotos?: File | File[],
   placeId?: string,
   placeName?: string,
   cityName?: string,
 ): Promise<FoodTweet> {
-  let photoUrl: string | undefined;
-  if (foto) {
-    photoUrl = await uploadFotoPost(autor.uid, foto);
-  }
+  const arquivos = fotos
+    ? Array.isArray(fotos) ? fotos : [fotos]
+    : [];
+
+  const photoUrls: string[] = await Promise.all(
+    arquivos.map((f) => uploadFotoPost(autor.uid, f))
+  );
 
   const post: FoodTweet = {
     id: crypto.randomUUID(),
@@ -124,7 +127,8 @@ export async function criarPost(
     authorHandle: autor.handle,
     authorPhoto: autor.photo,
     text: texto,
-    photoUrl,
+    photoUrl: photoUrls[0],
+    photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
     placeId,
     placeName,
     cityName,

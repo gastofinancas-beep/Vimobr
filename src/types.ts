@@ -161,6 +161,7 @@ export interface FoodTweet {
   authorPhoto: string;
   text: string;
   photoUrl?: string;
+  photoUrls?: string[];
   placeId?: string;
   placeName?: string;
   cityName?: string;
