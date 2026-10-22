@@ -127,15 +127,11 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
 
           {/* Grid de fotos */}
           {previews.length > 0 && (
-            <div className={`px-4 pb-4 grid gap-1.5 ${previews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            <div className="px-4 pb-4 grid grid-cols-2 gap-1.5">
               {previews.map((src, idx) => (
                 <div
                   key={idx}
-                  className={`relative rounded-xl overflow-hidden bg-s2 ${
-                    previews.length === 1 ? 'aspect-[4/3]' :
-                    previews.length === 3 && idx === 0 ? 'row-span-2 aspect-square' :
-                    'aspect-square'
-                  }`}
+                  className="relative rounded-xl overflow-hidden bg-s2 aspect-square"
                 >
                   <img src={src} alt="" className="w-full h-full object-cover" />
                   <button
