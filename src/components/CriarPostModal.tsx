@@ -135,11 +135,6 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
                 >
                   <X size={11} strokeWidth={2.5} className="text-white" />
                 </button>
-                {idx === 0 && previews.length > 1 && (
-                  <span className="absolute bottom-1 left-1 bg-black/50 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-                    capa
-                  </span>
-                )}
               </div>
             ))}
             {fotos.length < MAX_FOTOS && (
