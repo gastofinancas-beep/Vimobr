@@ -58,7 +58,10 @@ qualquer coisa nova.
   aparecem com 3+ lugares) e grade "Todos os lugares". **Nenhuma nota aparece na listagem** —
   só ao abrir o lugar. Com busca ou filtro ativo vira grade única de 2 colunas.
 - `DescobrirPertoDeMimScreen` — aba Mapa, pinos por proximidade, filtros por categoria
-- `AmigosScreen` — feed social (quem os amigos avaliaram)
+- `ComunidadeScreen` — aba Comunidade: Clubes (meus clubes, destaque do mês, populares, ranking do
+  mês, públicos, privados com código de convite) e Eventos (idas marcadas com o clube). Detalhe do
+  clube em `ClubeScreen` (Feed só de membros, Eventos, Ranking, Membros). Ranking = avaliações
+  ("idas") dos membros no mês. Dados em `src/lib/clubes.ts` e `src/lib/eventos.ts`.
 - `PerfilScreen` — capa + foto, números (idas, seguidores, seguindo), bio, favoritos, abas
   Diário / Paladar / Conquistas; medalhas em destaque só para PRO (ver abaixo)
 - `PlaceDetailScreen` — tela única de detalhe do lugar (ações, como chegar, fotos, notas
@@ -67,9 +70,9 @@ qualquer coisa nova.
   Café & Espresso → Doces & Sobremesas → Comidinhas & Salgados → Ambiente & Conforto →
   Atendimento & Barista → Voltaria & Preço → Prato destaque → Comentário → Fotos → Amigos → Resumo.
   Nota geral é a média dos critérios, arredondada para meia estrela, e só aparece no resumo final.
-- `ComunidadeScreen`, `ColecaoScreen` — hoje sem uso real na navegação (ver "arquivos órfãos")
+- `AmigosScreen`, `ColecaoScreen` — hoje sem uso na navegação (ver "arquivos órfãos")
 
-Barra inferior fixa: Explorar, Mapa, **+** central (nova avaliação), Amigos, Perfil.
+Barra inferior fixa: Explorar, Descobrir, **+** central (nova avaliação), Comunidade, Perfil.
 
 ## Plano PRO
 
@@ -120,7 +123,8 @@ lugar nenhum (sobras de versões anteriores do app): `AddDishModal`, `CommunityT
 `PrivacidadeModal`, `ReservaModal`, `RestaurantCard`, `ReviewCard`, `RoteiroDetailModal`,
 `RoteiroModal`, `TopListsSection`, `WishlistTab`, `foursquare/FsqEmAltaSection`,
 `foursquare/FsqPlaceCard`, `communityPosts.ts`, `itineraries.ts`, `rankings.ts`, `dishes.ts`,
-`usePWAInstall.ts`, `ColecaoScreen.tsx`. Não quebram nada hoje, mas podem ser removidos numa
+`usePWAInstall.ts`, `ColecaoScreen.tsx`, `AmigosScreen.tsx` (feed de avaliações dos amigos, saiu da
+barra quando a aba virou Comunidade). Não quebram nada hoje, mas podem ser removidos numa
 limpeza futura (confirmar de novo com um grep de imports antes de apagar, caso algo tenha
 mudado).
 
@@ -130,8 +134,10 @@ mudado).
 - Sem notas visíveis nas listagens — só dentro do lugar.
 - Login: Google + e-mail/senha; modo convidado existe para teste.
 - Nota geral = média dos critérios, meia estrela, sem tela própria — calculada no resumo.
-- Barra inferior com 5 posições fixas (Explorar, Mapa, +, Amigos, Perfil) — não adicionar aba
-  nova sem conversar antes.
+- Barra inferior com 5 posições fixas (Explorar, Descobrir, +, Comunidade, Perfil) — não adicionar
+  aba nova sem conversar antes. "Amigos" virou "Comunidade" em 2026-10-22, a pedido do Pedro.
+- Clube privado: o código fica em `clubeConvites/{id}` (só membros leem); quem entra grava
+  `clubeConvites/{id}/usos/{uid}` no mesmo lote, e a regra confere o código.
 - Regras de segurança do Firestore já publicadas (bloco de segurança); curtidas, comentários e
   contadores de seguidores usam só regras (+1/-1), sem Cloud Functions.
 

@@ -191,8 +191,34 @@ export interface Clube {
   descricao: string;
   cidade?: string;
   criadorUid: string;
+  /** Privado: só entra quem tem o código de convite. */
+  privado?: boolean;
   membros: Record<string, ClubeMembro>;
   membrosUids: string[];
+  createdAt: number;
+}
+
+export interface EventoParticipante {
+  uid: string;
+  name: string;
+  handle: string;
+  photo: string;
+}
+
+export interface Evento {
+  id: string;
+  clubeId: string;
+  clubeNome: string;
+  titulo: string;
+  placeId?: string;
+  placeName: string;
+  placeEndereco?: string;
+  data: number;
+  observacao?: string;
+  criadorUid: string;
+  criadorNome: string;
+  confirmados: Record<string, EventoParticipante>;
+  confirmadosUids: string[];
   createdAt: number;
 }
 

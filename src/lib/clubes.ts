@@ -4,18 +4,43 @@ import {
   collection,
   deleteField,
   doc,
+  getDoc,
   getDocs,
   limit,
   query,
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { getLocalReviews } from './reviews';
 import type { Clube, ClubeMembro, Review } from '../types';
 
 const LS_CLUBES_KEY = 'vimo_clubes_v1';
+const LS_CONVITES_KEY = 'vimo_clube_convites_v1';
+
+function lerConvites(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(LS_CONVITES_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function guardarConvite(clubeId: string, codigo: string) {
+  try {
+    localStorage.setItem(LS_CONVITES_KEY, JSON.stringify({ ...lerConvites(), [clubeId]: codigo }));
+  } catch {}
+}
+
+function gerarCodigo(): string {
+  const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  return Array.from(bytes, (b) => letras[b % letras.length]).join('');
+}
+
+export const normalizarCodigo = (c: string) => c.replace(/[^a-z0-9]/gi, '').toUpperCase();
 
 function lerLocais(): Clube[] {
   try {
@@ -42,7 +67,7 @@ function substituirLocal(clube: Clube) {
 }
 
 /** Grava no servidor em segundo plano; o Firestore pode lançar erro síncrono (ex.: campo vazio). */
-function sincronizar(gravar: () => Promise<unknown>) {
+export function sincronizar(gravar: () => Promise<unknown>) {
   if (!isFirebaseConfigured) return;
   try {
     gravar().catch(() => {});
@@ -80,7 +105,7 @@ export async function carregarClubes(): Promise<Clube[]> {
 
 export async function criarClube(
   autor: Omit<ClubeMembro, 'entrouEm'>,
-  dados: { nome: string; descricao: string; cidade?: string },
+  dados: { nome: string; descricao: string; cidade?: string; privado?: boolean },
 ): Promise<Clube> {
   const agora = Date.now();
   const clube: Clube = {
@@ -88,16 +113,21 @@ export async function criarClube(
     nome: dados.nome.trim(),
     descricao: dados.descricao.trim(),
     criadorUid: autor.uid,
+    privado: !!dados.privado,
     membros: { [autor.uid]: { ...autor, entrouEm: agora } },
     membrosUids: [autor.uid],
     createdAt: agora,
   };
   if (dados.cidade?.trim()) clube.cidade = dados.cidade.trim();
+  const codigo = clube.privado ? gerarCodigo() : null;
+  if (codigo) guardarConvite(clube.id, codigo);
 
   substituirLocal(clube);
-  sincronizar(() => {
+  sincronizar(async () => {
     const { id, ...campos } = clube;
-    return setDoc(doc(db, 'clubes', id), campos);
+    await setDoc(doc(db, 'clubes', id), campos);
+    // o convite fica num documento que só membros leem
+    if (codigo) await setDoc(doc(db, 'clubeConvites', id), { codigo });
   });
   return clube;
 }
@@ -117,6 +147,71 @@ export async function entrarNoClube(clube: Clube, membro: Omit<ClubeMembro, 'ent
     }),
   );
   return atualizado;
+}
+
+/** Código do clube privado, para quem já é membro compartilhar. */
+export async function obterCodigoConvite(clube: Clube): Promise<string | null> {
+  const local = lerConvites()[clube.id];
+  if (local) return local;
+  if (!isFirebaseConfigured) return null;
+  try {
+    const snap = await comPrazo(getDoc(doc(db, 'clubeConvites', clube.id)));
+    const codigo = snap.exists() ? (snap.data().codigo as string) : null;
+    if (codigo) guardarConvite(clube.id, codigo);
+    return codigo;
+  } catch {
+    return null;
+  }
+}
+
+export type ResultadoConvite = { ok: true; clube: Clube } | { ok: false; erro: string };
+
+/** Entrada em clube privado: o código é conferido no aparelho ou pelas regras do servidor. */
+export async function entrarComConvite(
+  clube: Clube,
+  membro: Omit<ClubeMembro, 'entrouEm'>,
+  codigoDigitado: string,
+): Promise<ResultadoConvite> {
+  const codigo = normalizarCodigo(codigoDigitado);
+  if (codigo.length < 4) return { ok: false, erro: 'Digite o código do convite.' };
+  const novo: ClubeMembro = { ...membro, entrouEm: Date.now() };
+  const atualizado: Clube = {
+    ...clube,
+    membros: { ...clube.membros, [membro.uid]: novo },
+    membrosUids: [...new Set([...clube.membrosUids, membro.uid])],
+  };
+  // Uma gravação só: o uso do convite (conferido pelas regras) e a vaga no clube
+  const gravarRemoto = () => {
+    const lote = writeBatch(db);
+    lote.set(doc(db, 'clubeConvites', clube.id, 'usos', membro.uid), { codigo });
+    lote.update(doc(db, 'clubes', clube.id), {
+      [`membros.${membro.uid}`]: novo,
+      membrosUids: arrayUnion(membro.uid),
+    });
+    return lote.commit();
+  };
+
+  const conhecido = lerConvites()[clube.id];
+  if (conhecido) {
+    if (conhecido !== codigo) return { ok: false, erro: 'Código de convite inválido.' };
+    substituirLocal(atualizado);
+    sincronizar(gravarRemoto);
+    return { ok: true, clube: atualizado };
+  }
+
+  if (!isFirebaseConfigured || !membro.uid) return { ok: false, erro: 'Código de convite inválido.' };
+  try {
+    await comPrazo(gravarRemoto(), 8000);
+    guardarConvite(clube.id, codigo);
+    substituirLocal(atualizado);
+    return { ok: true, clube: atualizado };
+  } catch (e) {
+    const negado = (e as { code?: string })?.code === 'permission-denied';
+    return {
+      ok: false,
+      erro: negado ? 'Código de convite inválido.' : 'Não foi possível conferir o convite agora. Tente de novo.',
+    };
+  }
 }
 
 export async function sairDoClube(clube: Clube, uid: string): Promise<Clube> {
@@ -148,7 +243,7 @@ export function nomeDoMes(data = new Date()): string {
 }
 
 /** Rede lenta não pode travar a tela: desiste depois do prazo. */
-function comPrazo<T>(promessa: Promise<T>, ms = 5000): Promise<T> {
+export function comPrazo<T>(promessa: Promise<T>, ms = 5000): Promise<T> {
   return Promise.race([
     promessa,
     new Promise<T>((_, rejeitar) => setTimeout(() => rejeitar(new Error('prazo')), ms)),

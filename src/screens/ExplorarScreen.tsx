@@ -4,25 +4,20 @@ import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
 import CriarPostModal from '../components/CriarPostModal';
 import { FeedPosts, SkeletonPosts } from '../components/PostCard';
-import ClubesTab from './ClubesTab';
-import ClubeScreen from './ClubeScreen';
 import { carregarPosts } from '../lib/posts';
-import { clubesLocais } from '../lib/clubes';
-import type { Clube, FoodTweet, UserProfile } from '../types';
+import type { FoodTweet, UserProfile } from '../types';
 import MascotMessage from '../components/MascotMessage';
 import { Logo, btn } from '../components/ui';
 
-type AbaFeed = 'explorar' | 'seguindo' | 'clubes';
+type AbaFeed = 'explorar' | 'seguindo';
 
 const ABAS: { key: AbaFeed; label: string }[] = [
   { key: 'explorar', label: 'Explorar' },
   { key: 'seguindo', label: 'Seguindo' },
-  { key: 'clubes', label: 'Clubes' },
 ];
 
-// Mantém aba e clube abertos ao voltar de um lugar ou perfil
+// Mantém a aba ao voltar de um lugar ou perfil
 const SS_ABA = 'vimo_explorar_aba';
-const SS_CLUBE = 'vimo_explorar_clube';
 
 function lerSessao(chave: string): string | null {
   try {
@@ -45,7 +40,7 @@ interface ExplorarScreenProps {
   onAbrirPerfil: (uid: string) => void;
   onAbrirBusca?: () => void;
   onAbrirAvaliar?: () => void;
-  onMudarTab?: (tab: 'explorar' | 'descobrir' | 'amigos' | 'perfil') => void;
+  onMudarTab?: (tab: 'explorar' | 'descobrir' | 'comunidade' | 'perfil') => void;
   tema?: 'dark' | 'light';
   onToggleTema?: () => void;
 }
@@ -53,12 +48,7 @@ interface ExplorarScreenProps {
 export default function ExplorarScreen({ currentUser, onAbrirLugar, onAbrirPerfil }: ExplorarScreenProps) {
   const [abaAtiva, setAbaAtiva] = useState<AbaFeed>(() => {
     const salva = lerSessao(SS_ABA);
-    return salva === 'seguindo' || salva === 'clubes' ? salva : 'explorar';
-  });
-  const [clubeAberto, setClubeAberto] = useState<{ clube: Clube; posicao?: number } | null>(() => {
-    const id = lerSessao(SS_CLUBE);
-    const clube = id ? clubesLocais().find((c) => c.id === id) : undefined;
-    return clube ? { clube } : null;
+    return salva === 'seguindo' ? salva : 'explorar';
   });
   const [posts, setPosts] = useState<FoodTweet[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -67,7 +57,6 @@ export default function ExplorarScreen({ currentUser, onAbrirLugar, onAbrirPerfi
   const carregouRef = useRef<AbaFeed | null>(null);
 
   const carregar = (aba: AbaFeed) => {
-    if (aba === 'clubes') return;
     setCarregando(true);
     carregarPosts(currentUser.uid, 30)
       .then((lista) => setPosts(aba === 'seguindo' ? lista.filter((p) => p.isMutual) : lista))
@@ -82,37 +71,11 @@ export default function ExplorarScreen({ currentUser, onAbrirLugar, onAbrirPerfi
     carregar(abaAtiva);
   }, [abaAtiva, currentUser.uid]);
 
-  const abrirClube = (clube: Clube, posicao?: number) => {
-    gravarSessao(SS_CLUBE, clube.id);
-    setClubeAberto({ clube, posicao });
-    window.scrollTo({ top: 0 });
-  };
-
-  const fecharClube = () => {
-    gravarSessao(SS_CLUBE, null);
-    setClubeAberto(null);
-  };
-
   const handleNovoPost = () => {
     setMostrarCriarPost(false);
     carregouRef.current = null;
     carregar(abaAtiva);
   };
-
-  if (clubeAberto) {
-    return (
-      <ClubeScreen
-        key={clubeAberto.clube.id}
-        clube={clubeAberto.clube}
-        posicao={clubeAberto.posicao}
-        currentUser={currentUser}
-        onVoltar={fecharClube}
-        onAtualizado={(c) => setClubeAberto((prev) => (prev ? { ...prev, clube: c } : prev))}
-        onAbrirLugar={onAbrirLugar}
-        onAbrirPerfil={onAbrirPerfil}
-      />
-    );
-  }
 
   return (
     <div className="flex-1 w-full bg-bg text-ink min-h-screen pb-28">
@@ -148,9 +111,7 @@ export default function ExplorarScreen({ currentUser, onAbrirLugar, onAbrirPerfi
       </header>
 
       <main className="max-w-2xl mx-auto">
-        {abaAtiva === 'clubes' ? (
-          <ClubesTab currentUser={currentUser} onAbrirClube={abrirClube} />
-        ) : carregando ? (
+        {carregando ? (
           <SkeletonPosts />
         ) : posts.length === 0 ? (
           <MascotMessage
@@ -169,16 +130,14 @@ export default function ExplorarScreen({ currentUser, onAbrirLugar, onAbrirPerfi
         )}
       </main>
 
-      {abaAtiva !== 'clubes' && (
-        <button
-          type="button"
-          onClick={() => setMostrarCriarPost(true)}
-          aria-label="Nova publicação"
-          className="fixed bottom-24 right-4 z-40 w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform cursor-pointer"
-        >
-          <PenSquare size={22} strokeWidth={2} className="text-white" />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setMostrarCriarPost(true)}
+        aria-label="Nova publicação"
+        className="fixed bottom-24 right-4 z-40 w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform cursor-pointer"
+      >
+        <PenSquare size={22} strokeWidth={2} className="text-white" />
+      </button>
 
       {mostrarNotificacoes && (
         <NotificationsModal

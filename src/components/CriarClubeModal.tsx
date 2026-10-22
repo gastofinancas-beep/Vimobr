@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Globe, Lock } from 'lucide-react';
 import { criarClube } from '../lib/clubes';
 import type { Clube, UserProfile } from '../types';
 import { inputClass } from './ui';
@@ -15,6 +16,7 @@ export default function CriarClubeModal({
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [cidade, setCidade] = useState(currentUser.homeCityName ?? '');
+  const [privado, setPrivado] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
   const podeCriar = nome.trim().length >= 3 && !salvando;
@@ -29,7 +31,7 @@ export default function CriarClubeModal({
         handle: currentUser.handle,
         photo: currentUser.photoURL ?? '',
       },
-      { nome, descricao, cidade },
+      { nome, descricao, cidade, privado },
     );
     onCriado(clube);
   };
@@ -86,6 +88,31 @@ export default function CriarClubeModal({
             className={inputClass}
           />
         </label>
+
+        <fieldset>
+          <legend className="mb-1.5 block text-sm font-semibold text-ink">Quem pode entrar</legend>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { valor: false, Icon: Globe, titulo: 'Público', texto: 'Qualquer pessoa entra' },
+              { valor: true, Icon: Lock, titulo: 'Privado', texto: 'Só com código de convite' },
+            ].map(({ valor, Icon, titulo, texto }) => (
+              <button
+                key={titulo}
+                type="button"
+                onClick={() => setPrivado(valor)}
+                aria-pressed={privado === valor}
+                className={`flex flex-col items-start gap-1 rounded-xl p-3 text-left ring-1 transition-colors cursor-pointer ${
+                  privado === valor ? 'bg-primary/5 ring-2 ring-primary' : 'bg-s1 ring-line'
+                }`}
+              >
+                <Icon size={18} strokeWidth={2} className={privado === valor ? 'text-primary' : 'text-ink-2'} />
+                <span className="text-[14px] font-semibold text-ink">{titulo}</span>
+                <span className="text-[12px] text-muted leading-snug">{texto}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <div className="h-2" />
       </div>
 
       <div className="px-4 pt-2 pb-4 pb-safe shrink-0">

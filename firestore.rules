@@ -52,11 +52,49 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.criadorUid == request.auth.uid
         && request.resource.data.membrosUids == [request.auth.uid];
-      // entrar/sair: cada pessoa só mexe na própria vaga; o criador edita o resto
+      // entrar/sair: cada pessoa só mexe na própria vaga; o criador edita o resto.
+      // Clube privado: para entrar, a mesma gravação precisa registrar um uso válido do convite.
       allow update: if request.auth != null
         && (resource.data.criadorUid == request.auth.uid
-          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['membros', 'membrosUids'])
-            && request.resource.data.membros.diff(resource.data.membros).affectedKeys().hasOnly([request.auth.uid])));
+          || (somenteMinhaVaga() && (!entrando() || !resource.data.get('privado', false)
+            || existsAfter(/databases/$(database)/documents/clubeConvites/$(clubeId)/usos/$(request.auth.uid)))));
+      allow delete: if request.auth != null && resource.data.criadorUid == request.auth.uid;
+
+      function somenteMinhaVaga() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['membros', 'membrosUids'])
+          && request.resource.data.membros.diff(resource.data.membros).affectedKeys().hasOnly([request.auth.uid]);
+      }
+      function entrando() {
+        return !(request.auth.uid in resource.data.membrosUids)
+          && (request.auth.uid in request.resource.data.membrosUids);
+      }
+    }
+
+    // Código de convite dos clubes privados: só membros leem, só o criador grava
+    match /clubeConvites/{clubeId} {
+      allow read: if request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/clubes/$(clubeId)).data.membrosUids;
+      allow create, update: if request.auth != null
+        && get(/databases/$(database)/documents/clubes/$(clubeId)).data.criadorUid == request.auth.uid;
+
+      // Cada pessoa registra o código que usou; só é aceito se for o código certo
+      match /usos/{userId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null && request.auth.uid == userId
+          && request.resource.data.codigo == get(/databases/$(database)/documents/clubeConvites/$(clubeId)).data.codigo;
+      }
+    }
+
+    match /eventos/{eventoId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.criadorUid == request.auth.uid
+        && request.auth.uid in get(/databases/$(database)/documents/clubes/$(request.resource.data.clubeId)).data.membrosUids;
+      // confirmar presença: cada pessoa só mexe no próprio nome
+      allow update: if request.auth != null
+        && (resource.data.criadorUid == request.auth.uid
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmados', 'confirmadosUids'])
+            && request.resource.data.confirmados.diff(resource.data.confirmados).affectedKeys().hasOnly([request.auth.uid])));
       allow delete: if request.auth != null && resource.data.criadorUid == request.auth.uid;
     }
 

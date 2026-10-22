@@ -1,7 +1,7 @@
 import React from 'react';
 import { Compass, Telescope, Plus, Users, User } from 'lucide-react';
 
-export type TabKey = 'explorar' | 'descobrir' | 'amigos' | 'perfil';
+export type TabKey = 'explorar' | 'descobrir' | 'comunidade' | 'perfil';
 
 const tabClass = (ativa: boolean) =>
   `flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer min-h-11 relative ${
@@ -58,17 +58,17 @@ export default function Navigation({
           </button>
         </div>
 
-        {/* 4. Amigos */}
+        {/* 4. Comunidade */}
         <button
           type="button"
-          onClick={() => onMudarTab('amigos')}
-          aria-label="Aba Amigos"
-          aria-current={tabAtiva === 'amigos' ? 'page' : undefined}
-          className={tabClass(tabAtiva === 'amigos')}
+          onClick={() => onMudarTab('comunidade')}
+          aria-label="Aba Comunidade"
+          aria-current={tabAtiva === 'comunidade' ? 'page' : undefined}
+          className={tabClass(tabAtiva === 'comunidade')}
         >
-          {tabAtiva === 'amigos' && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-primary" />}
-          <Users size={24} strokeWidth={tabAtiva === 'amigos' ? 2.2 : 1.8} />
-          <span className="text-2xs font-semibold leading-none">Amigos</span>
+          {tabAtiva === 'comunidade' && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full bg-primary" />}
+          <Users size={24} strokeWidth={tabAtiva === 'comunidade' ? 2.2 : 1.8} />
+          <span className="text-2xs font-semibold leading-none">Comunidade</span>
         </button>
 
         {/* 5. Perfil */}

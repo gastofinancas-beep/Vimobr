@@ -24,7 +24,7 @@ interface DescobrirScreenProps {
   onAbrirPerfil: (uid: string) => void;
   onAbrirBusca: () => void;
   onAbrirAvaliar?: () => void;
-  onMudarTab?: (tab: 'explorar' | 'descobrir' | 'amigos' | 'perfil') => void;
+  onMudarTab?: (tab: 'explorar' | 'descobrir' | 'comunidade' | 'perfil') => void;
   tema?: 'dark' | 'light';
   onToggleTema?: () => void;
 }

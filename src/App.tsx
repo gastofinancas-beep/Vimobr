@@ -12,7 +12,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import LoginScreen from './screens/LoginScreen';
 import ExplorarScreen from './screens/ExplorarScreen';
 import DescobrirScreen from './screens/DescobrirScreen';
-import AmigosScreen from './screens/AmigosScreen';
+import ComunidadeScreen from './screens/ComunidadeScreen';
 import PerfilScreen from './screens/PerfilScreen';
 import PlaceDetailScreen from './screens/PlaceDetailScreen';
 import AvaliarModal from './screens/AvaliarModal';
@@ -311,16 +311,11 @@ export default function App() {
               />
             )}
 
-            {tabAtiva === 'amigos' && (
-              <AmigosScreen
+            {tabAtiva === 'comunidade' && (
+              <ComunidadeScreen
                 currentUser={currentUser}
                 onAbrirLugar={handleAbrirLugar}
                 onAbrirPerfil={handleAbrirPerfil}
-                onAbrirBusca={() => setMostrarBusca(true)}
-                onAbrirAvaliar={() => {
-                  setLugarParaAvaliar(null);
-                  setMostrarModalAvaliar(true);
-                }}
               />
             )}
 
