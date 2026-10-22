@@ -80,18 +80,14 @@ async function toDataUrl(file: File): Promise<string> {
   });
 }
 
-async function uploadFotoPost(uid: string, file: File): Promise<string> {
-  // Gera DataURL primeiro — persiste no localStorage se o upload remoto falhar
-  const dataUrl = await toDataUrl(file);
-
-  if (!isFirebaseConfigured) return dataUrl;
-
+async function uploadFotoParaStorage(uid: string, file: File): Promise<string | null> {
+  if (!isFirebaseConfigured) return null;
   try {
     const r = ref(storage, `posts/${uid}/${crypto.randomUUID()}.jpg`);
     await uploadBytes(r, file, { contentType: file.type });
     return await getDownloadURL(r);
   } catch {
-    return dataUrl;
+    return null;
   }
 }
 
@@ -117,19 +113,19 @@ export async function criarPost(
     ? Array.isArray(fotos) ? fotos : [fotos]
     : [];
 
-  const photoUrls: string[] = await Promise.all(
-    arquivos.map((f) => uploadFotoPost(autor.uid, f))
-  );
+  // Converte para DataURL localmente (rápido, sem rede)
+  const dataUrls: string[] = await Promise.all(arquivos.map((f) => toDataUrl(f)));
 
+  const postId = crypto.randomUUID();
   const post: FoodTweet = {
-    id: crypto.randomUUID(),
+    id: postId,
     uid: autor.uid,
     authorName: autor.name,
     authorHandle: autor.handle,
     authorPhoto: autor.photo,
     text: texto,
-    photoUrl: photoUrls[0],
-    photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
+    photoUrl: dataUrls[0],
+    photoUrls: dataUrls.length > 0 ? dataUrls : undefined,
     placeId,
     placeName,
     cityName,
@@ -140,19 +136,29 @@ export async function criarPost(
     commentsCount: 0,
   };
 
-  // Salvar localmente primeiro
+  // Salva localmente imediatamente (sem esperar rede)
   const local = getLocalPosts();
   local.unshift(post);
   saveLocalPosts(local);
 
+  // Upload para Firebase em background — não bloqueia o retorno
   if (isFirebaseConfigured) {
-    try {
-      const { id: _id, ...dados } = post;
-      const docRef = await addDoc(collection(db, 'posts'), dados);
-      const comId = { ...post, id: docRef.id };
-      saveLocalPosts(getLocalPosts().map((p) => (p.id === post.id ? comId : p)));
-      return comId;
-    } catch {}
+    Promise.all(arquivos.map((f) => uploadFotoParaStorage(autor.uid, f)))
+      .then(async (remoteUrls) => {
+        const urls = remoteUrls.filter(Boolean) as string[];
+        const postAtualizado = {
+          ...post,
+          photoUrl: urls[0] ?? post.photoUrl,
+          photoUrls: urls.length > 0 ? urls : post.photoUrls,
+        };
+        try {
+          const { id: _id, ...dados } = postAtualizado;
+          const docRef = await addDoc(collection(db, 'posts'), dados);
+          const comId = { ...postAtualizado, id: docRef.id };
+          saveLocalPosts(getLocalPosts().map((p) => (p.id === postId ? comId : p)));
+        } catch {}
+      })
+      .catch(() => {});
   }
 
   return post;

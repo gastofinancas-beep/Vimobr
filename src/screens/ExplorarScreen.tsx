@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Heart, MessageCircle, MapPin, PenSquare, MoreHorizontal, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, PenSquare, MoreHorizontal, Bookmark } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
 import CriarPostModal from '../components/CriarPostModal';
@@ -272,9 +272,9 @@ function PostCard({
         </button>
       </div>
 
-      {/* Carrossel de fotos */}
+      {/* Grid de fotos */}
       {(post.photoUrls?.length ?? 0) > 0 || post.photoUrl ? (
-        <Carrossel
+        <GridFotos
           fotos={post.photoUrls ?? (post.photoUrl ? [post.photoUrl] : [])}
           onDoubleClick={handleCurtir}
         />
@@ -343,76 +343,66 @@ function PostCard({
   );
 }
 
-function Carrossel({ fotos, onDoubleClick }: { fotos: string[]; onDoubleClick: () => void }) {
-  const [slide, setSlide] = useState(0);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const total = fotos.length;
+function GridFotos({ fotos, onDoubleClick }: { fotos: string[]; onDoubleClick: () => void }) {
+  const n = fotos.length;
+  if (n === 0) return null;
 
-  const irPara = (idx: number) => {
-    const clamped = Math.max(0, Math.min(total - 1, idx));
-    setSlide(clamped);
-    trackRef.current?.children[clamped]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-  };
+  if (n === 1) {
+    return (
+      <div className="w-full aspect-[4/3] overflow-hidden" onDoubleClick={onDoubleClick}>
+        <img src={fotos[0]} alt="" loading="lazy" className="w-full h-full object-cover" />
+      </div>
+    );
+  }
 
-  const handleScroll = () => {
-    const el = trackRef.current;
-    if (!el) return;
-    const idx = Math.round(el.scrollLeft / el.clientWidth);
-    setSlide(idx);
-  };
-
-  return (
-    <div className="relative w-full aspect-[4/3] bg-s2 overflow-hidden" onDoubleClick={onDoubleClick}>
-      {/* track */}
-      <div
-        ref={trackRef}
-        onScroll={handleScroll}
-        className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-none"
-        style={{ scrollbarWidth: 'none' }}
-      >
+  if (n === 2) {
+    return (
+      <div className="w-full flex gap-0.5 aspect-[4/3]" onDoubleClick={onDoubleClick}>
         {fotos.map((src, i) => (
-          <div key={i} className="shrink-0 w-full h-full snap-start">
+          <div key={i} className="flex-1 overflow-hidden">
             <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
           </div>
         ))}
       </div>
+    );
+  }
 
-      {/* setas */}
-      {total > 1 && slide > 0 && (
-        <button
-          type="button"
-          onClick={() => irPara(slide - 1)}
-          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center cursor-pointer"
-          aria-label="Foto anterior"
-        >
-          <ChevronLeft size={18} className="text-white" />
-        </button>
-      )}
-      {total > 1 && slide < total - 1 && (
-        <button
-          type="button"
-          onClick={() => irPara(slide + 1)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center cursor-pointer"
-          aria-label="Próxima foto"
-        >
-          <ChevronRight size={18} className="text-white" />
-        </button>
-      )}
-
-      {/* indicador */}
-      {total > 1 ? (
-        <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1">
-          {fotos.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => irPara(i)}
-              className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${i === slide ? 'bg-white w-3' : 'bg-white/50'}`}
-              aria-label={`Foto ${i + 1}`}
-            />
+  if (n === 3) {
+    return (
+      <div className="w-full flex gap-0.5 aspect-[4/3]" onDoubleClick={onDoubleClick}>
+        <div className="flex-1 overflow-hidden">
+          <img src={fotos[0]} alt="" loading="lazy" className="w-full h-full object-cover" />
+        </div>
+        <div className="flex-1 flex flex-col gap-0.5">
+          {fotos.slice(1).map((src, i) => (
+            <div key={i} className="flex-1 overflow-hidden">
+              <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+            </div>
           ))}
         </div>
-      ) : null}
+      </div>
+    );
+  }
+
+  // 4 ou 5 fotos: grade 2x2 + linha extra
+  return (
+    <div className="w-full" onDoubleClick={onDoubleClick}>
+      <div className="grid grid-cols-2 gap-0.5">
+        {fotos.slice(0, 4).map((src, i) => (
+          <div key={i} className="aspect-square overflow-hidden">
+            <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+          </div>
+        ))}
+      </div>
+      {n > 4 && (
+        <div className="grid grid-cols-3 gap-0.5 mt-0.5">
+          {fotos.slice(4).map((src, i) => (
+            <div key={i} className="aspect-square overflow-hidden">
+              <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
