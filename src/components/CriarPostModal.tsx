@@ -1,9 +1,11 @@
 import { useMemo, useRef, useState } from 'react';
-import { X, Camera, Image, Globe, Lock, Users, ChevronDown, MoreHorizontal, Shield } from 'lucide-react';
+import { X, Camera, Image, Globe, Lock, Users, ChevronDown, MapPin, Search, Shield, Star } from 'lucide-react';
 import { criarPost, type Visibilidade } from '../lib/posts';
 import { meusClubesLocais } from '../lib/clubes';
-import type { Clube, UserProfile } from '../types';
-import { Avatar } from './ui';
+import { sugerirLugares, type SugestaoLugar } from '../lib/eventos';
+import { reviewsLocaisDoUsuario } from '../lib/reviews';
+import type { Clube, Review, UserProfile } from '../types';
+import { Avatar, inputClass } from './ui';
 
 const OPCOES_VISIBILIDADE: { value: Exclude<Visibilidade, 'clube'>; label: string; descricao: string; Icon: typeof Globe }[] = [
   { value: 'publico', label: 'Público', descricao: 'Visível para todos', Icon: Globe },
@@ -31,6 +33,10 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado, club
   }, [currentUser.uid, clubeInicial]);
   const clubeSelecionado = meusClubes.find((c) => c.id === clubeId) ?? null;
   const [mostrarVisibilidade, setMostrarVisibilidade] = useState(false);
+  const [lugar, setLugar] = useState<(SugestaoLugar & { cidade?: string }) | null>(null);
+  const [mostrarLocal, setMostrarLocal] = useState(false);
+  const minhasIdas = useMemo(() => reviewsLocaisDoUsuario(currentUser.uid), [currentUser.uid]);
+  const temAvaliacao = !!lugar?.placeId && minhasIdas.some((r) => r.placeId === lugar.placeId);
   const [publicando, setPublicando] = useState(false);
   const inputGaleriaRef = useRef<HTMLInputElement>(null);
   const inputCameraRef = useRef<HTMLInputElement>(null);
@@ -76,6 +82,9 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado, club
             visibilidade === 'clube' && clubeSelecionado
               ? { id: clubeSelecionado.id, nome: clubeSelecionado.nome }
               : undefined,
+          placeId: lugar?.placeId,
+          placeName: lugar?.nome,
+          cityName: lugar?.cidade,
         },
       );
     } catch {
@@ -130,6 +139,31 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado, club
             )}
           </div>
 
+          {/* Local marcado */}
+          {lugar && (
+            <div className="px-4 pb-3">
+              <div className="flex items-center gap-2.5 rounded-xl bg-s1 px-3 py-2.5 ring-1 ring-line">
+                <MapPin size={17} strokeWidth={2} className="shrink-0 text-primary" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-semibold text-ink">{lugar.nome}</span>
+                  <span className="block truncate text-[12px] text-muted">
+                    {temAvaliacao
+                      ? 'Sua avaliação deste lugar vai aparecer no post'
+                      : lugar.endereco ?? lugar.cidade ?? 'Local do post'}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLugar(null)}
+                  aria-label="Remover local"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-s2 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Grid de fotos */}
           {previews.length > 0 && (
             <div className="px-4 pb-4 grid grid-cols-2 gap-1.5">
@@ -179,10 +213,12 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado, club
           </button>
           <button
             type="button"
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted"
-            aria-label="Mais opções"
+            onClick={() => setMostrarLocal(true)}
+            className={`h-10 flex items-center gap-1.5 rounded-full px-2.5 hover:bg-s2 transition-colors cursor-pointer ${lugar ? 'text-primary' : 'text-muted'}`}
+            aria-label="Adicionar local"
           >
-            <MoreHorizontal size={22} strokeWidth={1.8} />
+            <MapPin size={22} strokeWidth={1.8} />
+            <span className="text-[13px] font-medium">{lugar ? 'Trocar local' : 'Local'}</span>
           </button>
         </div>
 
@@ -207,6 +243,17 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado, club
           </button>
         </div>
       </div>
+
+      {mostrarLocal && (
+        <SeletorLocal
+          minhasIdas={minhasIdas}
+          onFechar={() => setMostrarLocal(false)}
+          onEscolher={(l) => {
+            setLugar(l);
+            setMostrarLocal(false);
+          }}
+        />
+      )}
 
       {/* Sheet de visibilidade */}
       {mostrarVisibilidade && (
@@ -288,6 +335,98 @@ function OpcaoVisibilidade({
         className={`w-5 h-5 rounded-full shrink-0 ${ativo ? 'border-[6px] border-primary' : 'border-2 border-line'}`}
         aria-hidden="true"
       />
+    </button>
+  );
+}
+
+/** Escolha do local do post: suas idas primeiro, depois lugares conhecidos pelo app (sem API paga). */
+function SeletorLocal({
+  minhasIdas,
+  onFechar,
+  onEscolher,
+}: {
+  minhasIdas: Review[];
+  onFechar: () => void;
+  onEscolher: (l: SugestaoLugar & { cidade?: string }) => void;
+}) {
+  const [busca, setBusca] = useState('');
+  const termo = busca.trim().toLowerCase();
+
+  const idas = useMemo(() => {
+    const vistos = new Set<string>();
+    return minhasIdas
+      .filter((r) => !vistos.has(r.placeId) && vistos.add(r.placeId))
+      .filter((r) => !termo || r.placeName.toLowerCase().includes(termo))
+      .slice(0, 6);
+  }, [minhasIdas, termo]);
+  const outros = useMemo(() => {
+    const avaliados = new Set(minhasIdas.map((r) => r.placeId));
+    return sugerirLugares(busca, 12).filter((l) => !l.placeId || !avaliados.has(l.placeId)).slice(0, 8);
+  }, [busca, minhasIdas]);
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/40" onClick={onFechar} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" aria-label="Adicionar local" className="fixed bottom-0 left-0 right-0 z-[70] flex max-h-[85vh] flex-col rounded-t-2xl bg-bg pb-safe">
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
+          <div className="h-1 w-10 rounded-full bg-line" />
+        </div>
+        <h2 className="px-5 pt-1 pb-3 text-[15px] font-semibold text-ink shrink-0">Onde foi?</h2>
+        <div className="relative px-5 pb-2 shrink-0">
+          <Search size={16} className="pointer-events-none absolute left-9 top-[22px] -translate-y-1/2 text-muted" />
+          <input
+            autoFocus
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Restaurante, café ou bar"
+            className={`${inputClass} h-11 pl-10`}
+          />
+        </div>
+        <div className="flex-1 overflow-y-auto pb-4">
+          {idas.length > 0 && (
+            <>
+              <p className="px-5 pt-3 pb-1 text-[12px] font-semibold uppercase tracking-wide text-muted">Suas idas</p>
+              {idas.map((r) => (
+                <ItemLocal
+                  key={r.placeId}
+                  titulo={r.placeName}
+                  subtitulo={r.cityName ? `${r.cityName} · com avaliação` : 'Com avaliação'}
+                  avaliado
+                  onClick={() => onEscolher({ placeId: r.placeId, nome: r.placeName, cidade: r.cityName || undefined })}
+                />
+              ))}
+            </>
+          )}
+          {outros.length > 0 && (
+            <>
+              <p className="px-5 pt-3 pb-1 text-[12px] font-semibold uppercase tracking-wide text-muted">Lugares</p>
+              {outros.map((l) => (
+                <ItemLocal key={l.placeId ?? l.nome} titulo={l.nome} subtitulo={l.endereco} onClick={() => onEscolher(l)} />
+              ))}
+            </>
+          )}
+          {termo.length >= 2 && (
+            <ItemLocal titulo={`Usar "${busca.trim()}"`} subtitulo="Sem ligação com um lugar do app" onClick={() => onEscolher({ nome: busca.trim() })} />
+          )}
+          {idas.length === 0 && outros.length === 0 && termo.length < 2 && (
+            <p className="px-5 py-4 text-sm text-muted">Digite o nome do lugar.</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ItemLocal({ titulo, subtitulo, avaliado = false, onClick }: { titulo: string; subtitulo?: string; avaliado?: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="flex w-full items-center gap-3 px-5 py-2.5 text-left hover:bg-s2 transition-colors cursor-pointer">
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${avaliado ? 'bg-primary/10 text-primary' : 'bg-s2 text-ink-2'}`}>
+        {avaliado ? <Star size={16} strokeWidth={2} /> : <MapPin size={16} strokeWidth={2} />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14px] font-medium text-ink">{titulo}</span>
+        {subtitulo && <span className="block truncate text-[12px] text-muted">{subtitulo}</span>}
+      </span>
     </button>
   );
 }

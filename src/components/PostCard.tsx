@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Heart, MessageCircle, MapPin, MoreHorizontal, Bookmark, Lock, Users, Shield } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Heart, MessageCircle, MapPin, Lock, Users, Shield, Star } from 'lucide-react';
+import AvaliacaoSheet from './AvaliacaoSheet';
 import ComentariosModal from './ComentariosModal';
 import { curtirPost } from '../lib/posts';
-import type { FoodTweet, UserProfile } from '../types';
+import { buscarAvaliacaoDoPost } from '../lib/reviews';
+import type { FoodTweet, Review, UserProfile } from '../types';
 import { Avatar } from './ui';
 
 function tempoRelativo(createdAt: number): string {
@@ -10,10 +12,11 @@ function tempoRelativo(createdAt: number): string {
   const diffH = Math.floor(diffMin / 60);
   const diffD = Math.floor(diffH / 24);
   if (diffMin < 1) return 'agora';
-  if (diffMin < 60) return `${diffMin}min`;
-  if (diffH < 24) return `${diffH}h`;
-  if (diffD < 7) return `${diffD}d`;
-  return new Date(createdAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+  if (diffMin < 60) return `${diffMin} min atrás`;
+  if (diffH < 24) return `${diffH} h atrás`;
+  if (diffD === 1) return 'ontem';
+  if (diffD < 7) return `${diffD} dias atrás`;
+  return new Date(createdAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '');
 }
 
 /** Lista de posts com curtidas e comentários já ligados. */
@@ -92,7 +95,17 @@ export function PostCard({
   mostrarVisibilidade?: boolean;
 }) {
   const [curtidoAnimando, setCurtidoAnimando] = useState(false);
-  const [salvo, setSalvo] = useState(false);
+  const [avaliacao, setAvaliacao] = useState<Review | null>(null);
+  const [vendoAvaliacao, setVendoAvaliacao] = useState(false);
+
+  useEffect(() => {
+    if (!post.placeId) return;
+    let ativo = true;
+    buscarAvaliacaoDoPost(post.uid, post.placeId).then((r) => ativo && setAvaliacao(r));
+    return () => {
+      ativo = false;
+    };
+  }, [post.uid, post.placeId]);
 
   const handleCurtir = () => {
     setCurtidoAnimando(true);
@@ -113,147 +126,119 @@ export function PostCard({
   const fotos = post.photoUrls ?? (post.photoUrl ? [post.photoUrl] : []);
 
   return (
-    <article className="border-b border-line">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <button
-          type="button"
-          onClick={() => onAbrirPerfil(post.uid)}
-          aria-label={`Ver perfil de ${post.authorName}`}
-          className="shrink-0 cursor-pointer"
-        >
-          <Avatar src={post.authorPhoto} name={post.authorName} size={40} />
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2">
-            <button
-              type="button"
-              onClick={() => onAbrirPerfil(post.uid)}
-              className="font-semibold text-[14px] text-ink hover:underline cursor-pointer truncate"
-            >
-              {post.authorName}
-            </button>
-            <span className="text-[13px] text-muted shrink-0">{tempoRelativo(post.createdAt)}</span>
-          </div>
-          {selo && (
-            <span className="flex items-center gap-1 mt-0.5 text-[12px] text-muted">
-              <selo.Icon size={11} strokeWidth={2} className="shrink-0" />
-              <span className="truncate">{selo.texto}</span>
-            </span>
-          )}
-          {post.placeName && (
-            <button
-              type="button"
-              onClick={() => post.placeId && onAbrirLugar(post.placeId)}
-              className="flex items-center gap-1 mt-0.5 cursor-pointer group"
-            >
-              <MapPin size={11} strokeWidth={2} className="text-primary shrink-0" />
-              <span className="text-[12px] text-muted group-hover:text-primary transition-colors truncate">
-                {post.placeName}{post.cityName ? ` · ${post.cityName}` : ''}
-              </span>
-            </button>
-          )}
-        </div>
-        <button
-          type="button"
-          aria-label="Mais opções"
-          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-s2 transition-colors cursor-pointer text-muted"
-        >
-          <MoreHorizontal size={20} strokeWidth={1.8} />
-        </button>
-      </div>
+    <article className="flex gap-3 border-b border-line px-4 py-4">
+      <button
+        type="button"
+        onClick={() => onAbrirPerfil(post.uid)}
+        aria-label={`Ver perfil de ${post.authorName}`}
+        className="shrink-0 self-start cursor-pointer"
+      >
+        <Avatar src={post.authorPhoto} name={post.authorName} size={42} />
+      </button>
 
-      {fotos.length > 0 && <GridFotos fotos={fotos} onDoubleClick={handleCurtir} />}
-
-      <div className="flex items-center px-3 pt-2 pb-1">
-        <button
-          type="button"
-          onClick={handleCurtir}
-          aria-label={post.userLiked ? 'Descurtir' : 'Curtir'}
-          className={`flex items-center gap-1.5 px-1.5 py-2 cursor-pointer ${post.userLiked ? 'text-red-500' : 'text-ink'}`}
-        >
-          <Heart
-            size={24}
-            strokeWidth={1.6}
-            className={`transition-transform duration-150 ${curtidoAnimando ? 'scale-125' : 'scale-100'} ${post.userLiked ? 'fill-current' : ''}`}
-          />
-          {post.likesCount > 0 && <span className="font-medium text-[14px]">{post.likesCount}</span>}
-        </button>
-        <button
-          type="button"
-          onClick={onComentar}
-          aria-label="Comentar"
-          className="flex items-center gap-1.5 px-1.5 py-2 ml-3 text-ink cursor-pointer"
-        >
-          <MessageCircle size={24} strokeWidth={1.6} />
-          {post.commentsCount > 0 && <span className="font-medium text-[14px]">{post.commentsCount}</span>}
-        </button>
-        <button
-          type="button"
-          onClick={() => setSalvo((s) => !s)}
-          aria-label={salvo ? 'Remover dos salvos' : 'Salvar'}
-          className="ml-auto px-1.5 py-2 text-ink cursor-pointer"
-        >
-          <Bookmark size={24} strokeWidth={1.6} className={salvo ? 'fill-current' : ''} />
-        </button>
-      </div>
-
-      {post.text ? (
-        <p className="px-4 pb-4 text-[14px] text-ink leading-relaxed">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-1.5 min-w-0">
           <button
             type="button"
             onClick={() => onAbrirPerfil(post.uid)}
-            className="font-semibold hover:underline cursor-pointer mr-1"
+            className="truncate text-[15px] font-semibold text-ink hover:underline cursor-pointer"
           >
-            {post.authorName.split(' ')[0]}
+            {post.authorName}
           </button>
-          <TextoTruncado texto={post.text} />
-        </p>
-      ) : (
-        <div className="pb-3" />
+          <span className="shrink-0 text-[13px] text-muted">· {tempoRelativo(post.createdAt)}</span>
+        </div>
+
+        {post.placeName && (
+          <button
+            type="button"
+            disabled={!post.placeId}
+            onClick={() => post.placeId && onAbrirLugar(post.placeId)}
+            className="group mt-0.5 flex max-w-full items-center gap-1 text-left enabled:cursor-pointer"
+          >
+            <MapPin size={13} strokeWidth={2} className="shrink-0 text-primary" />
+            <span className="truncate text-[13px] font-medium text-ink-2 group-enabled:group-hover:text-primary transition-colors">
+              {post.placeName}
+              {post.cityName ? ` · ${post.cityName}` : ''}
+            </span>
+          </button>
+        )}
+
+        {selo && (
+          <span className="mt-0.5 flex items-center gap-1 text-[12px] text-muted">
+            <selo.Icon size={11} strokeWidth={2} className="shrink-0" />
+            <span className="truncate">{selo.texto}</span>
+          </span>
+        )}
+
+        {post.text && (
+          <p className="mt-1.5 text-[14px] leading-relaxed text-ink whitespace-pre-line break-words">
+            <TextoTruncado texto={post.text} />
+          </p>
+        )}
+
+        {fotos.length > 0 && <CarrosselFotos fotos={fotos} onDoubleClick={handleCurtir} />}
+
+        <div className="mt-2 -ml-1.5 flex items-center">
+          <button
+            type="button"
+            onClick={handleCurtir}
+            aria-label={post.userLiked ? 'Descurtir' : 'Curtir'}
+            className={`flex items-center gap-1.5 px-1.5 py-2 cursor-pointer ${post.userLiked ? 'text-red-500' : 'text-ink'}`}
+          >
+            <Heart
+              size={22}
+              strokeWidth={1.7}
+              className={`transition-transform duration-150 ${curtidoAnimando ? 'scale-125' : 'scale-100'} ${post.userLiked ? 'fill-current' : ''}`}
+            />
+            <span className="text-[14px] font-medium tabular">{post.likesCount}</span>
+          </button>
+          <button
+            type="button"
+            onClick={onComentar}
+            aria-label="Comentar"
+            className="ml-2 flex items-center gap-1.5 px-1.5 py-2 text-ink cursor-pointer"
+          >
+            <MessageCircle size={22} strokeWidth={1.7} />
+            <span className="text-[14px] font-medium tabular">{post.commentsCount}</span>
+          </button>
+          {avaliacao && (
+            <button
+              type="button"
+              onClick={() => setVendoAvaliacao(true)}
+              className="ml-auto flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-[13px] font-semibold text-white active:scale-[0.97] transition-transform cursor-pointer"
+            >
+              <Star size={14} strokeWidth={2.2} className="fill-current" />
+              Veja a avaliação
+            </button>
+          )}
+        </div>
+      </div>
+
+      {vendoAvaliacao && avaliacao && (
+        <AvaliacaoSheet review={avaliacao} onFechar={() => setVendoAvaliacao(false)} onAbrirLugar={onAbrirLugar} />
       )}
     </article>
   );
 }
 
-function GridFotos({ fotos, onDoubleClick }: { fotos: string[]; onDoubleClick: () => void }) {
-  const n = fotos.length;
-  const img = (src: string) => <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />;
-
-  if (n === 1) {
+/** Fotos em fileira horizontal com cantos arredondados; a próxima aparece pela metade. */
+function CarrosselFotos({ fotos, onDoubleClick }: { fotos: string[]; onDoubleClick: () => void }) {
+  if (fotos.length === 1) {
     return (
-      <div className="w-full aspect-[4/3] overflow-hidden" onDoubleClick={onDoubleClick}>
-        {img(fotos[0])}
+      <div className="mt-3 aspect-[4/5] max-h-[460px] w-full overflow-hidden rounded-2xl bg-s2" onDoubleClick={onDoubleClick}>
+        <img src={fotos[0]} alt="" loading="lazy" className="h-full w-full object-cover" />
       </div>
     );
   }
-
-  if (n === 2) {
-    return (
-      <div className="w-full flex gap-0.5 aspect-[4/3]" onDoubleClick={onDoubleClick}>
-        {fotos.map((src, i) => (
-          <div key={i} className="flex-1 overflow-hidden">{img(src)}</div>
-        ))}
-      </div>
-    );
-  }
-
-  if (n === 3) {
-    return (
-      <div className="w-full flex gap-0.5 aspect-[4/3]" onDoubleClick={onDoubleClick}>
-        <div className="flex-1 overflow-hidden">{img(fotos[0])}</div>
-        <div className="flex-1 flex flex-col gap-0.5">
-          {fotos.slice(1).map((src, i) => (
-            <div key={i} className="flex-1 overflow-hidden">{img(src)}</div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full grid grid-cols-2 gap-0.5" onDoubleClick={onDoubleClick}>
-      {fotos.slice(0, 4).map((src, i) => (
-        <div key={i} className="aspect-square overflow-hidden">{img(src)}</div>
+    <div
+      className="no-scrollbar -mr-4 mt-3 flex snap-x snap-mandatory gap-2 overflow-x-auto pr-4 scroll-pr-4"
+      onDoubleClick={onDoubleClick}
+    >
+      {fotos.map((src, i) => (
+        <div key={i} className="aspect-[4/5] w-[74%] shrink-0 snap-start overflow-hidden rounded-2xl bg-s2">
+          <img src={src} alt={`Foto ${i + 1} de ${fotos.length}`} loading="lazy" className="h-full w-full object-cover" />
+        </div>
       ))}
     </div>
   );
@@ -280,16 +265,17 @@ export function SkeletonPosts() {
   return (
     <div className="divide-y divide-line">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="py-4 animate-pulse space-y-3 px-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-s2 shrink-0" />
-            <div className="space-y-1.5 flex-1">
-              <div className="h-3.5 w-28 rounded bg-s2" />
-              <div className="h-3 w-20 rounded bg-s2" />
+        <div key={i} className="flex gap-3 px-4 py-4 animate-pulse">
+          <div className="h-[42px] w-[42px] shrink-0 rounded-full bg-s2" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-3.5 w-36 rounded bg-s2" />
+            <div className="h-3 w-24 rounded bg-s2" />
+            <div className="h-3.5 w-4/5 rounded bg-s2" />
+            <div className="flex gap-2 overflow-hidden pt-1">
+              <div className="aspect-[4/5] w-[74%] shrink-0 rounded-2xl bg-s2" />
+              <div className="aspect-[4/5] w-[74%] shrink-0 rounded-2xl bg-s2" />
             </div>
           </div>
-          <div className="aspect-square w-full rounded bg-s2" />
-          <div className="h-3.5 w-4/5 rounded bg-s2" />
         </div>
       ))}
     </div>

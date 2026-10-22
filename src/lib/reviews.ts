@@ -745,3 +745,27 @@ export async function carregarMelhoresAvaliados(limite = 5): Promise<LugarDestaq
     .sort((a, b) => b.mediaNotas - a.mediaNotas || b.totalAvaliacoes - a.totalAvaliacoes)
     .slice(0, limite);
 }
+
+// ---------- Avaliação ligada a um post (botão "Veja a avaliação" no feed)
+const cacheAvaliacaoDoPost = new Map<string, Promise<Review | null>>();
+
+/** Avaliação mais recente que o autor fez do lugar marcado no post. Local primeiro, depois Firestore. */
+export function buscarAvaliacaoDoPost(uid: string, placeId: string): Promise<Review | null> {
+  const chave = `${uid}|${placeId}`;
+  const local = getLocalReviews()
+    .filter((r) => r.uid === uid && r.placeId === placeId)
+    .sort((a, b) => b.visitedAt - a.visitedAt)[0];
+  if (local) return Promise.resolve(local);
+  const emCache = cacheAvaliacaoDoPost.get(chave);
+  if (emCache) return emCache;
+  if (!isFirebaseConfigured || !uid) return Promise.resolve(null);
+
+  const busca = Promise.race([
+    getDocs(query(collection(db, 'reviews'), where('uid', '==', uid), where('placeId', '==', placeId), limit(10))).then(
+      (snap) => snap.docs.map(toReview).sort((a, b) => b.visitedAt - a.visitedAt)[0] ?? null
+    ),
+    new Promise<null>((resolver) => setTimeout(() => resolver(null), 6000)),
+  ]).catch(() => null);
+  cacheAvaliacaoDoPost.set(chave, busca);
+  return busca;
+}
