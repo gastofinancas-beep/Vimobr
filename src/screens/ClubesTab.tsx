@@ -3,6 +3,7 @@ import { ChevronRight, Lock, Plus, Search } from 'lucide-react';
 import CriarClubeModal, { EscudoClube } from '../components/CriarClubeModal';
 import MascotMessage from '../components/MascotMessage';
 import { inputClass } from '../components/ui';
+import { Mascote } from '../components/Mascote';
 import { Posicao } from './ClubeScreen';
 import {
   carregarClubes,
@@ -105,12 +106,12 @@ export default function ClubesTab({
           <button
             type="button"
             onClick={() => abrir(destaque.clube)}
-            className="relative w-full overflow-hidden rounded-2xl bg-ink p-5 text-left text-bg cursor-pointer"
+            className="relative w-full overflow-hidden rounded-2xl bg-primary p-5 pr-28 text-left text-white cursor-pointer"
           >
-            <span className="absolute right-4 top-4 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-white">
+            <Mascote reacao="primeiro-lugar" tamanho={104} className="absolute right-1 top-1/2 -translate-y-1/2" />
+            <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-primary">
               1º em {nomeDoMes()}
             </span>
-            <EscudoClube nome={destaque.clube.nome} tamanho={44} />
             <span className="mt-3 block font-display text-[20px] font-bold leading-tight">{destaque.clube.nome}</span>
             {destaque.clube.descricao && (
               <span className="mt-1 block text-[14px] opacity-80 line-clamp-2">{destaque.clube.descricao}</span>
@@ -148,8 +149,13 @@ export default function ClubesTab({
       )}
 
       <section className="px-4 pt-6">
-        <h2 className="t-section mb-1 text-ink">Ranking de {nomeDoMes()}</h2>
-        <p className="mb-3 text-sm text-muted">Clubes com mais idas registradas pelos membros neste mês.</p>
+        <div className="mb-3 flex items-center gap-3">
+          <Mascote reacao="ranking" tamanho={52} />
+          <div className="min-w-0">
+            <h2 className="t-section text-ink">Ranking de {nomeDoMes()}</h2>
+            <p className="text-sm text-muted">Clubes com mais idas registradas pelos membros neste mês.</p>
+          </div>
+        </div>
         <ol className="divide-y divide-line rounded-2xl bg-s1 ring-1 ring-line">
           {ranking.map((p, i) => (
             <li key={p.clube.id}>

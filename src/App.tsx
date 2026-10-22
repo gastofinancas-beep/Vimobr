@@ -8,6 +8,8 @@ import { registrarServiceWorker, iniciarEscutaNotificacoes } from './lib/fcm';
 import { cachePlace } from './lib/places';
 import type { Place, UserProfile } from './types';
 import Navigation, { type TabKey } from './components/Navigation';
+import { definirMascotePro } from './components/Mascote';
+import { ehPro } from './lib/plano';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import LoginScreen from './screens/LoginScreen';
 import ExplorarScreen from './screens/ExplorarScreen';
@@ -96,6 +98,11 @@ export default function App() {
       return false;
     }
   });
+
+  // Assinante PRO vê o mascote todo preto em todo o app
+  useEffect(() => {
+    definirMascotePro(isAutenticado && ehPro(currentUser));
+  }, [isAutenticado, currentUser]);
 
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const [mostrarEditarPerfil, setMostrarEditarPerfil] = useState(false);

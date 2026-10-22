@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { OLHOS, PROPORCAO_PRINCIPAL } from '../lib/mascoteOlhos';
 
 /**
@@ -19,6 +19,10 @@ import { OLHOS, PROPORCAO_PRINCIPAL } from '../lib/mascoteOlhos';
  *  decepcionado / erro              → erro recuperável
  *  carregando                       → carregamento longo
  *  boas-vindas / tchau              → entrada e saída
+ *  focado / dormindo                → planejando / nada acontecendo
+ *  ranking / vitoria / trofeu / primeiro-lugar / desafio → clubes e competição
+ *
+ * Assinantes PRO veem o mascote todo preto (/public/mascote/pro/), com reações próprias.
  */
 export type Reacao =
   | 'curioso'
@@ -46,13 +50,21 @@ export type Reacao =
   | 'feliz'
   | 'rindo'
   | 'desconfiado'
-  | 'carregando';
+  | 'carregando'
+  | 'focado'
+  | 'dormindo'
+  | 'ranking'
+  | 'vitoria'
+  | 'trofeu'
+  | 'primeiro-lugar'
+  | 'desafio'
+  | 'pro';
 
 /** Reação → arquivo em /public/mascote/ (nomes da prancha oficial). */
 const ARQUIVO: Record<Reacao, string> = {
   curioso: 'curioso',
   confiante: 'confiante',
-  animado: 'empolgado',
+  animado: 'animado',
   pensativo: 'pensativo',
   surpreso: 'surpreso',
   tranquilo: 'neutro',
@@ -76,14 +88,87 @@ const ARQUIVO: Record<Reacao, string> = {
   rindo: 'rindo',
   desconfiado: 'desconfiado',
   carregando: 'carregando',
+  focado: 'focado',
+  dormindo: 'dormindo',
+  ranking: 'confiante',
+  vitoria: 'celebrando',
+  trofeu: 'impressionado',
+  'primeiro-lugar': 'celebrando',
+  desafio: 'confiante',
+  pro: 'confiante',
 };
 
-export const urlMascote = (r: Reacao) => `/mascote/${ARQUIVO[r]}.png`;
+/** Reação → arquivo do mascote PRO (todo preto) em /public/mascote/pro/. */
+const ARQUIVO_PRO: Record<Reacao, string> = {
+  curioso: 'pensativo',
+  confiante: 'confiante',
+  animado: 'celebrando',
+  pensativo: 'pensativo',
+  surpreso: 'surpreso',
+  tranquilo: 'descansando',
+  comemorando: 'celebrando',
+  degustando: 'aprovado',
+  apaixonado: 'apaixonado',
+  explorando: 'explorando',
+  registrando: 'novo-lugar',
+  avaliando: 'aprovado',
+  compartilhando: 'debochado',
+  salvando: 'novo-lugar',
+  socializando: 'rivalidade',
+  impressionado: 'orgulhoso',
+  decepcionado: 'perdeu-por-pouco',
+  sucesso: 'aprovado',
+  erro: 'bravo',
+  'boas-vindas': 'pro',
+  tchau: 'to-on',
+  buscando: 'focado',
+  feliz: 'risada',
+  rindo: 'risada',
+  desconfiado: 'debochado',
+  carregando: 'determinado',
+  focado: 'focado',
+  dormindo: 'descansando',
+  ranking: 'ranking',
+  vitoria: 'vitoria',
+  trofeu: 'trofeu',
+  'primeiro-lugar': 'primeiro-lugar',
+  desafio: 'desafio',
+  pro: 'pro',
+};
+
+// Versão do mascote do usuário logado: o App liga quando a pessoa é PRO
+let mascotePro = false;
+const ouvintes = new Set<() => void>();
+
+export function definirMascotePro(ativo: boolean) {
+  if (ativo === mascotePro) return;
+  mascotePro = ativo;
+  ouvintes.forEach((f) => f());
+}
+
+function useMascotePro(): boolean {
+  return useSyncExternalStore(
+    (f) => {
+      ouvintes.add(f);
+      return () => ouvintes.delete(f);
+    },
+    () => mascotePro,
+    () => false,
+  );
+}
+
+const caminho = (r: Reacao, pro: boolean) => (pro ? `pro/${ARQUIVO_PRO[r]}` : ARQUIVO[r]);
+
+export const urlMascote = (r: Reacao, pro = mascotePro) => `/mascote/${caminho(r, pro)}.png`;
 
 export type MascoteAnimacao = 'flutuar' | 'respirar' | 'pular' | 'inclinar' | 'orgulho' | 'entrar' | 'nenhuma';
 
 /** Movimento padrão de cada reação: o gesto combina com o que o mascote "sente". */
 const MOVIMENTO: Partial<Record<Reacao, MascoteAnimacao>> = {
+  dormindo: 'respirar',
+  vitoria: 'pular',
+  'primeiro-lugar': 'orgulho',
+  trofeu: 'orgulho',
   tranquilo: 'respirar',
   comemorando: 'pular',
   sucesso: 'pular',
@@ -133,9 +218,12 @@ export function Mascote({
   tamanho = 72,
   animacao,
   piscar = true,
+  pro,
   className = '',
 }: {
   reacao: Reacao;
+  /** Força a versão PRO (true) ou a normal (false). Sem valor, segue o plano do usuário. */
+  pro?: boolean;
   /** Lado do quadro em px (os arquivos têm 224 px, nítidos até ~112). */
   tamanho?: number;
   animacao?: MascoteAnimacao;
@@ -143,8 +231,10 @@ export function Mascote({
   piscar?: boolean;
   className?: string;
 }) {
+  const proDoUsuario = useMascotePro();
+  const versaoPro = pro ?? proDoUsuario;
   const mov = animacao ?? MOVIMENTO[reacao] ?? 'flutuar';
-  const arquivo = ARQUIVO[reacao];
+  const arquivo = caminho(reacao, versaoPro);
   return (
     <span
       aria-hidden="true"
@@ -161,7 +251,7 @@ export function Mascote({
           draggable={false}
           className="h-full w-full select-none object-contain"
         />
-        <Palpebras arquivo={arquivo} estado={piscar ? 'piscando' : 'abertos'} />
+        {!versaoPro && <Palpebras arquivo={arquivo} estado={piscar ? 'piscando' : 'abertos'} />}
       </span>
     </span>
   );
@@ -184,7 +274,9 @@ export function MascoteHero({
   animacao?: MascoteAnimacao;
   className?: string;
 }) {
+  const pro = useMascotePro();
   const estado: EstadoOlhos = olhosFechados ? 'fechados' : piscar ? 'piscando' : 'abertos';
+  if (pro) return <Mascote reacao="pro" tamanho={tamanho} animacao={animacao} pro className={className} />;
   return (
     <span
       aria-hidden="true"

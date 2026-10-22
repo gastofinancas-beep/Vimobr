@@ -3,6 +3,7 @@ import { CalendarPlus } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
 import MascotMessage from '../components/MascotMessage';
+import { Mascote } from '../components/Mascote';
 import { CriarEventoModal, EventoCard } from '../components/Eventos';
 import { Spinner, btn } from '../components/ui';
 import ClubesTab from './ClubesTab';
@@ -189,7 +190,10 @@ function EventosTab({
 
       <h2 className="t-section mt-6 mb-3 text-ink">Próximos</h2>
       {proximos.length === 0 ? (
-        <p className="py-4 text-sm text-muted">Nenhum evento marcado nos seus clubes.</p>
+        <div className="flex flex-col items-center py-4 text-center">
+          <Mascote reacao="dormindo" tamanho={76} />
+          <p className="mt-2 text-sm text-muted">Nenhum evento marcado nos seus clubes.</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {proximos.map((e) => (

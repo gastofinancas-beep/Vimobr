@@ -81,7 +81,10 @@ Barra inferior fixa: Explorar, Descobrir, **+** central (nova avaliação), Comu
   em `import.meta.env.DEV`).
 - Ativar PRO de verdade = gravar `plano: 'pro'` no documento `users/{uid}` no Firestore. **Não
   existe cobrança/checkout ainda.**
-- Benefício implementado: vitrine de medalhas em destaque no perfil + selo "PRO" ao lado do nome.
+- Benefícios implementados: vitrine de medalhas em destaque no perfil, selo "PRO" ao lado do nome e
+  **mascote PRO** (gralha toda preta, 27 reações em `public/mascote/pro/`). O `App` chama
+  `definirMascotePro(ehPro(user))` e todo `<Mascote>` troca de arquivo sozinho (mapa `ARQUIVO_PRO`
+  em `Mascote.tsx`); `pro={true}` força a versão PRO (usado na `ProSheet` como vitrine).
   Quem não é PRO vê um card de oferta que abre `ProSheet` (folha com mascote, benefícios e botão
   "Quero ser PRO" que só registra interesse via `registrarInteressePro`, não cobra nada).
   Outros benefícios do PRO **ainda não foram decididos** — perguntar ao Pedro antes de supor.

@@ -9,6 +9,7 @@ import ConquistasTab from '../components/ConquistasTab';
 import NotificationsModal from '../components/NotificationsModal';
 import ProSheet from '../components/ProSheet';
 import { Medalha, SeloPro, rotuloNivel } from '../components/Medalha';
+import { Mascote } from '../components/Mascote';
 import { ehPro } from '../lib/plano';
 import { obterResumoConquistas } from '../lib/badges';
 import { Avatar, PlaceImage, Spinner, btn, card } from '../components/ui';
@@ -299,8 +300,9 @@ export default function PerfilScreen({
         {/* Medalhas: vitrine para assinantes PRO */}
         {pro ? (
           <section aria-labelledby="titulo-medalhas" className="mt-7">
-            <div className="mb-3 flex items-baseline justify-between px-4">
-              <h2 id="titulo-medalhas" className="t-section text-ink">
+            <div className="mb-3 flex items-center justify-between px-4">
+              <h2 id="titulo-medalhas" className="t-section flex items-center gap-2 text-ink">
+                <Mascote reacao="trofeu" tamanho={40} />
                 Medalhas <span className="font-medium text-muted tabular">{medalhas.length}</span>
               </h2>
               {isMeuPerfil && (

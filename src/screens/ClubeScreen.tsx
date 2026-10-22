@@ -5,6 +5,7 @@ import CriarPostModal from '../components/CriarPostModal';
 import { EscudoClube } from '../components/CriarClubeModal';
 import { FeedPosts, SkeletonPosts } from '../components/PostCard';
 import MascotMessage from '../components/MascotMessage';
+import { Mascote } from '../components/Mascote';
 import { Avatar, Spinner, inputClass } from '../components/ui';
 import { carregarEventos } from '../lib/eventos';
 import { carregarPostsDoClube } from '../lib/posts';
@@ -303,9 +304,10 @@ export default function ClubeScreen({
                 {eventos === null ? (
                   <Spinner label="Carregando eventos" />
                 ) : eventos.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted">
-                    Nenhum evento marcado. Escolha um lugar e chame o clube.
-                  </p>
+                  <div className="flex flex-col items-center py-4 text-center">
+                    <Mascote reacao="focado" tamanho={76} />
+                    <p className="mt-2 text-sm text-muted">Nenhum evento marcado. Escolha um lugar e chame o clube.</p>
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {[...eventos]
@@ -333,9 +335,22 @@ export default function ClubeScreen({
 
         {aba === 'ranking' && (
           <section className="px-4 pt-4">
-            <p className="mb-3 text-sm text-muted">
-              Quem mais registrou idas em {nomeDoMes()}. Cada avaliação conta como uma ida.
-            </p>
+            {(() => {
+              const lider = placar && placar[0]?.idas > 0 ? placar[0] : null;
+              const souLider = lider?.membro.uid === currentUser.uid;
+              return (
+                <div className="mb-4 flex items-center gap-3">
+                  <Mascote reacao={souLider ? 'primeiro-lugar' : lider ? 'desafio' : 'ranking'} tamanho={60} />
+                  <p className="min-w-0 text-sm text-muted">
+                    {souLider
+                      ? `Você lidera o clube em ${nomeDoMes()}.`
+                      : lider
+                      ? `${lider.membro.name.split(' ')[0]} lidera em ${nomeDoMes()}. Cada avaliação conta como uma ida.`
+                      : `Quem mais registrar idas em ${nomeDoMes()} lidera. Cada avaliação conta como uma ida.`}
+                  </p>
+                </div>
+              );
+            })()}
             {placar === null ? (
               <Spinner label="Carregando ranking" />
             ) : (

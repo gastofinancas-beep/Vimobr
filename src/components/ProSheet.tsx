@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Award, BadgeCheck, X, Zap } from 'lucide-react';
+import { Award, BadgeCheck, Crown, X, Zap } from 'lucide-react';
 import { Mascote } from './Mascote';
 import { btn } from './ui';
 import { useEscape } from '../hooks/useEscape';
 import { jaDemonstrouInteresse, registrarInteressePro } from '../lib/plano';
 
 const BENEFICIOS = [
+  { Icon: Crown, titulo: 'Mascote PRO', texto: 'A gralha toda preta, com reações exclusivas, em todo o app.' },
   { Icon: Award, titulo: 'Medalhas no perfil', texto: 'Suas conquistas em destaque para quem visita seu perfil.' },
   { Icon: BadgeCheck, titulo: 'Selo PRO', texto: 'Um selo ao lado do seu nome em todo o app.' },
   { Icon: Zap, titulo: 'Novidades primeiro', texto: 'Os próximos recursos do PRO chegam antes para você.' },
@@ -33,15 +34,15 @@ export default function ProSheet({ uid, onClose }: { uid: string; onClose: () =>
         </div>
 
         <div className="flex flex-col items-center text-center">
-          <Mascote reacao="impressionado" tamanho={84} />
+          <Mascote reacao="pro" tamanho={112} pro />
           <p className="mt-3 inline-flex h-6 items-center rounded-full bg-primary px-2.5 text-xs font-bold tracking-wide text-white">
             VIMO PRO
           </p>
           <h2 id="titulo-pro" className="mt-3 font-display text-2xl font-bold tracking-tight text-ink">
-            Seu perfil com medalhas
+            Mascote exclusivo e medalhas
           </h2>
           <p className="mt-1.5 max-w-[300px] text-sm text-muted">
-            Mostre o que você já conquistou comendo por aí.
+            Quem assina o PRO troca a gralha azul pela versão toda preta.
           </p>
         </div>
 
