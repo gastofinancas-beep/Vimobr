@@ -12,7 +12,11 @@ import { Medalha, SeloPro, rotuloNivel } from '../components/Medalha';
 import { ehPro } from '../lib/plano';
 import { obterResumoConquistas } from '../lib/badges';
 import { Avatar, PlaceImage, Spinner, btn, card } from '../components/ui';
-import type { Place, Review, UserProfile } from '../types';
+import { FeedPosts } from '../components/PostCard';
+import MascotMessage from '../components/MascotMessage';
+import { carregarPostsDoUsuario } from '../lib/posts';
+import { meusClubesLocais } from '../lib/clubes';
+import type { FoodTweet, Place, Review, UserProfile } from '../types';
 
 interface PerfilScreenProps {
   uid: string;
@@ -30,9 +34,10 @@ interface PerfilScreenProps {
   onAbrirTutorial?: () => void;
 }
 
-type PerfilTab = 'diario' | 'paladar' | 'conquistas';
+type PerfilTab = 'posts' | 'diario' | 'paladar' | 'conquistas';
 
 const ABAS: { key: PerfilTab; label: string; soDono?: boolean }[] = [
+  { key: 'posts', label: 'Posts' },
   { key: 'diario', label: 'Diário' },
   { key: 'paladar', label: 'Paladar' },
   { key: 'conquistas', label: 'Conquistas', soDono: true },
@@ -55,8 +60,10 @@ export default function PerfilScreen({
 }: PerfilScreenProps) {
   const isMeuPerfil = uid === currentUser.uid;
 
-  const [aba, setAba] = useState<PerfilTab>('diario');
+  const [aba, setAba] = useState<PerfilTab>('posts');
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [posts, setPosts] = useState<FoodTweet[]>([]);
+  const [carregandoPosts, setCarregandoPosts] = useState(true);
   const [carregando, setCarregando] = useState(true);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
   const [mostrarPro, setMostrarPro] = useState(false);
@@ -76,6 +83,11 @@ export default function PerfilScreen({
     setReviews(locais);
     setListas(obterListasUsuario(uid));
     setCarregando(locais.length === 0);
+    setCarregandoPosts(true);
+    carregarPostsDoUsuario(uid, currentUser.uid, meusClubesLocais(currentUser.uid).map((c) => c.id))
+      .then((p) => ativo && setPosts(p))
+      .catch(() => ativo && setPosts([]))
+      .finally(() => ativo && setCarregandoPosts(false));
     carregarReviewsDoUsuario(uid)
       .then((r) => {
         if (!ativo) return;
@@ -399,7 +411,30 @@ export default function PerfilScreen({
           ))}
         </div>
 
-        <main className="px-4 pt-4">
+        {aba === 'posts' && (
+          <section aria-label="Posts" className="pt-1">
+            {carregandoPosts ? (
+              <Spinner label="Carregando posts" />
+            ) : posts.length === 0 ? (
+              <MascotMessage
+                reaction="pensativo"
+                title={isMeuPerfil ? 'Você ainda não publicou' : 'Nenhuma publicação ainda'}
+                subtitle={isMeuPerfil ? 'Suas publicações do feed aparecem aqui.' : undefined}
+              />
+            ) : (
+              <FeedPosts
+                posts={posts}
+                setPosts={setPosts}
+                currentUser={currentUser}
+                onAbrirLugar={(id) => onAbrirLugar(id)}
+                onAbrirPerfil={(u) => (u !== uid ? onAbrirPerfil?.(u) : undefined)}
+                mostrarVisibilidade={isMeuPerfil}
+              />
+            )}
+          </section>
+        )}
+
+        <main className={`px-4 pt-4 ${aba === 'posts' ? 'hidden' : ''}`}>
           {carregando ? (
             <Spinner label="Carregando perfil" />
           ) : (

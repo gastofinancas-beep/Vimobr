@@ -1,12 +1,14 @@
 import {
   collection,
-  addDoc,
   getDocs,
   query,
   orderBy,
   limit,
+  where,
   doc,
+  setDoc,
   updateDoc,
+  addDoc,
   increment,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured, storage } from './firebase';
@@ -17,6 +19,8 @@ import type { FoodTweet, TweetComment } from '../types';
 const LS_POSTS_KEY = 'vimo_posts_v1';
 const LS_POST_LIKES_KEY = 'vimo_post_likes_v1';
 const LS_POST_COMMENTS_KEY = 'vimo_post_comments_v1';
+
+export type Visibilidade = NonNullable<FoodTweet['visibilidade']>;
 
 // ---------- localStorage helpers ----------
 
@@ -30,9 +34,17 @@ function getLocalPosts(): FoodTweet[] {
 }
 
 function saveLocalPosts(posts: FoodTweet[]) {
-  try {
-    localStorage.setItem(LS_POSTS_KEY, JSON.stringify(posts));
-  } catch {}
+  // Fotos em DataURL pesam: se o armazenamento do aparelho encher, descarta os posts mais antigos
+  let lista = posts;
+  while (lista.length > 0) {
+    try {
+      localStorage.setItem(LS_POSTS_KEY, JSON.stringify(lista));
+      return;
+    } catch {
+      if (lista.length === 1) return;
+      lista = lista.slice(0, -1);
+    }
+  }
 }
 
 function getPostLikes(uid: string): Set<string> {
@@ -69,9 +81,31 @@ function getLocalPostComments(postId: string): TweetComment[] {
   }
 }
 
-// ---------- Upload ----------
+/** Firestore recusa campos com valor undefined. */
+function semUndefined<T extends object>(obj: T): Partial<T> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
 
-async function toDataUrl(file: File): Promise<string> {
+function mesclar(locais: FoodTweet[], remotos: FoodTweet[]): FoodTweet[] {
+  const mapa = new Map<string, FoodTweet>();
+  for (const p of locais) mapa.set(p.id, p);
+  for (const p of remotos) mapa.set(p.id, p);
+  return [...mapa.values()].sort((a, b) => b.createdAt - a.createdAt);
+}
+
+function comEstadoDoUsuario(lista: FoodTweet[], meuUid: string): FoodTweet[] {
+  const curtidos = getPostLikes(meuUid);
+  const seguindo = new Set(seguindoLocais(meuUid));
+  return lista.map((p) => ({
+    ...p,
+    userLiked: curtidos.has(p.id),
+    isMutual: seguindo.has(p.uid),
+  }));
+}
+
+// ---------- Imagens ----------
+
+function lerArquivo(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -80,11 +114,36 @@ async function toDataUrl(file: File): Promise<string> {
   });
 }
 
-async function uploadFotoParaStorage(uid: string, file: File): Promise<string | null> {
-  if (!isFirebaseConfigured) return null;
+/** Reduz a foto para no máximo 1280px em JPEG — cabe no aparelho e sobe mais rápido. */
+async function comprimirImagem(file: File): Promise<{ dataUrl: string; blob: Blob }> {
+  const original = await lerArquivo(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Imagem inválida'));
+      el.src = original;
+    });
+    const MAX = 1280;
+    const escala = Math.min(1, MAX / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * escala);
+    canvas.height = Math.round(img.height * escala);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas indisponível');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+    return { dataUrl, blob: blob ?? file };
+  } catch {
+    return { dataUrl: original, blob: file };
+  }
+}
+
+async function uploadFotoParaStorage(uid: string, blob: Blob): Promise<string | null> {
   try {
     const r = ref(storage, `posts/${uid}/${crypto.randomUUID()}.jpg`);
-    await uploadBytes(r, file, { contentType: file.type });
+    await uploadBytes(r, blob, { contentType: 'image/jpeg' });
     return await getDownloadURL(r);
   } catch {
     return null;
@@ -100,90 +159,133 @@ export interface AutorPost {
   photo: string;
 }
 
-export async function criarPost(
-  autor: AutorPost,
-  texto: string,
-  fotos?: File | File[],
-  placeId?: string,
-  placeName?: string,
-  cityName?: string,
-  visibilidade: FoodTweet['visibilidade'] = 'publico',
-): Promise<FoodTweet> {
-  const arquivos = fotos
-    ? Array.isArray(fotos) ? fotos : [fotos]
-    : [];
+export interface NovoPost {
+  texto: string;
+  fotos?: File[];
+  visibilidade?: Visibilidade;
+  clube?: { id: string; nome: string };
+  placeId?: string;
+  placeName?: string;
+  cityName?: string;
+}
 
-  // Converte para DataURL localmente (rápido, sem rede)
-  const dataUrls: string[] = await Promise.all(arquivos.map((f) => toDataUrl(f)));
+export async function criarPost(autor: AutorPost, dados: NovoPost): Promise<FoodTweet> {
+  const arquivos = dados.fotos ?? [];
+  const imagens = await Promise.all(arquivos.map(comprimirImagem));
+  const dataUrls = imagens.map((i) => i.dataUrl);
+  const visibilidade: Visibilidade = dados.clube ? 'clube' : dados.visibilidade ?? 'publico';
 
-  const postId = crypto.randomUUID();
   const post: FoodTweet = {
-    id: postId,
+    id: crypto.randomUUID(),
     uid: autor.uid,
     authorName: autor.name,
     authorHandle: autor.handle,
     authorPhoto: autor.photo,
-    text: texto,
+    text: dados.texto,
     photoUrl: dataUrls[0],
     photoUrls: dataUrls.length > 0 ? dataUrls : undefined,
-    placeId,
-    placeName,
-    cityName,
+    placeId: dados.placeId,
+    placeName: dados.placeName,
+    cityName: dados.cityName,
     visibilidade,
+    clubeId: visibilidade === 'clube' ? dados.clube?.id : undefined,
+    clubeNome: visibilidade === 'clube' ? dados.clube?.nome : undefined,
     createdAt: Date.now(),
     likesCount: 0,
     repostsCount: 0,
     commentsCount: 0,
   };
 
-  // Salva localmente imediatamente (sem esperar rede)
-  const local = getLocalPosts();
-  local.unshift(post);
-  saveLocalPosts(local);
+  // Salva no aparelho na hora; a tela não espera a rede
+  saveLocalPosts([post, ...getLocalPosts()]);
 
-  // Upload para Firebase em background — não bloqueia o retorno
   if (isFirebaseConfigured) {
-    Promise.all(arquivos.map((f) => uploadFotoParaStorage(autor.uid, f)))
-      .then(async (remoteUrls) => {
-        const urls = remoteUrls.filter(Boolean) as string[];
-        const postAtualizado = {
-          ...post,
-          photoUrl: urls[0] ?? post.photoUrl,
-          photoUrls: urls.length > 0 ? urls : post.photoUrls,
-        };
-        try {
-          const { id: _id, ...dados } = postAtualizado;
-          const docRef = await addDoc(collection(db, 'posts'), dados);
-          const comId = { ...postAtualizado, id: docRef.id };
-          saveLocalPosts(getLocalPosts().map((p) => (p.id === postId ? comId : p)));
-        } catch {}
-      })
-      .catch(() => {});
+    void (async () => {
+      if (!autor.uid) return;
+      const remotas = await Promise.all(imagens.map((i) => uploadFotoParaStorage(autor.uid, i.blob)));
+      const urls = remotas.every(Boolean) ? (remotas as string[]) : [];
+      // Sem URL remota não sobe o post com DataURL (estoura o limite do documento)
+      if (arquivos.length > 0 && urls.length === 0) return;
+      const remoto: FoodTweet = {
+        ...post,
+        photoUrl: urls[0],
+        photoUrls: urls.length > 0 ? urls : undefined,
+      };
+      const { id, userLiked: _l, isMutual: _m, ...campos } = remoto;
+      try {
+        const destino =
+          visibilidade === 'privado'
+            ? doc(db, 'users', autor.uid, 'postsPrivados', id)
+            : doc(db, 'posts', id);
+        await setDoc(destino, semUndefined(campos));
+        saveLocalPosts(getLocalPosts().map((p) => (p.id === id ? remoto : p)));
+      } catch {}
+    })();
   }
 
   return post;
 }
 
-export async function carregarPosts(meuUid: string, limite = 30): Promise<FoodTweet[]> {
-  let lista = getLocalPosts();
+/** Regra de quem vê o quê no feed geral: clube e "só eu" ficam fora. */
+function visivelNoFeed(p: FoodTweet, meuUid: string, seguindo: Set<string>): boolean {
+  const v = p.visibilidade ?? 'publico';
+  if (v === 'publico') return true;
+  if (v === 'amigos') return p.uid === meuUid || seguindo.has(p.uid);
+  return false;
+}
 
+export async function carregarPosts(meuUid: string, limite = 30): Promise<FoodTweet[]> {
+  let remotos: FoodTweet[] = [];
   if (isFirebaseConfigured) {
     try {
-      const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(limite));
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        lista = snap.docs.map((d) => ({ id: d.id, ...d.data() } as FoodTweet));
-      }
+      const snap = await getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(limite)));
+      remotos = snap.docs.map((d) => ({ ...d.data(), id: d.id } as FoodTweet));
     } catch {}
   }
-
-  const curtidos = getPostLikes(meuUid);
   const seguindo = new Set(seguindoLocais(meuUid));
-  return lista.map((p) => ({
-    ...p,
-    userLiked: curtidos.has(p.id),
-    isMutual: seguindo.has(p.uid),
-  }));
+  const lista = mesclar(getLocalPosts(), remotos).filter((p) => visivelNoFeed(p, meuUid, seguindo));
+  return comEstadoDoUsuario(lista, meuUid);
+}
+
+/** Posts de uma pessoa, já filtrados pelo que quem está vendo pode ver. */
+export async function carregarPostsDoUsuario(
+  uid: string,
+  meuUid: string,
+  meusClubesIds: string[] = [],
+): Promise<FoodTweet[]> {
+  const ehDono = uid === meuUid;
+  let remotos: FoodTweet[] = [];
+  if (isFirebaseConfigured) {
+    try {
+      const consultas = [getDocs(query(collection(db, 'posts'), where('uid', '==', uid), limit(60)))];
+      if (ehDono) consultas.push(getDocs(query(collection(db, 'users', uid, 'postsPrivados'), limit(60))));
+      const snaps = await Promise.all(consultas);
+      remotos = snaps.flatMap((s) => s.docs.map((d) => ({ ...d.data(), id: d.id } as FoodTweet)));
+    } catch {}
+  }
+  const seguindo = new Set(seguindoLocais(meuUid));
+  const clubes = new Set(meusClubesIds);
+  const lista = mesclar(getLocalPosts().filter((p) => p.uid === uid), remotos).filter((p) => {
+    if (ehDono) return true;
+    const v = p.visibilidade ?? 'publico';
+    if (v === 'publico') return true;
+    if (v === 'amigos') return seguindo.has(uid);
+    if (v === 'clube') return !!p.clubeId && clubes.has(p.clubeId);
+    return false;
+  });
+  return comEstadoDoUsuario(lista, meuUid);
+}
+
+export async function carregarPostsDoClube(clubeId: string, meuUid: string): Promise<FoodTweet[]> {
+  let remotos: FoodTweet[] = [];
+  if (isFirebaseConfigured) {
+    try {
+      const snap = await getDocs(query(collection(db, 'posts'), where('clubeId', '==', clubeId), limit(60)));
+      remotos = snap.docs.map((d) => ({ ...d.data(), id: d.id } as FoodTweet));
+    } catch {}
+  }
+  const lista = mesclar(getLocalPosts().filter((p) => p.clubeId === clubeId), remotos);
+  return comEstadoDoUsuario(lista, meuUid);
 }
 
 export async function curtirPost(postId: string, uid: string): Promise<boolean> {
@@ -199,9 +301,7 @@ export async function curtirPost(postId: string, uid: string): Promise<boolean> 
 
   if (isFirebaseConfigured) {
     try {
-      await updateDoc(doc(db, 'posts', postId), {
-        likesCount: increment(curtiu ? 1 : -1),
-      });
+      updateDoc(doc(db, 'posts', postId), { likesCount: increment(curtiu ? 1 : -1) }).catch(() => {});
     } catch {}
   }
 
@@ -246,7 +346,6 @@ export async function comentarPost(
     createdAt: Date.now(),
   };
 
-  // Salvar localmente
   try {
     const raw = localStorage.getItem(LS_POST_COMMENTS_KEY);
     const mapa: Record<string, TweetComment[]> = raw ? JSON.parse(raw) : {};

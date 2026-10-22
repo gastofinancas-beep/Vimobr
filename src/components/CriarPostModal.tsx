@@ -1,12 +1,11 @@
-import { useRef, useState } from 'react';
-import { X, Camera, Image, Globe, Lock, Users, ChevronDown, MoreHorizontal } from 'lucide-react';
-import { criarPost } from '../lib/posts';
-import type { FoodTweet, UserProfile } from '../types';
+import { useMemo, useRef, useState } from 'react';
+import { X, Camera, Image, Globe, Lock, Users, ChevronDown, MoreHorizontal, Shield } from 'lucide-react';
+import { criarPost, type Visibilidade } from '../lib/posts';
+import { meusClubesLocais } from '../lib/clubes';
+import type { Clube, UserProfile } from '../types';
 import { Avatar } from './ui';
 
-type Visibilidade = NonNullable<FoodTweet['visibilidade']>;
-
-const OPCOES_VISIBILIDADE: { value: Visibilidade; label: string; descricao: string; Icon: typeof Globe }[] = [
+const OPCOES_VISIBILIDADE: { value: Exclude<Visibilidade, 'clube'>; label: string; descricao: string; Icon: typeof Globe }[] = [
   { value: 'publico', label: 'Público', descricao: 'Visível para todos', Icon: Globe },
   { value: 'amigos', label: 'Melhores amigos', descricao: 'Só quem você segue de volta', Icon: Users },
   { value: 'privado', label: 'Só eu', descricao: 'Somente você pode ver', Icon: Lock },
@@ -16,13 +15,21 @@ interface CriarPostModalProps {
   currentUser: UserProfile;
   onClose: () => void;
   onPublicado: () => void;
+  /** Abre já publicando só para este clube. */
+  clubeInicial?: Clube;
 }
 
-export default function CriarPostModal({ currentUser, onClose, onPublicado }: CriarPostModalProps) {
+export default function CriarPostModal({ currentUser, onClose, onPublicado, clubeInicial }: CriarPostModalProps) {
   const [texto, setTexto] = useState('');
   const [fotos, setFotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [visibilidade, setVisibilidade] = useState<Visibilidade>('publico');
+  const [visibilidade, setVisibilidade] = useState<Visibilidade>(clubeInicial ? 'clube' : 'publico');
+  const [clubeId, setClubeId] = useState<string | null>(clubeInicial?.id ?? null);
+  const meusClubes = useMemo(() => {
+    const lista = meusClubesLocais(currentUser.uid);
+    return clubeInicial && !lista.some((c) => c.id === clubeInicial.id) ? [clubeInicial, ...lista] : lista;
+  }, [currentUser.uid, clubeInicial]);
+  const clubeSelecionado = meusClubes.find((c) => c.id === clubeId) ?? null;
   const [mostrarVisibilidade, setMostrarVisibilidade] = useState(false);
   const [publicando, setPublicando] = useState(false);
   const inputGaleriaRef = useRef<HTMLInputElement>(null);
@@ -31,7 +38,10 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
   const podePubilcar = texto.trim().length > 0 || fotos.length > 0;
   const MAX_FOTOS = 4;
 
-  const opcaoAtual = OPCOES_VISIBILIDADE.find((o) => o.value === visibilidade)!;
+  const opcaoAtual =
+    visibilidade === 'clube' && clubeSelecionado
+      ? { label: clubeSelecionado.nome, Icon: Shield }
+      : OPCOES_VISIBILIDADE.find((o) => o.value === visibilidade) ?? OPCOES_VISIBILIDADE[0];
 
   const adicionarFotos = (arquivos: FileList | null) => {
     if (!arquivos) return;
@@ -58,12 +68,15 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
           handle: currentUser.handle,
           photo: currentUser.photoURL,
         },
-        texto.trim(),
-        fotos.length > 0 ? fotos : undefined,
-        undefined,
-        undefined,
-        undefined,
-        visibilidade,
+        {
+          texto: texto.trim(),
+          fotos,
+          visibilidade,
+          clube:
+            visibilidade === 'clube' && clubeSelecionado
+              ? { id: clubeSelecionado.id, nome: clubeSelecionado.nome }
+              : undefined,
+        },
       );
     } catch {
       // salvo localmente
@@ -208,29 +221,27 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
               <div className="w-10 h-1 rounded-full bg-line" />
             </div>
             <h2 className="font-semibold text-[15px] text-ink px-5 pb-3 pt-1">Quem pode ver?</h2>
-            <div className="divide-y divide-line">
+            <div className="max-h-[60vh] overflow-y-auto divide-y divide-line">
               {OPCOES_VISIBILIDADE.map(({ value, label, descricao, Icon }) => (
-                <button
+                <OpcaoVisibilidade
                   key={value}
-                  type="button"
-                  onClick={() => { setVisibilidade(value); setMostrarVisibilidade(false); }}
-                  className="w-full flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-s2 transition-colors text-left"
-                >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                    value === 'publico' ? 'bg-blue-100 text-primary' :
-                    value === 'amigos' ? 'bg-green-100 text-green-600' :
-                    'bg-s3 text-muted'
-                  }`}>
-                    <Icon size={20} strokeWidth={1.8} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[14px] text-ink">{label}</p>
-                    <p className="text-[12px] text-muted mt-0.5">{descricao}</p>
-                  </div>
-                  {visibilidade === value && (
-                    <div className="w-5 h-5 rounded-full border-[6px] border-primary shrink-0" />
-                  )}
-                </button>
+                  Icon={Icon}
+                  label={label}
+                  descricao={descricao}
+                  destaque={value === 'publico'}
+                  ativo={visibilidade === value}
+                  onClick={() => { setVisibilidade(value); setClubeId(null); setMostrarVisibilidade(false); }}
+                />
+              ))}
+              {meusClubes.map((c) => (
+                <OpcaoVisibilidade
+                  key={c.id}
+                  Icon={Shield}
+                  label={c.nome}
+                  descricao="Só membros do clube, no feed do clube"
+                  ativo={visibilidade === 'clube' && clubeId === c.id}
+                  onClick={() => { setVisibilidade('clube'); setClubeId(c.id); setMostrarVisibilidade(false); }}
+                />
               ))}
             </div>
             <div className="h-4" />
@@ -238,5 +249,45 @@ export default function CriarPostModal({ currentUser, onClose, onPublicado }: Cr
         </>
       )}
     </>
+  );
+}
+
+function OpcaoVisibilidade({
+  Icon,
+  label,
+  descricao,
+  ativo,
+  destaque = false,
+  onClick,
+}: {
+  Icon: typeof Globe;
+  label: string;
+  descricao: string;
+  ativo: boolean;
+  destaque?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-s2 transition-colors text-left"
+    >
+      <div
+        className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+          destaque ? 'bg-primary/10 text-primary' : 'bg-s2 text-ink'
+        }`}
+      >
+        <Icon size={20} strokeWidth={1.8} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-[14px] text-ink truncate">{label}</p>
+        <p className="text-[12px] text-muted mt-0.5">{descricao}</p>
+      </div>
+      <span
+        className={`w-5 h-5 rounded-full shrink-0 ${ativo ? 'border-[6px] border-primary' : 'border-2 border-line'}`}
+        aria-hidden="true"
+      />
+    </button>
   );
 }

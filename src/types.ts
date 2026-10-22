@@ -165,7 +165,9 @@ export interface FoodTweet {
   placeId?: string;
   placeName?: string;
   cityName?: string;
-  visibilidade?: 'publico' | 'amigos' | 'privado';
+  visibilidade?: 'publico' | 'amigos' | 'privado' | 'clube';
+  clubeId?: string;
+  clubeNome?: string;
   createdAt: number;
   likesCount: number;
   repostsCount: number;
@@ -173,6 +175,25 @@ export interface FoodTweet {
   userLiked?: boolean;
   userReposted?: boolean;
   isMutual?: boolean;
+}
+
+export interface ClubeMembro {
+  uid: string;
+  name: string;
+  handle: string;
+  photo: string;
+  entrouEm: number;
+}
+
+export interface Clube {
+  id: string;
+  nome: string;
+  descricao: string;
+  cidade?: string;
+  criadorUid: string;
+  membros: Record<string, ClubeMembro>;
+  membrosUids: string[];
+  createdAt: number;
 }
 
 export interface TweetComment {
