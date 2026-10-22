@@ -11,6 +11,7 @@ import Navigation, { type TabKey } from './components/Navigation';
 import { definirMascotePro } from './components/Mascote';
 import { ehPro } from './lib/plano';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { AvisoHost } from './components/Aviso';
 import LoginScreen from './screens/LoginScreen';
 import ExplorarScreen from './screens/ExplorarScreen';
 import DescobrirScreen from './screens/DescobrirScreen';
@@ -243,6 +244,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--ink)] flex flex-col antialiased font-sans">
       <OfflineIndicator />
+      <AvisoHost />
 
       {/* Roteamento e Telas Principais */}
       <main className="flex-1 flex flex-col">

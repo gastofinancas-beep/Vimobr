@@ -7,6 +7,7 @@ import {
   where,
   doc,
   setDoc,
+  deleteDoc,
   updateDoc,
   addDoc,
   increment,
@@ -19,6 +20,9 @@ import type { FoodTweet, TweetComment } from '../types';
 const LS_POSTS_KEY = 'vimo_posts_v1';
 const LS_POST_LIKES_KEY = 'vimo_post_likes_v1';
 const LS_POST_COMMENTS_KEY = 'vimo_post_comments_v1';
+// Apagados e arquivados neste aparelho valem antes da sincronização terminar
+const LS_POST_AJUSTES_KEY = 'vimo_post_ajustes_v1';
+type AjustePost = 'apagado' | 'privado' | 'publico';
 
 export type Visibilidade = NonNullable<FoodTweet['visibilidade']>;
 
@@ -86,11 +90,34 @@ function semUndefined<T extends object>(obj: T): Partial<T> {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
+function lerAjustes(): Record<string, AjustePost> {
+  try {
+    return JSON.parse(localStorage.getItem(LS_POST_AJUSTES_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function gravarAjuste(id: string, ajuste: AjustePost) {
+  try {
+    localStorage.setItem(LS_POST_AJUSTES_KEY, JSON.stringify({ ...lerAjustes(), [id]: ajuste }));
+  } catch {}
+}
+
 function mesclar(locais: FoodTweet[], remotos: FoodTweet[]): FoodTweet[] {
+  const ajustes = lerAjustes();
   const mapa = new Map<string, FoodTweet>();
   for (const p of locais) mapa.set(p.id, p);
   for (const p of remotos) mapa.set(p.id, p);
-  return [...mapa.values()].sort((a, b) => b.createdAt - a.createdAt);
+  return [...mapa.values()]
+    .filter((p) => ajustes[p.id] !== 'apagado')
+    .map((p) => {
+      const a = ajustes[p.id];
+      return a === 'privado' || a === 'publico'
+        ? { ...p, visibilidade: a, clubeId: undefined, clubeNome: undefined }
+        : p;
+    })
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 function comEstadoDoUsuario(lista: FoodTweet[], meuUid: string): FoodTweet[] {
@@ -375,4 +402,46 @@ export async function comentarPost(
   }
 
   return comentario;
+}
+
+// ---------- Apagar e arquivar (só o autor) ----------
+
+/** Fotos ainda em DataURL não sobem para o Firestore (limite de tamanho do documento). */
+const temFotoLocal = (p: FoodTweet) => (p.photoUrls ?? []).some((u) => u.startsWith('data:'));
+
+function camposRemotos(p: FoodTweet) {
+  const { id: _id, userLiked: _l, isMutual: _m, ...campos } = p;
+  return semUndefined(campos);
+}
+
+export function apagarPost(post: FoodTweet): void {
+  gravarAjuste(post.id, 'apagado');
+  saveLocalPosts(getLocalPosts().filter((p) => p.id !== post.id));
+  if (!isFirebaseConfigured || !post.uid) return;
+  void Promise.allSettled([
+    deleteDoc(doc(db, 'posts', post.id)),
+    deleteDoc(doc(db, 'users', post.uid, 'postsPrivados', post.id)),
+  ]);
+}
+
+/** Arquivar = deixar só para o autor. Desarquivar volta como público. */
+export function alterarArquivamento(post: FoodTweet, arquivar: boolean): FoodTweet {
+  const visibilidade: Visibilidade = arquivar ? 'privado' : 'publico';
+  const novo: FoodTweet = { ...post, visibilidade, clubeId: undefined, clubeNome: undefined };
+  gravarAjuste(post.id, visibilidade);
+  const locais = getLocalPosts();
+  if (locais.some((p) => p.id === post.id)) saveLocalPosts(locais.map((p) => (p.id === post.id ? { ...p, ...novo } : p)));
+
+  if (isFirebaseConfigured && post.uid && !temFotoLocal(novo)) {
+    const publico = doc(db, 'posts', post.id);
+    const privado = doc(db, 'users', post.uid, 'postsPrivados', post.id);
+    const [destino, origem] = arquivar ? [privado, publico] : [publico, privado];
+    void (async () => {
+      try {
+        await setDoc(destino, camposRemotos(novo));
+        await deleteDoc(origem).catch(() => {});
+      } catch {}
+    })();
+  }
+  return novo;
 }
