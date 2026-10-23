@@ -63,7 +63,8 @@ qualquer coisa nova.
   clube em `ClubeScreen` no formato Fitfolio: foto, "Você é membro", atalhos Membros / Ranking /
   Eventos / Regras, mini pódio, Host, Membros, Sobre e botão flutuante Convidar. Criar/editar
   clube (`CriarClubeModal`, engrenagem só para o criador): foto, local, descrição, privacidade,
-  sistema de pontuação e tags. Pontuação do ranking interno: Mais idas, Lugares diferentes ou Dias
+  sistema de pontuação e tags; na edição o criador também pode excluir o clube, e na lista de
+  Membros pode remover pessoas. Pontuação do ranking interno: Mais idas, Lugares diferentes ou Dias
   ativos (`PONTUACOES` em clubes.ts). Ranking em `RankingClubeScreen` (Mensal/Geral, pódio com o
   mascote, demais posições). O ranking entre clubes continua por idas no mês. Clube **não tem feed
   próprio**: post para o clube aparece no feed principal só para membros, com a tag do clube.

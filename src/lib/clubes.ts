@@ -2,6 +2,7 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -19,6 +20,16 @@ import type { Clube, ClubeMembro, PontuacaoClube, Review } from '../types';
 
 const LS_CLUBES_KEY = 'vimo_clubes_v1';
 const LS_CONVITES_KEY = 'vimo_clube_convites_v1';
+// Clubes excluídos neste aparelho não voltam pela sincronização
+const LS_EXCLUIDOS_KEY = 'vimo_clubes_excluidos_v1';
+
+function lerExcluidos(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(LS_EXCLUIDOS_KEY) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
 
 function lerConvites(): Record<string, string> {
   try {
@@ -45,8 +56,9 @@ export const normalizarCodigo = (c: string) => c.replace(/[^a-z0-9]/gi, '').toUp
 function lerLocais(): Clube[] {
   try {
     const raw = localStorage.getItem(LS_CLUBES_KEY);
-    const lista = raw ? JSON.parse(raw) : [];
-    return Array.isArray(lista) ? lista : [];
+    const lista: Clube[] = raw ? JSON.parse(raw) : [];
+    const excluidos = lerExcluidos();
+    return Array.isArray(lista) ? lista.filter((c) => !excluidos.has(c.id)) : [];
   } catch {
     return [];
   }
@@ -91,7 +103,8 @@ export async function carregarClubes(): Promise<Clube[]> {
   if (!isFirebaseConfigured) return locais;
   try {
     const snap = await comPrazo(getDocs(query(collection(db, 'clubes'), limit(200))));
-    const remotos = snap.docs.map((d) => ({ ...d.data(), id: d.id } as Clube));
+    const excluidos = lerExcluidos();
+    const remotos = snap.docs.map((d) => ({ ...d.data(), id: d.id } as Clube)).filter((c) => !excluidos.has(c.id));
     const mapa = new Map<string, Clube>();
     for (const c of locais) mapa.set(c.id, c);
     for (const c of remotos) mapa.set(c.id, c);
@@ -280,6 +293,35 @@ export async function entrarComConvite(
       erro: negado ? 'Código de convite inválido.' : 'Não foi possível conferir o convite agora. Tente de novo.',
     };
   }
+}
+
+/** Só o criador: remove uma pessoa do clube. */
+export async function removerMembro(clube: Clube, uid: string): Promise<Clube> {
+  if (uid === clube.criadorUid) return clube;
+  const membros = { ...clube.membros };
+  delete membros[uid];
+  const atualizado: Clube = { ...clube, membros, membrosUids: clube.membrosUids.filter((u) => u !== uid) };
+  substituirLocal(atualizado);
+  sincronizar(() =>
+    updateDoc(doc(db, 'clubes', clube.id), {
+      [`membros.${uid}`]: deleteField(),
+      membrosUids: arrayRemove(uid),
+    }),
+  );
+  return atualizado;
+}
+
+/** Só o criador: apaga o clube para todos. Os posts continuam com quem publicou. */
+export function excluirClube(clube: Clube): void {
+  try {
+    localStorage.setItem(LS_EXCLUIDOS_KEY, JSON.stringify([...lerExcluidos(), clube.id]));
+  } catch {}
+  salvarLocais(lerLocais().filter((c) => c.id !== clube.id));
+  sincronizar(async () => {
+    // o convite primeiro: a regra dele consulta o documento do clube
+    if (clube.privado) await deleteDoc(doc(db, 'clubeConvites', clube.id)).catch(() => {});
+    await deleteDoc(doc(db, 'clubes', clube.id));
+  });
 }
 
 export async function sairDoClube(clube: Clube, uid: string): Promise<Clube> {

@@ -74,7 +74,7 @@ service cloud.firestore {
     match /clubeConvites/{clubeId} {
       allow read: if request.auth != null
         && request.auth.uid in get(/databases/$(database)/documents/clubes/$(clubeId)).data.membrosUids;
-      allow create, update: if request.auth != null
+      allow create, update, delete: if request.auth != null
         && get(/databases/$(database)/documents/clubes/$(clubeId)).data.criadorUid == request.auth.uid;
 
       // Cada pessoa registra o código que usou; só é aceito se for o código certo

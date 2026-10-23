@@ -32,11 +32,14 @@ import {
   obterCodigoConvite,
   rankingDoClube,
   rankingLocalDoClube,
+  excluirClube,
+  removerMembro,
   sairDoClube,
   unidadePontos,
   type PlacarMembro,
 } from '../lib/clubes';
-import type { Clube, Evento, UserProfile } from '../types';
+import type { Clube, ClubeMembro, Evento, UserProfile } from '../types';
+import { mostrarAviso } from '../components/Aviso';
 
 type Vista = 'inicio' | 'ranking' | 'membros' | 'eventos';
 
@@ -44,6 +47,7 @@ export default function ClubeScreen({
   clube: clubeInicial,
   currentUser,
   onVoltar,
+  onExcluido,
   onAtualizado,
   onAbrirLugar,
   onAbrirPerfil,
@@ -52,6 +56,8 @@ export default function ClubeScreen({
   posicao?: number;
   currentUser: UserProfile;
   onVoltar: () => void;
+  /** Chamado depois que o criador exclui o clube. */
+  onExcluido?: () => void;
   onAtualizado: (clube: Clube) => void;
   onAbrirLugar: (id: string) => void;
   onAbrirPerfil: (uid: string) => void;
@@ -62,6 +68,7 @@ export default function ClubeScreen({
   const [editando, setEditando] = useState(false);
   const [vendoRegras, setVendoRegras] = useState(false);
   const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  const [removendo, setRemovendo] = useState<ClubeMembro | null>(null);
   const [eventos, setEventos] = useState<Evento[] | null>(null);
   const [criandoEvento, setCriandoEvento] = useState(false);
   const [pedindoConvite, setPedindoConvite] = useState(false);
@@ -187,6 +194,12 @@ export default function ClubeScreen({
           currentUser={currentUser}
           clube={clube}
           onClose={() => setEditando(false)}
+          onExcluir={() => {
+            excluirClube(clube);
+            setEditando(false);
+            mostrarAviso('Clube excluído');
+            (onExcluido ?? onVoltar)();
+          }}
           onCriado={(c) => {
             setEditando(false);
             atualizar(c);
@@ -311,6 +324,37 @@ export default function ClubeScreen({
         </Folha>
       )}
 
+      {removendo && (
+        <Folha onFechar={() => setRemovendo(null)}>
+          <h2 className="font-semibold text-[16px] text-ink">Remover {removendo.name} do clube?</h2>
+          <p className="mt-1 text-sm text-muted">
+            As idas dessa pessoa deixam de contar no ranking.
+            {clube.privado ? ' Para voltar, ela precisa do código de convite.' : ' Como o clube é público, ela pode entrar de novo.'}
+          </p>
+          <div className="mt-5 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setRemovendo(null)}
+              className="flex-1 h-11 rounded-full bg-s2 text-ink text-sm font-semibold cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const alvo = removendo;
+                setRemovendo(null);
+                atualizar(await removerMembro(clube, alvo.uid));
+                mostrarAviso(`${alvo.name.split(' ')[0] || 'Membro'} removido do clube`);
+              }}
+              className="flex-1 h-11 rounded-full bg-danger text-white text-sm font-semibold cursor-pointer"
+            >
+              Remover
+            </button>
+          </div>
+        </Folha>
+      )}
+
       {confirmandoSaida && (
         <Folha onFechar={() => setConfirmandoSaida(false)}>
           <h2 className="font-semibold text-[16px] text-ink">Sair de {clube.nome}?</h2>
@@ -356,11 +400,11 @@ export default function ClubeScreen({
           {vista === 'membros' ? (
             <ul className="divide-y divide-line">
               {membrosOrdenados.map((m) => (
-                <li key={m.uid}>
+                <li key={m.uid} className="flex items-center pr-4">
                   <button
                     type="button"
                     onClick={() => onAbrirPerfil(m.uid)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-s2 transition-colors cursor-pointer"
+                    className="min-w-0 flex-1 flex items-center gap-3 px-4 py-3 text-left hover:bg-s2 transition-colors cursor-pointer"
                   >
                     <Avatar src={m.photo} name={m.name} size={44} />
                     <span className="min-w-0 flex-1">
@@ -371,6 +415,16 @@ export default function ClubeScreen({
                       <span className="shrink-0 rounded-full bg-s2 px-2.5 py-1 text-[11px] font-semibold text-ink-2">Host</span>
                     )}
                   </button>
+                  {criador && m.uid !== clube.criadorUid && (
+                    <button
+                      type="button"
+                      onClick={() => setRemovendo(m)}
+                      aria-label={`Remover ${m.name} do clube`}
+                      className="h-9 shrink-0 rounded-full px-3.5 text-[13px] font-semibold text-danger ring-1 ring-line hover:bg-s2 cursor-pointer"
+                    >
+                      Remover
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

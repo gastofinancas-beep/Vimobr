@@ -41,7 +41,7 @@ const ICONE_PONTUACAO: Record<PontuacaoClube, typeof Trophy> = {
   dias: CalendarCheck,
 };
 
-type Folha = 'local' | 'privacidade' | 'pontuacao' | 'tags' | null;
+type Folha = 'local' | 'privacidade' | 'pontuacao' | 'tags' | 'excluir' | null;
 
 /** Criar ou editar (quando recebe `clube`) um clube, no formato de ajustes em lista. */
 export default function CriarClubeModal({
@@ -49,11 +49,14 @@ export default function CriarClubeModal({
   clube,
   onClose,
   onCriado,
+  onExcluir,
 }: {
   currentUser: UserProfile;
   clube?: Clube;
   onClose: () => void;
   onCriado: (clube: Clube) => void;
+  /** Só na edição: apaga o clube para todos. */
+  onExcluir?: () => void;
 }) {
   const editando = !!clube;
   const [nome, setNome] = useState(clube?.nome ?? '');
@@ -195,7 +198,34 @@ export default function CriarClubeModal({
             onClick={() => setFolha('tags')}
           />
         </Grupo>
+
+        {editando && onExcluir && (
+          <button
+            type="button"
+            onClick={() => setFolha('excluir')}
+            className="mt-8 h-12 w-full rounded-2xl bg-s1 text-[15px] font-semibold text-danger ring-1 ring-line hover:bg-s2 cursor-pointer"
+          >
+            Excluir clube
+          </button>
+        )}
       </div>
+
+      {folha === 'excluir' && onExcluir && (
+        <FolhaOpcoes titulo={`Excluir ${clube?.nome ?? 'clube'}?`} onFechar={() => setFolha(null)}>
+          <p className="-mt-2 px-1 text-[14px] leading-relaxed text-muted">
+            O clube, o ranking e os eventos somem para todos os membros. Os posts continuam no perfil de quem
+            publicou. Não dá para desfazer.
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setFolha(null)} className="h-12 rounded-full bg-s2 text-[15px] font-semibold text-ink cursor-pointer">
+              Cancelar
+            </button>
+            <button type="button" onClick={onExcluir} className="h-12 rounded-full bg-danger text-[15px] font-semibold text-white cursor-pointer">
+              Excluir
+            </button>
+          </div>
+        </FolhaOpcoes>
+      )}
 
       {folha === 'local' && (
         <FolhaOpcoes titulo="Localização" onFechar={() => setFolha(null)}>
