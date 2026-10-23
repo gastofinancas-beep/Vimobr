@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { carregarBloqueados, desbloquear, type PessoaBloqueada } from '../lib/moderacao';
 import { AlertCircle, Camera, Check, X, MapPin, Loader, Trash2 } from 'lucide-react';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { deleteUser } from 'firebase/auth';
@@ -62,6 +63,11 @@ export default function EditarPerfilModal({
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
   const [textoConfirmacao, setTextoConfirmacao] = useState('');
   const [excluindo, setExcluindo] = useState(false);
+  const [bloqueados, setBloqueados] = useState<PessoaBloqueada[]>([]);
+
+  useEffect(() => {
+    carregarBloqueados(usuario.uid).then(setBloqueados).catch(() => {});
+  }, [usuario.uid]);
   const inputFotoRef = useRef<HTMLInputElement>(null);
 
   const handleHandleChange = (val: string) => {
@@ -298,6 +304,33 @@ export default function EditarPerfilModal({
               )}
             </div>
           </Field>
+
+          {/* Pessoas bloqueadas */}
+          <div className="px-4 py-5 border-b border-line">
+            <p className="text-sm font-semibold text-ink">Pessoas bloqueadas</p>
+            {bloqueados.length === 0 ? (
+              <p className="mt-1 text-[13px] text-muted">Ninguém bloqueado.</p>
+            ) : (
+              <ul className="mt-2 divide-y divide-line">
+                {bloqueados.map((b) => (
+                  <li key={b.uid} className="flex items-center gap-3 py-2.5">
+                    <Avatar src={b.photo} name={b.name} size={36} />
+                    <span className="min-w-0 flex-1 truncate text-[14px] text-ink">{b.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        desbloquear(usuario.uid, b.uid);
+                        setBloqueados((prev) => prev.filter((x) => x.uid !== b.uid));
+                      }}
+                      className="h-8 shrink-0 rounded-full px-3.5 text-[13px] font-semibold text-ink ring-1 ring-line hover:bg-s2 cursor-pointer"
+                    >
+                      Desbloquear
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           {/* Links legais */}
           <div className="flex gap-6 px-4 py-5 border-b border-line">

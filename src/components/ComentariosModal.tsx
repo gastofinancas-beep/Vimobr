@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, Send } from 'lucide-react';
 import { carregarComentariosPost, comentarPost } from '../lib/posts';
+import { idsBloqueados } from '../lib/moderacao';
 import type { TweetComment, UserProfile } from '../types';
 import { Avatar } from './ui';
 
@@ -26,7 +27,10 @@ export default function ComentariosModal({
 
   useEffect(() => {
     carregarComentariosPost(postId)
-      .then(setComentarios)
+      .then((lista) => {
+        const bloqueados = idsBloqueados(currentUser.uid);
+        setComentarios(lista.filter((c) => !bloqueados.has(c.uid)));
+      })
       .catch(() => setComentarios([]))
       .finally(() => setCarregando(false));
   }, [postId]);

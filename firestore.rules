@@ -13,6 +13,11 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
+      // Quem eu bloqueei: só eu leio e gravo
+      match /bloqueados/{alvoId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
       match /following/{targetId} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == userId;
@@ -27,6 +32,15 @@ service cloud.firestore {
       match /postsPrivados/{postId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // Denúncias: qualquer pessoa logada envia; só a equipe lê (pelo console)
+    match /denuncias/{denunciaId} {
+      allow create: if request.auth != null
+        && request.resource.data.denuncianteUid == request.auth.uid
+        && request.resource.data.motivo is string
+        && request.resource.data.tipo in ['post', 'usuario', 'avaliacao', 'comentario'];
+      allow read, update, delete: if false;
     }
 
     match /posts/{postId} {

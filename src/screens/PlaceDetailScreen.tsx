@@ -11,6 +11,7 @@ import {
   MessageCircle,
   X,
   CalendarCheck,
+  MoreHorizontal,
 } from 'lucide-react';
 import { getPlace, SAMPLE_PLACES, formatarPrecoLabel } from '../lib/places';
 import {
@@ -21,6 +22,8 @@ import {
   alternarCurtida,
   verificarCurtida,
 } from '../lib/reviews';
+import { semBloqueados } from '../lib/moderacao';
+import { MenuModeracao } from '../components/Moderacao';
 import StarRating from '../components/StarRating';
 import MascotMessage from '../components/MascotMessage';
 import { Avatar, PlaceImage, Spinner, btn, card } from '../components/ui';
@@ -57,6 +60,7 @@ export default function PlaceDetailScreen({
   const [place, setPlace] = useState<Place | null>(initialPlace || null);
   const [naoEncontrado, setNaoEncontrado] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [moderando, setModerando] = useState<Review | null>(null);
   const [carregando, setCarregando] = useState(!initialPlace);
   const [fotoModal, setFotoModal] = useState<string | null>(null);
   const [mostrarTodasFotos, setMostrarTodasFotos] = useState(false);
@@ -103,7 +107,7 @@ export default function PlaceDetailScreen({
       }
 
       try {
-        const filtradas = await carregarReviewsDoLugar(placeId);
+        const filtradas = semBloqueados(await carregarReviewsDoLugar(placeId), currentUser.uid);
         if (ativo) {
           setReviews(filtradas);
           const liked: Record<string, boolean> = {};
@@ -598,7 +602,19 @@ export default function PlaceDetailScreen({
                           {rev.authorHandle && <span className="block t-meta">{rev.authorHandle}</span>}
                         </span>
                       </button>
-                      <StarRating value={rev.overall || 0} size={13} />
+                      <span className="flex shrink-0 items-center gap-1">
+                        <StarRating value={rev.overall || 0} size={13} />
+                        {rev.uid !== currentUser.uid && (
+                          <button
+                            type="button"
+                            onClick={() => setModerando(rev)}
+                            aria-label={`Opções da avaliação de ${rev.authorName}`}
+                            className="-mr-2 flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-s2 cursor-pointer"
+                          >
+                            <MoreHorizontal size={18} strokeWidth={1.8} />
+                          </button>
+                        )}
+                      </span>
                     </header>
 
                     {rev.tituloReview && <h3 className="mt-3 text-base font-semibold text-ink">{rev.tituloReview}</h3>}
@@ -654,6 +670,18 @@ export default function PlaceDetailScreen({
       </main>
 
       {/* Foto em tela cheia */}
+      {moderando && (
+        <MenuModeracao
+          alvo={{ tipo: 'avaliacao', id: moderando.id, uid: moderando.uid, nome: moderando.authorName || 'Usuário', foto: moderando.authorPhoto }}
+          meuUid={currentUser.uid}
+          onFechar={() => setModerando(null)}
+          onFeito={(acao) => {
+            const alvo = moderando;
+            setReviews((prev) => prev.filter((r) => (acao === 'bloqueado' ? r.uid !== alvo.uid : r.id !== alvo.id)));
+          }}
+        />
+      )}
+
       {fotoModal && (
         <div
           onClick={() => setFotoModal(null)}

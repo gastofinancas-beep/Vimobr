@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, Moon, Sun, Plus, LogOut, HelpCircle, UserPlus, UserCheck } from 'lucide-react';
+import { Bell, Moon, Sun, Plus, LogOut, HelpCircle, UserPlus, UserCheck, MoreHorizontal } from 'lucide-react';
+import { MenuModeracao } from '../components/Moderacao';
+import { desbloquear, estaBloqueado, ouvirModeracao } from '../lib/moderacao';
 import { estaSeguindo, seguirUsuario, deixarDeSeguir, carregarPerfil } from '../lib/follows';
 import { carregarReviewsDoUsuario, obterListasUsuario, reviewsLocaisDoUsuario, excluirAvaliacao } from '../lib/reviews';
 import { photoUrl, SAMPLE_PLACES } from '../lib/places';
@@ -68,6 +70,19 @@ export default function PerfilScreen({
   const [carregando, setCarregando] = useState(true);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
   const [mostrarPro, setMostrarPro] = useState(false);
+  const [menuModeracao, setMenuModeracao] = useState(false);
+  const [bloqueado, setBloqueado] = useState(() => !isMeuPerfil && estaBloqueado(currentUser.uid, uid));
+
+  useEffect(() => {
+    if (isMeuPerfil) return;
+    const atualizar = () => {
+      const b = estaBloqueado(currentUser.uid, uid);
+      setBloqueado(b);
+      if (b) setSeguindo(false);
+    };
+    atualizar();
+    return ouvirModeracao(atualizar);
+  }, [uid, currentUser.uid, isMeuPerfil]);
   const [seguindo, setSeguindo] = useState(false);
   const [salvandoFollow, setSalvandoFollow] = useState(false);
   const [perfilRemoto, setPerfilRemoto] = useState<Partial<import('../types').UserProfile>>({});
@@ -277,12 +292,21 @@ export default function PerfilScreen({
             <button type="button" onClick={onEditarPerfil} className={`${btn.outline} mt-4 h-10 w-full`}>
               Editar perfil
             </button>
+          ) : bloqueado ? (
+            <button
+              type="button"
+              onClick={() => desbloquear(currentUser.uid, uid)}
+              className={`${btn.outline} mt-4 h-10 w-full`}
+            >
+              Desbloquear
+            </button>
           ) : (
+            <div className="mt-4 flex gap-2">
             <button
               type="button"
               onClick={toggleSeguir}
               disabled={salvandoFollow}
-              className={`mt-4 h-10 w-full flex items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer disabled:opacity-60 ${
+              className={`h-10 flex-1 flex items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer disabled:opacity-60 ${
                 seguindo
                   ? 'bg-s2 text-ink ring-1 ring-line hover:bg-danger/10 hover:text-danger hover:ring-danger'
                   : 'bg-primary text-on-primary hover:bg-primary-hover'
@@ -294,9 +318,26 @@ export default function PerfilScreen({
                 <><UserPlus size={16} strokeWidth={2} /><span>Seguir</span></>
               )}
             </button>
+            <button
+              type="button"
+              onClick={() => setMenuModeracao(true)}
+              aria-label={`Mais opções sobre ${usuario.displayName}`}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-s2 text-ink ring-1 ring-line hover:bg-s3 cursor-pointer"
+            >
+              <MoreHorizontal size={18} strokeWidth={1.8} />
+            </button>
+            </div>
           )}
         </div>
 
+        {bloqueado ? (
+          <div className="flex flex-col items-center px-6 py-12 text-center">
+            <Mascote reacao="tranquilo" tamanho={84} />
+            <p className="mt-3 text-[16px] font-semibold text-ink">Você bloqueou {usuario.displayName.split(' ')[0]}</p>
+            <p className="mt-1 max-w-[280px] text-sm text-muted">Os posts, as idas e os comentários dessa pessoa ficam escondidos para você.</p>
+          </div>
+        ) : (
+        <>
         {/* Medalhas: vitrine para assinantes PRO */}
         {pro ? (
           <section aria-labelledby="titulo-medalhas" className="mt-7">
@@ -460,7 +501,17 @@ export default function PerfilScreen({
             </>
           )}
         </main>
+        </>
+        )}
       </div>
+
+      {menuModeracao && (
+        <MenuModeracao
+          alvo={{ tipo: 'usuario', id: uid, uid, nome: usuario.displayName, foto: usuario.photoURL }}
+          meuUid={currentUser.uid}
+          onFechar={() => setMenuModeracao(false)}
+        />
+      )}
 
       {mostrarPro && <ProSheet uid={currentUser.uid} onClose={() => setMostrarPro(false)} />}
 

@@ -16,6 +16,7 @@ import { db, isFirebaseConfigured, storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { seguindoLocais } from './follows';
 import { meusClubesLocais } from './clubes';
+import { semBloqueados } from './moderacao';
 import type { FoodTweet, TweetComment } from '../types';
 
 const LS_POSTS_KEY = 'vimo_posts_v1';
@@ -124,7 +125,7 @@ function mesclar(locais: FoodTweet[], remotos: FoodTweet[]): FoodTweet[] {
 function comEstadoDoUsuario(lista: FoodTweet[], meuUid: string): FoodTweet[] {
   const curtidos = getPostLikes(meuUid);
   const seguindo = new Set(seguindoLocais(meuUid));
-  return lista.map((p) => ({
+  return semBloqueados(lista, meuUid).map((p) => ({
     ...p,
     userLiked: curtidos.has(p.id),
     isMutual: seguindo.has(p.uid),

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Heart, MessageCircle, MapPin, Lock, Users, Shield, Star, MoreHorizontal, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import AvaliacaoSheet from './AvaliacaoSheet';
 import { mostrarAviso } from './Aviso';
+import { MenuModeracao } from './Moderacao';
 import ComentariosModal from './ComentariosModal';
 import { alterarArquivamento, apagarPost, curtirPost } from '../lib/posts';
 import { buscarAvaliacaoDoPost } from '../lib/reviews';
@@ -44,6 +45,10 @@ export function FeedPosts({
     mostrarAviso('Post apagado');
   };
 
+  // Denunciado some só ele; bloqueado leva junto tudo da pessoa
+  const handleModerado = (post: FoodTweet, acao: 'denunciado' | 'bloqueado') =>
+    setPosts((prev) => prev.filter((p) => (acao === 'bloqueado' ? p.uid !== post.uid : p.id !== post.id)));
+
   const handleArquivar = (post: FoodTweet, arquivar: boolean) => {
     const novo = alterarArquivamento(post, arquivar);
     setPosts((prev) =>
@@ -80,6 +85,8 @@ export function FeedPosts({
             ehMeu={post.uid === currentUser.uid}
             onApagar={() => handleApagar(post)}
             onArquivar={(arquivar) => handleArquivar(post, arquivar)}
+            meuUid={currentUser.uid}
+            onModerado={(acao) => handleModerado(post, acao)}
           />
         ))}
       </div>
@@ -109,6 +116,8 @@ export function PostCard({
   ehMeu = false,
   onApagar,
   onArquivar,
+  meuUid,
+  onModerado,
 }: {
   post: FoodTweet;
   onCurtir: (id: string) => void;
@@ -119,6 +128,8 @@ export function PostCard({
   ehMeu?: boolean;
   onApagar?: () => void;
   onArquivar?: (arquivar: boolean) => void;
+  meuUid?: string;
+  onModerado?: (acao: 'denunciado' | 'bloqueado') => void;
 }) {
   const [curtidoAnimando, setCurtidoAnimando] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
@@ -206,7 +217,7 @@ export function PostCard({
           )}
         </div>
 
-        {ehMeu && (
+        {(ehMeu || meuUid !== undefined) && (
           <button
             type="button"
             onClick={() => setMenuAberto(true)}
@@ -265,7 +276,16 @@ export function PostCard({
         <AvaliacaoSheet review={avaliacao} onFechar={() => setVendoAvaliacao(false)} onAbrirLugar={onAbrirLugar} />
       )}
 
-      {menuAberto && (
+      {menuAberto && !ehMeu && meuUid !== undefined && (
+        <MenuModeracao
+          alvo={{ tipo: 'post', id: post.id, uid: post.uid, nome: post.authorName || 'Usuário', foto: post.authorPhoto }}
+          meuUid={meuUid}
+          onFechar={() => setMenuAberto(false)}
+          onFeito={onModerado}
+        />
+      )}
+
+      {menuAberto && ehMeu && (
         <MenuPost
           arquivado={v === 'privado'}
           onFechar={() => setMenuAberto(false)}
@@ -312,7 +332,7 @@ function MenuPost({
               <button type="button" onClick={() => setConfirmando(false)} className="h-11 rounded-full bg-s2 text-[14px] font-semibold text-ink cursor-pointer">
                 Cancelar
               </button>
-              <button type="button" onClick={onApagar} className="h-11 rounded-full bg-red-600 text-[14px] font-semibold text-white cursor-pointer">
+              <button type="button" onClick={onApagar} className="h-11 rounded-full bg-danger text-[14px] font-semibold text-white cursor-pointer">
                 Apagar
               </button>
             </div>
@@ -329,8 +349,8 @@ function MenuPost({
               </span>
             </button>
             <button type="button" onClick={() => setConfirmando(true)} className={item}>
-              <Trash2 size={20} strokeWidth={1.8} className="text-red-600" />
-              <span className="text-[15px] font-semibold text-red-600">Apagar post</span>
+              <Trash2 size={20} strokeWidth={1.8} className="text-danger" />
+              <span className="text-[15px] font-semibold text-danger">Apagar post</span>
             </button>
           </div>
         )}

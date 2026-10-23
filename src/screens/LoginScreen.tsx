@@ -405,6 +405,18 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
                 Entrar como convidado
               </button>
             )}
+
+            <p className="mt-3 text-center text-[12px] leading-snug text-muted">
+              Ao entrar, você concorda com os{' '}
+              <a href="/termos.html" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-ink">
+                Termos de Uso
+              </a>{' '}
+              e a{' '}
+              <a href="/privacidade.html" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-ink">
+                Política de Privacidade
+              </a>
+              .
+            </p>
           </div>
         </div>
       </div>

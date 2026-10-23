@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Heart, CornerDownRight, Share2 } from 'lucide-react';
 import type { Comment, Review, UserProfile } from '../types';
 import { carregarComentarios, comentar } from '../lib/reviews';
+import { idsBloqueados } from '../lib/moderacao';
 import { useEscape } from '../hooks/useEscape';
 
 import { Mascote } from './Mascote';
@@ -32,7 +33,8 @@ export default function CommentsSheet({
     (async () => {
       setCarregando(true);
       try {
-        const lista = await carregarComentarios(review.id);
+        const bloqueados = idsBloqueados(currentUser.uid);
+        const lista = (await carregarComentarios(review.id)).filter((c) => !bloqueados.has(c.uid));
         if (ativo) {
           // Mantém comentários enviados enquanto a lista ainda carregava
           setComentarios((prev) => {
