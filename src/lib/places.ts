@@ -470,6 +470,32 @@ function traduzirCozinha(cuisine: string): string {
   return COZINHAS[primeira] ?? '';
 }
 
+const sim = (v?: string) => (v === 'yes' ? true : v === 'no' ? false : undefined);
+
+function servicosOSM(tags: Record<string, string>): Place['servicos'] {
+  const s = {
+    noLocal: tags.amenity && tags.amenity !== 'fast_food' ? true : sim(tags.indoor_seating),
+    retirada: sim(tags.takeaway),
+    entrega: sim(tags.delivery),
+    areaExterna: sim(tags.outdoor_seating),
+    acessivel: sim(tags.wheelchair),
+  };
+  return Object.values(s).some((v) => v !== undefined) ? s : undefined;
+}
+
+function limparSite(url?: string): string | undefined {
+  if (!url) return undefined;
+  const u = url.trim().split(';')[0];
+  if (/instagram\.com/i.test(u)) return undefined;
+  return /^https?:\/\//i.test(u) ? u : `https://${u}`;
+}
+
+function limparInstagram(valor?: string): string | undefined {
+  if (!valor) return undefined;
+  const m = valor.trim().match(/(?:instagram\.com\/)?@?([A-Za-z0-9_.]{2,30})\/?$/);
+  return m ? m[1] : undefined;
+}
+
 export async function buscarRestaurantesReaisOSM(
   lat: number,
   lng: number,
@@ -550,6 +576,13 @@ export async function buscarRestaurantesReaisOSM(
           cityName: cidade || undefined,
           cityKey: cidade ? slug(cidade) : undefined,
           distanceKm: calcularDistanciaKm(lat, lng, pLat, pLng),
+          phone: tags.phone || tags['contact:phone'] || tags['contact:mobile'] || undefined,
+          horario: tags.opening_hours || undefined,
+          site: limparSite(tags.website || tags['contact:website']),
+          instagram: limparInstagram(
+            tags['contact:instagram'] || tags.instagram || ((tags.website || '').includes('instagram.com') ? tags.website : undefined),
+          ),
+          servicos: servicosOSM(tags),
         };
 
         lugaresReais.push(place);

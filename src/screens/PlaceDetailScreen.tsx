@@ -12,7 +12,14 @@ import {
   X,
   CalendarCheck,
   MoreHorizontal,
+  MapPin,
+  Clock,
+  Phone,
+  Globe,
+  Instagram,
+  ChevronDown,
 } from 'lucide-react';
+import { NOMES_DIAS, faixasDoDia, lerHorario, situacaoAgora } from '../lib/horario';
 import { getPlace, SAMPLE_PLACES, formatarPrecoLabel } from '../lib/places';
 import {
   alternarListaUsuario,
@@ -230,6 +237,13 @@ export default function PlaceDetailScreen({
     return Array.from(new Set(list));
   }, [place, reviews]);
 
+  // Sem foto do lugar, a capa é a foto mais recente das avaliações do Vimo
+  const capa = useMemo(() => {
+    if (place?.photoUrl) return place.photoUrl;
+    const comFoto = [...reviews].sort((a, b) => b.createdAt - a.createdAt).find((r) => r.photos?.length || r.peoplePhotos?.length);
+    return comFoto?.photos?.[0] ?? comFoto?.peoplePhotos?.[0];
+  }, [place, reviews]);
+
   const fotosExibidas = mostrarTodasFotos ? todasFotos : todasFotos.slice(0, 8);
 
   // Quantas vezes o usuário atual foi a este estabelecimento
@@ -299,7 +313,7 @@ export default function PlaceDetailScreen({
   const notaGoogle = place.googleRating ?? place.rating ?? null;
   const qtdGoogle = place.googleUserRatingCount ?? place.reviewsCount ?? 0;
   const tipo = place.tipo ? TIPOS[place.tipo] || place.tipo : null;
-  const meta = [tipo, place.bairro, place.priceLevel ? formatarPrecoLabel(place.priceLevel) : null].filter(Boolean);
+  const meta = [place.cuisine || tipo, place.bairro, place.priceLevel ? formatarPrecoLabel(place.priceLevel) : null].filter(Boolean);
   const maxHist = Math.max(1, ...histograma.map((h) => h.quantidade));
   const faltam = Math.max(0, 5 - reviews.length);
 
@@ -337,7 +351,7 @@ export default function PlaceDetailScreen({
       {/* Foto do lugar */}
       <div className="relative w-full max-w-4xl mx-auto">
         <PlaceImage
-          src={place.photoUrl}
+          src={capa}
           name={place.name}
           loading="eager"
           className="aspect-[4/3] sm:aspect-[21/9] max-h-[420px] w-full"
@@ -425,21 +439,8 @@ export default function PlaceDetailScreen({
           </div>
         </section>
 
-        {/* Como chegar */}
-        <section aria-labelledby="titulo-chegar" className={`mt-4 ${card} p-4`}>
-          <h2 id="titulo-chegar" className="t-section text-ink">Como chegar</h2>
-          <p className="mt-1 text-sm text-ink-2">{place.address || 'Endereço disponível no mapa'}</p>
-          <div className="mt-3 flex gap-2">
-            <a href={rotasUrl} target="_blank" rel="noopener noreferrer" className={`${btn.secondary} h-10 flex-1`}>
-              <NavigationIcon size={15} strokeWidth={2} />
-              Rotas
-            </a>
-            <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className={`${btn.secondary} h-10 flex-1`}>
-              <MapIcon size={15} strokeWidth={2} />
-              Ver no mapa
-            </a>
-          </div>
-        </section>
+        {/* Informações do lugar (endereço, horário, contato e serviços) */}
+        <InformacoesLugar place={place} rotasUrl={rotasUrl} mapaUrl={googleMapsUrl} />
 
         {/* Fotos */}
         {todasFotos.length > 0 && (
@@ -699,5 +700,114 @@ export default function PlaceDetailScreen({
         </div>
       )}
     </div>
+  );
+}
+
+function InformacoesLugar({ place, rotasUrl, mapaUrl }: { place: Place; rotasUrl: string; mapaUrl: string }) {
+  const [semanaAberta, setSemanaAberta] = useState(false);
+  const semana = lerHorario(place.horario);
+  const agora = semana ? situacaoAgora(semana) : null;
+  const hoje = new Date().getDay();
+  const serv = place.servicos;
+  const servicos = serv
+    ? [
+        serv.noLocal && 'Refeição no local',
+        serv.retirada && 'Retirada',
+        serv.entrega && 'Entrega',
+        serv.areaExterna && 'Área externa',
+        serv.acessivel && 'Acessível',
+      ].filter((x): x is string => !!x)
+    : [];
+  const telefone = place.phone?.split(';')[0].trim();
+  const linha = 'flex items-start gap-3 py-3';
+  const icone = 'mt-0.5 shrink-0 text-primary';
+
+  return (
+    <section aria-labelledby="titulo-info" className={`mt-4 ${card} px-4 pt-4 pb-1`}>
+      <h2 id="titulo-info" className="t-section text-ink">Informações</h2>
+      {servicos.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          {servicos.map((sv) => (
+            <li key={sv} className="flex items-center gap-1.5 text-[13px] text-ink-2">
+              <Check size={14} strokeWidth={2.4} className="text-primary" />
+              {sv}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-1 divide-y divide-line">
+        <div className={linha}>
+          <MapPin size={18} strokeWidth={1.9} className={icone} />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-ink">{place.address || 'Endereço disponível no mapa'}</p>
+            <div className="mt-2.5 flex gap-2">
+              <a href={rotasUrl} target="_blank" rel="noopener noreferrer" className={`${btn.secondary} h-9 flex-1 text-[13px]`}>
+                <NavigationIcon size={14} strokeWidth={2} />
+                Rotas
+              </a>
+              <a href={mapaUrl} target="_blank" rel="noopener noreferrer" className={`${btn.secondary} h-9 flex-1 text-[13px]`}>
+                <MapIcon size={14} strokeWidth={2} />
+                Ver no mapa
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {place.horario && (
+          <div className={linha}>
+            <Clock size={18} strokeWidth={1.9} className={icone} />
+            <div className="min-w-0 flex-1">
+              {semana && agora ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSemanaAberta((v) => !v)}
+                    aria-expanded={semanaAberta}
+                    className="flex w-full items-center gap-1.5 text-left text-sm cursor-pointer"
+                  >
+                    <span className={`font-semibold ${agora.aberto ? 'text-primary' : 'text-danger'}`}>
+                      {agora.aberto ? 'Aberto' : 'Fechado'}
+                    </span>
+                    <span className="text-ink-2">· {agora.texto}</span>
+                    <ChevronDown size={15} className={`ml-auto shrink-0 text-muted transition-transform ${semanaAberta ? 'rotate-180' : ''}`} />
+                  </button>
+                  {semanaAberta && (
+                    <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
+                      {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+                        <React.Fragment key={d}>
+                          <dt className={d === hoje ? 'font-semibold text-ink' : 'text-ink-2'}>{NOMES_DIAS[d]}</dt>
+                          <dd className={`tabular ${d === hoje ? 'font-semibold text-ink' : 'text-ink-2'}`}>{faixasDoDia(semana[d])}</dd>
+                        </React.Fragment>
+                      ))}
+                    </dl>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-ink-2">{place.horario}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {telefone && (
+          <a href={`tel:${telefone.replace(/[^\d+]/g, '')}`} className={`${linha} cursor-pointer`}>
+            <Phone size={18} strokeWidth={1.9} className={icone} />
+            <span className="text-sm text-ink">{telefone}</span>
+          </a>
+        )}
+        {place.site && (
+          <a href={place.site} target="_blank" rel="noopener noreferrer" className={`${linha} cursor-pointer`}>
+            <Globe size={18} strokeWidth={1.9} className={icone} />
+            <span className="min-w-0 truncate text-sm text-ink">{place.site.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>
+          </a>
+        )}
+        {place.instagram && (
+          <a href={`https://instagram.com/${place.instagram}`} target="_blank" rel="noopener noreferrer" className={`${linha} cursor-pointer`}>
+            <Instagram size={18} strokeWidth={1.9} className={icone} />
+            <span className="text-sm text-ink">@{place.instagram}</span>
+          </a>
+        )}
+      </div>
+    </section>
   );
 }

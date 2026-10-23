@@ -16,7 +16,7 @@ export interface CidadeAtual {
 export type FalhaLocalizacao = 'negado' | 'indisponivel' | 'tempo';
 
 const LS_CIDADE = 'vimo_cidade_v1';
-const LS_LUGARES_CIDADE = 'vimo_lugares_cidade_v1_';
+const LS_LUGARES_CIDADE = 'vimo_lugares_cidade_v2_';
 const VALIDADE_LUGARES = 24 * 60 * 60 * 1000;
 const NOMINATIM = 'https://nominatim.openstreetmap.org';
 

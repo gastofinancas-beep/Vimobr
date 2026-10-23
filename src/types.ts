@@ -65,6 +65,11 @@ export interface Place {
   category?: string;
   coverImage?: string;
   photos?: string[];
+  /** Horário no formato do OpenStreetMap, ex.: "Mo-Fr 10:00-22:00; Sa 10:00-14:00" */
+  horario?: string;
+  site?: string;
+  instagram?: string;
+  servicos?: { noLocal?: boolean; retirada?: boolean; entrega?: boolean; areaExterna?: boolean; acessivel?: boolean };
 }
 
 export type CompanionStatus = 'pendente' | 'aprovado_coautor' | 'aprovado_presenca' | 'recusado';

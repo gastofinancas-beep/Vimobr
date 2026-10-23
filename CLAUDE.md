@@ -61,7 +61,7 @@ qualquer coisa nova.
   celular (`navigator.geolocation`), acha a cidade pelo Nominatim e lista restaurantes, cafés,
   padarias e bares num raio de 5 km pelo Overpass (OpenStreetMap, grátis), do mais perto ao mais
   longe ("Perto de você"). Sem GPS: aviso com "Escolher cidade" e busca de cidades. Lógica em
-  `src/lib/localizacao.ts`; cidade em `vimo_cidade_v1`, lugares guardados por 24 h. Lugares do OSM
+  `src/lib/localizacao.ts`; cidade em `vimo_cidade_v1`, lugares guardados por 24 h. O detalhe do lugar mostra o bloco Informações (serviços, endereço, horário com aberto/fechado, telefone, site, Instagram) com o que o OSM tiver, e usa a foto mais recente das avaliações como capa quando o lugar não tem foto. Google Places foi avaliado em 2026-10-23: a cota grátis com nota e fotos é ~1.000 consultas/mês, não aguenta o app; fica para quando houver receita. Lugares do OSM
   não têm nota, preço nem foto inventados. **Nenhuma nota aparece na listagem** — só ao abrir o lugar.
   Ao gerar os projetos nativos (Capacitor), incluir `NSLocationWhenInUseUsageDescription` no iOS e
   `ACCESS_COARSE_LOCATION`/`ACCESS_FINE_LOCATION` no Android, senão o pedido de GPS não aparece.
