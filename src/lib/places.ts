@@ -1,21 +1,8 @@
 import type { Place } from '../types';
 
-const getApiKey = () => {
-  try {
-    const key =
-      (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) ||
-      (import.meta.env.VITE_GOOGLE_PLACES_KEY as string) ||
-      localStorage.getItem('vimo_gmaps_api_key') ||
-      '';
-    if (!key) {
-      console.warn('[Vimo] Chave do Google Maps não configurada. Defina VITE_GOOGLE_MAPS_API_KEY no .env');
-    }
-    return key;
-  } catch {
-    console.warn('[Vimo] Erro ao obter chave do Google Maps.');
-    return '';
-  }
-};
+// Google Places é pago por chamada. Decisão do produto: nenhuma API paga, então a chave
+// fica desligada mesmo que exista no .env, e as buscas usam OpenStreetMap e dados locais.
+const getApiKey = (): string => '';
 
 const BASE = 'https://places.googleapis.com/v1';
 const TIPOS = ['restaurant', 'cafe', 'bakery', 'bar'];

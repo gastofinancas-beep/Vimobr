@@ -4,10 +4,10 @@ import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
 import CriarPostModal from '../components/CriarPostModal';
 import { FeedPosts, SkeletonPosts } from '../components/PostCard';
-import { carregarPosts } from '../lib/posts';
+import { carregarPaginaPosts } from '../lib/posts';
 import type { FoodTweet, UserProfile } from '../types';
 import MascotMessage from '../components/MascotMessage';
-import { Logo, btn } from '../components/ui';
+import { Logo, Spinner, btn } from '../components/ui';
 
 type AbaFeed = 'explorar' | 'seguindo';
 
@@ -55,14 +55,74 @@ export default function ExplorarScreen({ currentUser, onAbrirLugar, onAbrirPerfi
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
   const [mostrarCriarPost, setMostrarCriarPost] = useState(false);
   const carregouRef = useRef<AbaFeed | null>(null);
+  const [cursor, setCursor] = useState<number | null>(null);
+  const [fim, setFim] = useState(false);
+  const [carregandoMais, setCarregandoMais] = useState(false);
+  const pedidoRef = useRef(0);
+  const sentinelaRef = useRef<HTMLDivElement>(null);
+
+  const filtrarAba = (aba: AbaFeed, lista: FoodTweet[]) => (aba === 'seguindo' ? lista.filter((p) => p.isMutual) : lista);
+
+  /**
+   * Busca páginas até ter algo novo para mostrar (em Seguindo uma página pode vir
+   * sem ninguém que a pessoa segue) ou até acabar.
+   */
+  const buscar = async (aba: AbaFeed, antesDe: number | null) => {
+    let novos: FoodTweet[] = [];
+    let c = antesDe;
+    let acabou = false;
+    for (let i = 0; i < 5 && novos.length < 5 && !acabou; i++) {
+      const pagina = await carregarPaginaPosts(currentUser.uid, c, 20);
+      novos = [...novos, ...filtrarAba(aba, pagina.posts)];
+      c = pagina.cursor ?? c;
+      acabou = pagina.fim;
+    }
+    return { novos, cursor: c, fim: acabou };
+  };
 
   const carregar = (aba: AbaFeed) => {
+    const pedido = ++pedidoRef.current;
     setCarregando(true);
-    carregarPosts(currentUser.uid, 30)
-      .then((lista) => setPosts(aba === 'seguindo' ? lista.filter((p) => p.isMutual) : lista))
-      .catch(() => setPosts([]))
-      .finally(() => setCarregando(false));
+    setFim(false);
+    buscar(aba, null)
+      .then((r) => {
+        if (pedido !== pedidoRef.current) return;
+        setPosts(r.novos);
+        setCursor(r.cursor);
+        setFim(r.fim);
+      })
+      .catch(() => pedido === pedidoRef.current && setPosts([]))
+      .finally(() => pedido === pedidoRef.current && setCarregando(false));
   };
+
+  const carregarMais = () => {
+    if (carregando || carregandoMais || fim || cursor === null) return;
+    const pedido = pedidoRef.current;
+    setCarregandoMais(true);
+    buscar(abaAtiva, cursor)
+      .then((r) => {
+        if (pedido !== pedidoRef.current) return;
+        setPosts((prev) => {
+          const ids = new Set(prev.map((p) => p.id));
+          return [...prev, ...r.novos.filter((p) => !ids.has(p.id))];
+        });
+        setCursor(r.cursor);
+        setFim(r.fim);
+      })
+      .catch(() => {})
+      .finally(() => setCarregandoMais(false));
+  };
+
+  // Chegou perto do fim da lista: pede a próxima página
+  const carregarMaisRef = useRef(carregarMais);
+  carregarMaisRef.current = carregarMais;
+  useEffect(() => {
+    const alvo = sentinelaRef.current;
+    if (!alvo) return;
+    const obs = new IntersectionObserver((e) => e[0]?.isIntersecting && carregarMaisRef.current(), { rootMargin: '600px 0px' });
+    obs.observe(alvo);
+    return () => obs.disconnect();
+  }, [carregando, posts.length > 0]);
 
   useEffect(() => {
     gravarSessao(SS_ABA, abaAtiva);
@@ -127,6 +187,15 @@ export default function ExplorarScreen({ currentUser, onAbrirLugar, onAbrirPerfi
             onAbrirLugar={onAbrirLugar}
             onAbrirPerfil={onAbrirPerfil}
           />
+        )}
+        {!carregando && posts.length > 0 && (
+          <div ref={sentinelaRef} className="flex justify-center py-8">
+            {carregandoMais ? (
+              <Spinner />
+            ) : fim ? (
+              <p className="text-[13px] text-muted">Você viu todas as publicações</p>
+            ) : null}
+          </div>
         )}
       </main>
 

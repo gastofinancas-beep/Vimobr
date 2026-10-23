@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
 import { autocomplete, getPlace, photoUrl, SAMPLE_PLACES } from '../lib/places';
-import { salvarAvaliacao } from '../lib/reviews';
+import { getLocalReviews, salvarAvaliacao } from '../lib/reviews';
+import { avisarUltrapassagens } from '../lib/clubes';
 import { buscarUsuariosParaMarcar } from '../lib/companions';
 import { obterCriteriosParaLugar } from '../lib/criteriosEstabelecimento';
 import { Mascote } from '../components/Mascote';
@@ -327,6 +328,15 @@ export default function AvaliarModal({
 
       setReviewIdPublicado(revId);
       setPublicado(true);
+
+      // Em segundo plano: avisa quem ficou para trás no ranking dos clubes
+      const nova = getLocalReviews().find((r) => r.id === revId);
+      if (nova) {
+        void avisarUltrapassagens(
+          { uid: currentUser.uid, name: currentUser.displayName, handle: currentUser.handle, photo: currentUser.photoURL || '' },
+          nova,
+        ).catch(() => {});
+      }
     } catch (err: any) {
       console.warn('Erro ao salvar avaliação:', err);
       setErroValidacao('Ocorreu um erro ao publicar sua ida. Tente novamente.');
@@ -345,7 +355,7 @@ export default function AvaliarModal({
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg px-6 text-center animate-in fade-in duration-300">
         <Mascote reacao="registrando" tamanho={140} animacao="respirar" className="mx-auto" />
         <h2 className="mt-6 t-title text-ink">Registrando sua avaliação...</h2>
-        <p className="mt-2 text-sm text-muted">Quase lá! Estamos salvando sua experiência.</p>
+        <p className="mt-2 text-sm text-muted">Salvando sua ida.</p>
       </div>
     );
   }
@@ -355,7 +365,7 @@ export default function AvaliarModal({
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg px-6 text-center animate-in fade-in duration-300">
         <Mascote reacao="comemorando" tamanho={160} animacao="pular" className="mx-auto" />
-        <h2 className="mt-6 t-title text-ink">Avaliação publicada! 🎉</h2>
+        <h2 className="mt-6 t-title text-ink">Avaliação publicada</h2>
         <p className="mt-2 text-sm text-muted max-w-[280px]">
           Sua experiência já está disponível para seus amigos.
         </p>
@@ -647,7 +657,7 @@ export default function AvaliarModal({
                   <Mascote reacao="animado" tamanho={64} />
                 </div>
                 <div className="bg-[var(--s1)] rounded-2xl px-4 py-2.5 shadow-sm border border-[var(--line)] text-sm font-semibold text-ink leading-snug self-end mb-2">
-                  Legal! Me conta como foi 📝
+                  Conta como foi
                   <div className="absolute" style={{ width: 0, height: 0, borderTop: '9px solid transparent', borderBottom: '9px solid transparent', borderRight: '9px solid var(--s1)', left: -9, top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
               </div>
@@ -747,7 +757,7 @@ export default function AvaliarModal({
               <div className="flex items-end gap-3 pt-1">
                 <Mascote reacao="apaixonado" tamanho={64} className="shrink-0" />
                 <div className="bg-[var(--s1)] rounded-2xl px-4 py-2.5 shadow-sm border border-[var(--line)] text-sm font-semibold text-ink leading-snug mb-2">
-                  Adoro ler suas experiências! 💙
+                  Fotos ajudam quem vai depois
                 </div>
               </div>
             </div>

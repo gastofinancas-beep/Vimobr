@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
-import { contarNaoLidas } from '../lib/notifications';
+import { contarNaoLidas, sincronizarNotificacoes } from '../lib/notifications';
 
 export default function NotificationBell({
   currentUserUid,
@@ -21,7 +21,19 @@ export default function NotificationBell({
     atualizar();
     const handleUpdate = () => atualizar();
     window.addEventListener('garfo:notifications_updated', handleUpdate);
-    return () => window.removeEventListener('garfo:notifications_updated', handleUpdate);
+
+    // Busca o que outras pessoas mandaram: ao abrir, a cada minuto e ao voltar para o app
+    const buscar = () => {
+      if (document.visibilityState === 'visible') void sincronizarNotificacoes(currentUserUid);
+    };
+    buscar();
+    const intervalo = window.setInterval(buscar, 60_000);
+    document.addEventListener('visibilitychange', buscar);
+    return () => {
+      window.removeEventListener('garfo:notifications_updated', handleUpdate);
+      window.clearInterval(intervalo);
+      document.removeEventListener('visibilitychange', buscar);
+    };
   }, [currentUserUid]);
 
   return (

@@ -264,18 +264,34 @@ function visivelNoFeed(p: FoodTweet, meuUid: string, seguindo: Set<string>, meus
   return false;
 }
 
-export async function carregarPosts(meuUid: string, limite = 30): Promise<FoodTweet[]> {
+export interface PaginaPosts {
+  posts: FoodTweet[];
+  /** createdAt do post mais antigo já lido; a próxima página começa antes dele */
+  cursor: number | null;
+  fim: boolean;
+}
+
+/** Uma página do feed, do mais novo para o mais antigo. Sem `antesDe`, é a primeira. */
+export async function carregarPaginaPosts(meuUid: string, antesDe: number | null = null, limite = 20): Promise<PaginaPosts> {
   let remotos: FoodTweet[] = [];
+  let fim = true;
   if (isFirebaseConfigured) {
     try {
-      const snap = await getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(limite)));
+      const filtros = antesDe ? [where('createdAt', '<', antesDe)] : [];
+      const snap = await getDocs(query(collection(db, 'posts'), ...filtros, orderBy('createdAt', 'desc'), limit(limite)));
       remotos = snap.docs.map((d) => ({ ...d.data(), id: d.id } as FoodTweet));
+      fim = snap.size < limite;
     } catch {}
   }
+  const cursor = remotos.length > 0 ? Math.min(...remotos.map((p) => p.createdAt)) : null;
+  // Posts do aparelho entram na mesma janela de tempo da página do servidor
+  const locais = getLocalPosts().filter(
+    (p) => (antesDe === null || p.createdAt < antesDe) && (fim || cursor === null || p.createdAt >= cursor),
+  );
   const seguindo = new Set(seguindoLocais(meuUid));
   const meusClubes = new Set(meusClubesLocais(meuUid).map((c) => c.id));
-  const lista = mesclar(getLocalPosts(), remotos).filter((p) => visivelNoFeed(p, meuUid, seguindo, meusClubes));
-  return comEstadoDoUsuario(lista, meuUid);
+  const lista = mesclar(locais, remotos).filter((p) => visivelNoFeed(p, meuUid, seguindo, meusClubes));
+  return { posts: comEstadoDoUsuario(lista, meuUid), cursor, fim: fim || cursor === null };
 }
 
 /** Posts de uma pessoa, já filtrados pelo que quem está vendo pode ver. */

@@ -1,3 +1,5 @@
+import { collection, deleteDoc, doc, getDocs, limit, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
+import { db, isFirebaseConfigured } from './firebase';
 import type { NotificationItem, CompanionStatus } from '../types';
 import { responderSolicitacaoMarcacao } from './companions';
 import { dispararNotificacaoLocalPush } from './fcm';
@@ -95,59 +97,145 @@ export function salvarNotificacoes(userUid: string, notifs: NotificationItem[]):
   }
 }
 
+/** Título curto usado no aviso do sistema (push). */
+export function tituloNotificacao(n: Pick<NotificationItem, 'tipo' | 'remetente' | 'clubeNome'>): string {
+  const quem = n.remetente.name;
+  switch (n.tipo) {
+    case 'curtida':
+      return `${quem} curtiu sua publicação`;
+    case 'comentario':
+      return `${quem} comentou`;
+    case 'marcacao_presenca':
+      return `${quem} marcou você em um restaurante`;
+    case 'clube_entrou':
+      return `${quem} entrou no ${n.clubeNome ?? 'clube'}`;
+    case 'clube_evento':
+      return `Novo evento no ${n.clubeNome ?? 'clube'}`;
+    case 'clube_removido':
+      return `Você saiu do ${n.clubeNome ?? 'clube'}`;
+    case 'clube_ultrapassou':
+      return `${quem} passou você no ranking`;
+    default:
+      return `${quem} começou a seguir você`;
+  }
+}
+
+function semUndefined<T extends object>(obj: T): T {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+}
+
+function gravarRemoto(gravar: () => Promise<unknown>) {
+  if (!isFirebaseConfigured) return;
+  try {
+    gravar().catch(() => {});
+  } catch {}
+}
+
+/**
+ * Cria a notificação para outra pessoa: grava neste aparelho e no Firestore
+ * (users/{destinatario}/notificacoes), de onde o aparelho dela busca.
+ */
 export function criarNotificacao(
   destinatarioUid: string,
   notif: Omit<NotificationItem, 'id' | 'createdAt' | 'lida'>
 ): NotificationItem {
   const current = obterNotificacoes(destinatarioUid);
-  const nova: NotificationItem = {
+  const nova: NotificationItem = semUndefined({
     ...notif,
-    id: 'notif-' + crypto.randomUUID().slice(0, 8),
+    id: 'notif-' + crypto.randomUUID().slice(0, 12),
     createdAt: Date.now(),
     lida: false,
-  };
+  });
 
-  salvarNotificacoes(destinatarioUid, [nova, ...current]);
-
-  // Dispara a Notificação Push (FCM / Web Push)
-  try {
-    const titulo =
-      notif.tipo === 'curtida'
-        ? `${notif.remetente.name} curtiu sua avaliação`
-        : notif.tipo === 'comentario'
-        ? `${notif.remetente.name} comentou na sua avaliação`
-        : notif.tipo === 'marcacao_presenca'
-        ? `${notif.remetente.name} marcou você em um restaurante`
-        : `${notif.remetente.name} começou a seguir você`;
-
-    dispararNotificacaoLocalPush({
-      titulo,
-      corpo: notif.texto || 'Você recebeu uma nova interação no seu diário.',
-      icone: notif.remetente.photo,
-    });
-  } catch (pushErr) {
-    console.warn('Erro ao disparar push notification:', pushErr);
+  const paraOutraPessoa = !!destinatarioUid && !!notif.remetente.uid && destinatarioUid !== notif.remetente.uid;
+  if (paraOutraPessoa && isFirebaseConfigured) {
+    gravarRemoto(() => setDoc(doc(db, 'users', destinatarioUid, 'notificacoes', nova.id), nova));
+  } else {
+    // sem servidor (modo de exemplo) a lista local é a única que existe
+    salvarNotificacoes(destinatarioUid, [nova, ...current]);
   }
 
   return nova;
+}
+
+/** Avisa várias pessoas de uma vez (ex.: evento novo para o clube). */
+export function notificarVarios(
+  destinatarios: string[],
+  notif: Omit<NotificationItem, 'id' | 'createdAt' | 'lida'>,
+): void {
+  for (const uid of new Set(destinatarios)) {
+    if (uid && uid !== notif.remetente.uid) criarNotificacao(uid, notif);
+  }
+}
+
+const sincronizando = new Map<string, Promise<void>>();
+
+/**
+ * Busca no servidor o que outras pessoas mandaram e junta com o que já está no aparelho.
+ * Notificações novas e recentes geram um aviso do sistema quando a permissão existe.
+ */
+export function sincronizarNotificacoes(userUid: string): Promise<void> {
+  if (!isFirebaseConfigured || !userUid) return Promise.resolve();
+  const emAndamento = sincronizando.get(userUid);
+  if (emAndamento) return emAndamento;
+  const tarefa = (async () => {
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'users', userUid, 'notificacoes'), orderBy('createdAt', 'desc'), limit(60)),
+      );
+      const remotas = snap.docs.map((d) => ({ ...(d.data() as NotificationItem), id: d.id }));
+      const locais = obterNotificacoes(userUid);
+      const porId = new Map(locais.map((n) => [n.id, n]));
+      const novas: NotificationItem[] = [];
+      for (const r of remotas) {
+        const local = porId.get(r.id);
+        if (!local) {
+          novas.push(r);
+          porId.set(r.id, r);
+        } else if (r.lida && !local.lida) {
+          porId.set(r.id, { ...local, lida: true });
+        }
+      }
+      if (novas.length === 0 && remotas.every((r) => !r.lida || porId.get(r.id)?.lida)) return;
+      const lista = [...porId.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
+      salvarNotificacoes(userUid, lista);
+      const recentes = novas.filter((n) => !n.lida && Date.now() - n.createdAt < 15 * 60_000);
+      for (const n of recentes.slice(0, 3)) {
+        try {
+          dispararNotificacaoLocalPush({ titulo: tituloNotificacao(n), corpo: n.texto || '', icone: n.remetente.photo });
+        } catch {}
+      }
+    } catch {
+      // sem rede ou sem permissão: fica com o que está no aparelho
+    } finally {
+      sincronizando.delete(userUid);
+    }
+  })();
+  sincronizando.set(userUid, tarefa);
+  return tarefa;
 }
 
 export function marcarComoLida(userUid: string, notifId: string): void {
   const current = obterNotificacoes(userUid);
   const updated = current.map((n) => (n.id === notifId ? { ...n, lida: true } : n));
   salvarNotificacoes(userUid, updated);
+  if (userUid) gravarRemoto(() => updateDoc(doc(db, 'users', userUid, 'notificacoes', notifId), { lida: true }));
 }
 
 export function marcarTodasComoLidas(userUid: string): void {
   const current = obterNotificacoes(userUid);
-  const updated = current.map((n) => ({ ...n, lida: true }));
-  salvarNotificacoes(userUid, updated);
+  const naoLidas = current.filter((n) => !n.lida);
+  salvarNotificacoes(userUid, current.map((n) => ({ ...n, lida: true })));
+  if (!userUid || naoLidas.length === 0) return;
+  // só atualiza o que existe no servidor; o que nasceu neste aparelho falha em silêncio
+  gravarRemoto(() => Promise.allSettled(naoLidas.map((n) => updateDoc(doc(db, 'users', userUid, 'notificacoes', n.id), { lida: true }))));
 }
 
 export function removerNotificacao(userUid: string, notifId: string): void {
   const current = obterNotificacoes(userUid);
   const updated = current.filter((n) => n.id !== notifId);
   salvarNotificacoes(userUid, updated);
+  if (userUid) gravarRemoto(() => deleteDoc(doc(db, 'users', userUid, 'notificacoes', notifId)));
 }
 
 export function contarNaoLidas(userUid: string): number {

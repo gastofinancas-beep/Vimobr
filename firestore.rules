@@ -18,6 +18,17 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
+      // Notificações: qualquer pessoa logada cria em nome próprio; só o dono lê, marca como lida e apaga
+      match /notificacoes/{notifId} {
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null
+          && request.auth.uid != userId
+          && request.resource.data.remetente.uid == request.auth.uid
+          && request.resource.data.lida == false;
+        allow update: if request.auth != null && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida', 'companionStatus']);
+      }
+
       match /following/{targetId} {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == userId;

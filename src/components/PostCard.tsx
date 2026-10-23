@@ -6,6 +6,7 @@ import { MenuModeracao } from './Moderacao';
 import ComentariosModal from './ComentariosModal';
 import { alterarArquivamento, apagarPost, curtirPost } from '../lib/posts';
 import { buscarAvaliacaoDoPost } from '../lib/reviews';
+import { clubeFoiExcluido } from '../lib/clubes';
 import type { FoodTweet, Review, UserProfile } from '../types';
 import { Avatar } from './ui';
 
@@ -160,7 +161,12 @@ export function PostCard({
       : v === 'amigos'
       ? { Icon: Users, texto: 'Melhores amigos' }
       : null;
-  const clubeTag = v === 'clube' ? post.clubeNome ?? 'Clube' : null;
+  const clubeTag =
+    v !== 'clube'
+      ? null
+      : post.clubeId && clubeFoiExcluido(post.clubeId)
+      ? `${post.clubeNome ?? 'Clube'} · clube excluído, só você vê`
+      : post.clubeNome ?? 'Clube';
 
   const fotos = post.photoUrls ?? (post.photoUrl ? [post.photoUrl] : []);
 

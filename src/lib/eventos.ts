@@ -14,6 +14,7 @@ import {
 import { db, isFirebaseConfigured } from './firebase';
 import { comPrazo, sincronizar } from './clubes';
 import { getLocalReviews } from './reviews';
+import { notificarVarios } from './notifications';
 import { SAMPLE_PLACES, MEMORY_PLACES_CACHE } from './places';
 import type { Clube, Evento, EventoParticipante } from '../types';
 
@@ -93,6 +94,16 @@ export async function criarEvento(
   sincronizar(() => {
     const { id, ...campos } = evento;
     return setDoc(doc(db, 'eventos', id), campos);
+  });
+  const quando = new Date(evento.data).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+  notificarVarios(clube.membrosUids, {
+    tipo: 'clube_evento',
+    remetente: autor,
+    placeId: evento.placeId,
+    placeName: evento.placeName,
+    texto: `marcou ${evento.titulo} em ${evento.placeName}, ${quando}.`,
+    clubeId: clube.id,
+    clubeNome: clube.nome,
   });
   return evento;
 }

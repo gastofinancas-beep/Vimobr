@@ -15,6 +15,10 @@ import {
   Smartphone,
   Send,
   Loader2,
+  Shield,
+  CalendarDays,
+  Trophy,
+  LogOut,
 } from 'lucide-react';
 import {
   obterNotificacoes,
@@ -22,7 +26,7 @@ import {
   marcarTodasComoLidas,
   removerNotificacao,
   responderNotificacaoMarcacao,
-  criarNotificacao,
+  sincronizarNotificacoes,
 } from '../lib/notifications';
 import { solicitarPermissaoNotificacoes, dispararNotificacaoLocalPush } from '../lib/fcm';
 import type { NotificationItem, NotificationType, CompanionStatus } from '../types';
@@ -30,6 +34,7 @@ import { Avatar, PlaceImage, chip } from './ui';
 import { SAMPLE_PLACES } from '../lib/places';
 import { seguir, idsSeguindo } from '../lib/reviews';
 import { useEscape } from '../hooks/useEscape';
+import { abrirClube } from '../lib/clubes';
 
 import { Mascote } from './Mascote';
 function tempoAtras(timestamp: number): string {
@@ -82,6 +87,7 @@ export default function NotificationsModal({
 
   useEffect(() => {
     carregar();
+    void sincronizarNotificacoes(currentUserUid).then(carregar);
     const handleUpdate = () => carregar();
     window.addEventListener('garfo:notifications_updated', handleUpdate);
     return () => window.removeEventListener('garfo:notifications_updated', handleUpdate);
@@ -102,24 +108,9 @@ export default function NotificationsModal({
     }
   };
 
-  const handleTestarPush = () => {
-    criarNotificacao(currentUserUid, {
-      tipo: 'curtida',
-      remetente: {
-        uid: 'user-camila',
-        name: 'Camila Duarte',
-        handle: '@camilagourmet',
-        photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      },
-      placeId: 'chIJf-place-01',
-      placeName: 'Maniçoba Bistrô & Café',
-      texto: 'curtiu sua avaliação de Maniçoba Bistrô & Café.',
-    });
-    carregar();
-  };
-
   const filtradas = notifs.filter((n) => {
     if (filtro === 'todas') return true;
+    if (filtro === 'clube_entrou') return n.tipo.startsWith('clube_');
     return n.tipo === filtro;
   });
 
@@ -130,7 +121,10 @@ export default function NotificationsModal({
       marcarComoLida(currentUserUid, n.id);
       carregar();
     }
-    if (n.placeId && onAbrirLugar) {
+    if (n.clubeId && n.tipo !== 'clube_removido') {
+      abrirClube(n.clubeId);
+      onClose();
+    } else if (n.placeId && onAbrirLugar) {
       onAbrirLugar(n.placeId);
       onClose();
     } else if (n.remetente.uid && onAbrirPerfil && n.tipo === 'seguir') {
@@ -155,6 +149,10 @@ export default function NotificationsModal({
     comentario: { Icon: MessageCircle, cor: 'bg-ink text-bg' },
     marcacao_presenca: { Icon: Users, cor: 'bg-primary text-white' },
     seguir: { Icon: UserPlus, cor: 'bg-primary text-white' },
+    clube_entrou: { Icon: Shield, cor: 'bg-primary text-white' },
+    clube_evento: { Icon: CalendarDays, cor: 'bg-ink text-bg' },
+    clube_removido: { Icon: LogOut, cor: 'bg-s3 text-ink' },
+    clube_ultrapassou: { Icon: Trophy, cor: 'bg-primary text-white' },
   };
 
   const filtros: { key: 'todas' | NotificationType; label: string }[] = [
@@ -163,6 +161,7 @@ export default function NotificationsModal({
     { key: 'comentario', label: 'Comentários' },
     { key: 'marcacao_presenca', label: 'Marcações' },
     { key: 'seguir', label: 'Seguidores' },
+    { key: 'clube_entrou', label: 'Clubes' },
   ];
 
   // Agrupa por período, como nos apps sociais

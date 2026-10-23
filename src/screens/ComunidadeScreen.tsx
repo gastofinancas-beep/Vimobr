@@ -8,7 +8,7 @@ import { CriarEventoModal, EventoCard } from '../components/Eventos';
 import { Spinner, btn } from '../components/ui';
 import ClubesTab from './ClubesTab';
 import ClubeScreen from './ClubeScreen';
-import { carregarClubes, clubesLocais, meusClubesLocais } from '../lib/clubes';
+import { EVENTO_ABRIR_CLUBE, carregarClubes, clubesLocais, meusClubesLocais } from '../lib/clubes';
 import { carregarEventos, eventosLocais } from '../lib/eventos';
 import type { Clube, Evento, UserProfile } from '../types';
 
@@ -51,6 +51,31 @@ export default function ComunidadeScreen({
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
 
   useEffect(() => gravarSessao(SS_ABA, aba), [aba]);
+
+  // Notificação de clube tocada com esta tela já aberta
+  useEffect(() => {
+    const aoAbrir = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      const achar = () => clubesLocais().find((c) => c.id === id);
+      const local = achar();
+      if (local) {
+        setAba('clubes');
+        setClubeAberto({ clube: local });
+        return;
+      }
+      carregarClubes()
+        .then(() => {
+          const c = achar();
+          if (c) {
+            setAba('clubes');
+            setClubeAberto({ clube: c });
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener(EVENTO_ABRIR_CLUBE, aoAbrir);
+    return () => window.removeEventListener(EVENTO_ABRIR_CLUBE, aoAbrir);
+  }, [currentUser.uid]);
 
   const abrirClube = (clube: Clube, posicao?: number) => {
     gravarSessao(SS_CLUBE, clube.id);

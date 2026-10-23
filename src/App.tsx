@@ -3,7 +3,6 @@ import { ArrowLeft } from 'lucide-react';
 import { signInWithPopup, onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, isFirebaseConfigured } from './lib/firebase';
-import { initGoogleMaps } from './lib/googleMaps';
 import { registrarServiceWorker, iniciarEscutaNotificacoes } from './lib/fcm';
 import { cachePlace } from './lib/places';
 import type { Place, UserProfile } from './types';
@@ -23,6 +22,7 @@ import OnboardingModal from './components/OnboardingModal';
 import EditarPerfilModal from './components/EditarPerfilModal';
 import SearchModal from './components/SearchModal';
 import TutorialModal, { tutorialJaVisto } from './components/TutorialModal';
+import { EVENTO_ABRIR_CLUBE } from './lib/clubes';
 
 const DEFAULT_CURRENT_USER: UserProfile = {
   uid: '',
@@ -47,17 +47,22 @@ export default function App() {
 
     window.addEventListener('gmp-quota-exceeded', handleQuotaExceeded);
 
-    // Pré-carrega o Google Maps JS API com suporte a Maps e Places
-    initGoogleMaps().catch((err) => {
-      console.warn('Google Maps Loader info:', err?.message || err);
-    });
-
     // Registra Service Worker e inicia escuta de notificações push (FCM)
     registrarServiceWorker();
     iniciarEscutaNotificacoes();
 
+    // Toque numa notificação de clube: vai para Comunidade, que abre o clube
+    const handleAbrirClube = () => {
+      setLugarDetalheId(null);
+      setLugarDetalheObjeto(null);
+      setPerfilVisualizadoUid(null);
+      setTabAtiva('comunidade');
+    };
+    window.addEventListener(EVENTO_ABRIR_CLUBE, handleAbrirClube);
+
     return () => {
       window.removeEventListener('gmp-quota-exceeded', handleQuotaExceeded);
+      window.removeEventListener(EVENTO_ABRIR_CLUBE, handleAbrirClube);
     };
   }, []);
 

@@ -289,7 +289,15 @@ export interface PlaceList {
   placeIds: string[];
 }
 
-export type NotificationType = 'curtida' | 'comentario' | 'marcacao_presenca' | 'seguir';
+export type NotificationType =
+  | 'curtida'
+  | 'comentario'
+  | 'marcacao_presenca'
+  | 'seguir'
+  | 'clube_entrou'
+  | 'clube_evento'
+  | 'clube_removido'
+  | 'clube_ultrapassou';
 
 export interface NotificationItem {
   id: string;
@@ -307,6 +315,8 @@ export interface NotificationItem {
   lida: boolean;
   createdAt: number;
   companionStatus?: CompanionStatus;
+  clubeId?: string;
+  clubeNome?: string;
 }
 
 export type DishCategory = 'Entrada' | 'Prato Principal' | 'Sobremesa' | 'Bebida & Drink' | 'Café & Confeitaria' | 'Especial da Casa';

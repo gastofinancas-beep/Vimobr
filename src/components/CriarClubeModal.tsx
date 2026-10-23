@@ -213,8 +213,8 @@ export default function CriarClubeModal({
       {folha === 'excluir' && onExcluir && (
         <FolhaOpcoes titulo={`Excluir ${clube?.nome ?? 'clube'}?`} onFechar={() => setFolha(null)}>
           <p className="-mt-2 px-1 text-[14px] leading-relaxed text-muted">
-            O clube, o ranking e os eventos somem para todos os membros. Os posts continuam no perfil de quem
-            publicou. Não dá para desfazer.
+            O clube, o ranking e os eventos somem para todos os membros. Os posts feitos para o clube ficam
+            visíveis só para quem publicou. Não dá para desfazer.
           </p>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setFolha(null)} className="h-12 rounded-full bg-s2 text-[15px] font-semibold text-ink cursor-pointer">

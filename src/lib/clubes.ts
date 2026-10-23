@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { getLocalReviews } from './reviews';
+import { criarNotificacao, notificarVarios } from './notifications';
 import type { Clube, ClubeMembro, PontuacaoClube, Review } from '../types';
 
 const LS_CLUBES_KEY = 'vimo_clubes_v1';
@@ -30,6 +31,9 @@ function lerExcluidos(): Set<string> {
     return new Set();
   }
 }
+
+/** Clube que foi excluído pelo criador (os posts dele ficam só com quem publicou). */
+export const clubeFoiExcluido = (clubeId: string) => lerExcluidos().has(clubeId);
 
 function lerConvites(): Record<string, string> {
   try {
@@ -86,6 +90,17 @@ export function sincronizar(gravar: () => Promise<unknown>) {
   } catch {}
 }
 
+export const EVENTO_ABRIR_CLUBE = 'vimo:abrir_clube';
+
+/** Abre um clube a partir de qualquer tela (ex.: toque numa notificação). */
+export function abrirClube(clubeId: string): void {
+  try {
+    sessionStorage.setItem('vimo_comunidade_aba', 'clubes');
+    sessionStorage.setItem('vimo_comunidade_clube', clubeId);
+  } catch {}
+  window.dispatchEvent(new CustomEvent(EVENTO_ABRIR_CLUBE, { detail: clubeId }));
+}
+
 export function clubesLocais(): Clube[] {
   return lerLocais();
 }
@@ -105,8 +120,18 @@ export async function carregarClubes(): Promise<Clube[]> {
     const snap = await comPrazo(getDocs(query(collection(db, 'clubes'), limit(200))));
     const excluidos = lerExcluidos();
     const remotos = snap.docs.map((d) => ({ ...d.data(), id: d.id } as Clube)).filter((c) => !excluidos.has(c.id));
+    const idsRemotos = new Set(remotos.map((c) => c.id));
+    // Lista completa do servidor sem um clube que já existia aqui: o criador excluiu.
+    // Clube recém-criado neste aparelho pode ainda não ter subido, então fica.
+    const sumiram =
+      snap.size < 200 ? locais.filter((c) => !idsRemotos.has(c.id) && Date.now() - c.createdAt > 10 * 60_000) : [];
+    if (sumiram.length > 0) {
+      try {
+        localStorage.setItem(LS_EXCLUIDOS_KEY, JSON.stringify([...excluidos, ...sumiram.map((c) => c.id)]));
+      } catch {}
+    }
     const mapa = new Map<string, Clube>();
-    for (const c of locais) mapa.set(c.id, c);
+    for (const c of locais) if (!sumiram.includes(c)) mapa.set(c.id, c);
     for (const c of remotos) mapa.set(c.id, c);
     const lista = [...mapa.values()];
     salvarLocais(lista);
@@ -227,7 +252,19 @@ export async function entrarNoClube(clube: Clube, membro: Omit<ClubeMembro, 'ent
       membrosUids: arrayUnion(membro.uid),
     }),
   );
+  avisarCriadorDaEntrada(atualizado, membro);
   return atualizado;
+}
+
+function avisarCriadorDaEntrada(clube: Clube, membro: Omit<ClubeMembro, 'entrouEm'>) {
+  if (!clube.criadorUid || clube.criadorUid === membro.uid) return;
+  criarNotificacao(clube.criadorUid, {
+    tipo: 'clube_entrou',
+    remetente: { uid: membro.uid, name: membro.name, handle: membro.handle, photo: membro.photo },
+    texto: `entrou no clube ${clube.nome}.`,
+    clubeId: clube.id,
+    clubeNome: clube.nome,
+  });
 }
 
 /** Código do clube privado, para quem já é membro compartilhar. */
@@ -277,6 +314,7 @@ export async function entrarComConvite(
     if (conhecido !== codigo) return { ok: false, erro: 'Código de convite inválido.' };
     substituirLocal(atualizado);
     sincronizar(gravarRemoto);
+    avisarCriadorDaEntrada(atualizado, membro);
     return { ok: true, clube: atualizado };
   }
 
@@ -285,6 +323,7 @@ export async function entrarComConvite(
     await comPrazo(gravarRemoto(), 8000);
     guardarConvite(clube.id, codigo);
     substituirLocal(atualizado);
+    avisarCriadorDaEntrada(atualizado, membro);
     return { ok: true, clube: atualizado };
   } catch (e) {
     const negado = (e as { code?: string })?.code === 'permission-denied';
@@ -308,6 +347,16 @@ export async function removerMembro(clube: Clube, uid: string): Promise<Clube> {
       membrosUids: arrayRemove(uid),
     }),
   );
+  const criador = clube.membros[clube.criadorUid];
+  if (criador) {
+    criarNotificacao(uid, {
+      tipo: 'clube_removido',
+      remetente: { uid: criador.uid, name: criador.name, handle: criador.handle, photo: criador.photo },
+      texto: `removeu você do clube ${clube.nome}.`,
+      clubeId: clube.id,
+      clubeNome: clube.nome,
+    });
+  }
   return atualizado;
 }
 
@@ -465,4 +514,32 @@ export function rankingLocalDoClube(clube: Clube, periodo: PeriodoRanking = 'men
 /** Ranking interno do clube pelo sistema de pontuação escolhido. */
 export async function rankingDoClube(clube: Clube, periodo: PeriodoRanking = 'mensal'): Promise<PlacarMembro[]> {
   return placarDoClube(clube, await reviewsDesde(clube.membrosUids, desdeDo(periodo)));
+}
+
+/**
+ * Depois de uma ida nova: avisa quem estava à frente no ranking do mês e ficou para trás.
+ * Chamado pela tela de avaliar (evita ciclo de importação entre clubes e reviews).
+ */
+export async function avisarUltrapassagens(autor: Omit<ClubeMembro, 'entrouEm'>, nova: Review): Promise<void> {
+  if (!autor.uid) return;
+  for (const clube of meusClubesLocais(autor.uid)) {
+    try {
+      const doMes = (await reviewsDesde(clube.membrosUids, inicioDoMes())).filter((r) => r.id !== nova.id);
+      const antes = placarDoClube(clube, doMes);
+      const depois = placarDoClube(clube, [...doMes, nova]);
+      const meuAntes = antes.find((p) => p.membro.uid === autor.uid)?.valor ?? 0;
+      const meuDepois = depois.find((p) => p.membro.uid === autor.uid)?.valor ?? 0;
+      if (meuDepois <= meuAntes) continue;
+      const passados = antes
+        .filter((p) => p.membro.uid !== autor.uid && p.valor > meuAntes && p.valor < meuDepois)
+        .map((p) => p.membro.uid);
+      notificarVarios(passados, {
+        tipo: 'clube_ultrapassou',
+        remetente: { uid: autor.uid, name: autor.name, handle: autor.handle, photo: autor.photo },
+        texto: `passou você no ranking de ${nomeDoMes()} do clube ${clube.nome}.`,
+        clubeId: clube.id,
+        clubeNome: clube.nome,
+      });
+    } catch {}
+  }
 }
