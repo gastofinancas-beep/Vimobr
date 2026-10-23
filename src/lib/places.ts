@@ -374,41 +374,6 @@ async function post(path: string, body: any, fields: string, timeoutMs = 4500) {
 }
 
 // Gera estabelecimentos locais ao redor do GPS do usuário caso não haja chave da API configurada
-export function gerarLugaresAoRedor(lat: number, lng: number): Place[] {
-  const templates = [
-    { name: 'Bistrô & Café Alecrim', tipo: 'restaurant', category: 'Bistrô Contemporâneo', rating: 4.8, price: '$$', dx: 0.0028, dy: 0.0019, photo: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Padaria Artesanal Farinha & Flor', tipo: 'bakery', category: 'Padaria Artesanal', rating: 4.9, price: '$$', dx: -0.0025, dy: 0.0035, photo: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Torra Especial & Espresso Bar', tipo: 'cafe', category: 'Cafeteria Especial', rating: 4.7, price: '$$', dx: 0.0038, dy: -0.0028, photo: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Bar do Terraço & Coquetelaria', tipo: 'bar', category: 'Bar & Coquetelaria', rating: 4.6, price: '$$$', dx: -0.0035, dy: -0.0022, photo: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Trattoria Bella Cucina', tipo: 'restaurant', category: 'Restaurante Italiano', rating: 4.8, price: '$$$', dx: 0.0055, dy: 0.0042, photo: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Confeitaria Dourada & Brunch', tipo: 'bakery', category: 'Confeitaria Artesanal', rating: 4.7, price: '$$', dx: -0.0048, dy: 0.0051, photo: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Boteco Original dos Amigos', tipo: 'bar', category: 'Bar Tradicional', rating: 4.5, price: '$', dx: 0.0021, dy: -0.0052, photo: 'https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Forno Napolitano Pizza & Bar', tipo: 'restaurant', category: 'Pizzaria Napolitana', rating: 4.9, price: '$$', dx: -0.0058, dy: -0.0041, photo: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80' },
-    { name: 'Craft Burger & Brioche', tipo: 'restaurant', category: 'Hamburgueria Artesanal', rating: 4.7, price: '$$', dx: 0.0042, dy: 0.0058, photo: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80' },
-  ];
-
-  return templates.map((t, idx) => {
-    const pLat = lat + t.dx;
-    const pLng = lng + t.dy;
-    const dist = calcularDistanciaKm(lat, lng, pLat, pLng);
-    return {
-      id: `local-place-${idx + 1}`,
-      name: t.name,
-      address: `Avenida Principal, ${100 + idx * 45} (Aprox. ${Math.round(dist * 1000)}m do seu GPS)`,
-      lat: pLat,
-      lng: pLng,
-      photoUrl: t.photo,
-      priceLevel: t.price,
-      rating: t.rating,
-      tipo: t.tipo,
-      distanceKm: dist,
-      cityName: 'Sua Localização',
-      cityKey: 'sua-localizacao',
-      reviewsCount: 15 + idx * 8,
-      sums: { ambiente: 120, comida: 130, atendimento: 125, custoBeneficio: 115 },
-    };
-  });
-}
 
 // Busca por texto (tela Buscar e escolha do lugar ao avaliar)
 export async function searchPlaces(
@@ -482,7 +447,7 @@ export async function searchPlaces(
   }
 
   const qLower = query.toLowerCase();
-  const baseList = opts?.lat && opts?.lng ? gerarLugaresAoRedor(opts.lat, opts.lng) : SAMPLE_PLACES;
+  const baseList = SAMPLE_PLACES;
   return baseList.filter(
     (p) =>
       p.name.toLowerCase().includes(qLower) ||
@@ -491,6 +456,20 @@ export async function searchPlaces(
 }
 
 // Consulta comércios e restaurantes REAIS (restaurantes, cafés, padarias, empórios, bares) na localização exata
+const COZINHAS: Record<string, string> = {
+  pizza: 'Pizzaria', burger: 'Hambúrguer', japanese: 'Japonesa', sushi: 'Japonesa', italian: 'Italiana',
+  brazilian: 'Brasileira', regional: 'Regional', chinese: 'Chinesa', mexican: 'Mexicana', arab: 'Árabe',
+  lebanese: 'Árabe', steak_house: 'Carnes', barbecue: 'Churrasco', seafood: 'Frutos do mar', coffee_shop: 'Café',
+  ice_cream: 'Sorvete', bakery: 'Padaria', vegetarian: 'Vegetariana', vegan: 'Vegana', french: 'Francesa',
+  portuguese: 'Portuguesa', peruvian: 'Peruana', thai: 'Tailandesa', indian: 'Indiana', korean: 'Coreana',
+  sandwich: 'Lanches', chicken: 'Frango', kebab: 'Árabe', crepe: 'Crepe', acai: 'Açaí', pasta: 'Italiana',
+};
+
+function traduzirCozinha(cuisine: string): string {
+  const primeira = cuisine.split(';')[0]?.trim().toLowerCase() ?? '';
+  return COZINHAS[primeira] ?? '';
+}
+
 export async function buscarRestaurantesReaisOSM(
   lat: number,
   lng: number,
@@ -503,12 +482,13 @@ export async function buscarRestaurantesReaisOSM(
   ];
 
   // Consulta abrangente incluindo restaurantes, bares, cafeterias, padarias, empórios e comércios gastronômicos
-  const query = `[out:json][timeout:10];(
-    node["amenity"~"restaurant|cafe|fast_food|bar|pub|bistro|ice_cream|food_court"](around:${raioMeters},${lat},${lng});
-    node["shop"~"bakery|pastry|supermarket|convenience|deli|butcher|greengrocer|coffee|confectionery|alcohol|beverages|grocery"](around:${raioMeters},${lat},${lng});
-    way["amenity"~"restaurant|cafe|fast_food|bar|pub|bistro|food_court"](around:${raioMeters},${lat},${lng});
-    way["shop"~"bakery|pastry|supermarket|convenience|deli"](around:${raioMeters},${lat},${lng});
-  );out center 45;`;
+  // Só lugares onde se come ou bebe (mercado, açougue e conveniência ficam de fora)
+  const query = `[out:json][timeout:12];(
+    node["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|biergarten)$"]["name"](around:${raioMeters},${lat},${lng});
+    node["shop"~"^(bakery|pastry|coffee|confectionery)$"]["name"](around:${raioMeters},${lat},${lng});
+    way["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|biergarten)$"]["name"](around:${raioMeters},${lat},${lng});
+    way["shop"~"^(bakery|pastry|coffee|confectionery)$"]["name"](around:${raioMeters},${lat},${lng});
+  );out center 150;`;
 
   for (const mirror of overpassMirrors) {
     try {
@@ -557,27 +537,19 @@ export async function buscarRestaurantesReaisOSM(
             ? 'bar'
             : 'restaurant';
 
-        const seed = Math.abs(
-          nome.split('').reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0)
-        );
-        const rating = 4.3 + (seed % 7) / 10;
-        const reviewsCount = 18 + (seed % 140);
-
+        // Sem nota, preço ou foto inventados: o OpenStreetMap não tem esses dados
         const place: Place = {
           id: `osm-${el.id}`,
-          name: nome,
+          name: nome.trim(),
           address: endereco,
           lat: pLat,
           lng: pLng,
           tipo,
-          rating,
-          reviewsCount,
-          photoUrl: obterFotoTematica(nome, tipo, cuisine),
-          cityName: cidade || 'Minha Região',
-          cityKey: slug(cidade || 'minha-regiao'),
+          cuisine: traduzirCozinha(cuisine) || undefined,
+          bairro: bairro || undefined,
+          cityName: cidade || undefined,
+          cityKey: cidade ? slug(cidade) : undefined,
           distanceKm: calcularDistanciaKm(lat, lng, pLat, pLng),
-          priceLevel: seed % 3 === 0 ? '$$$' : seed % 2 === 0 ? '$$' : '$',
-          sums: { ambiente: 120, comida: 130, atendimento: 125, custoBeneficio: 115 },
         };
 
         lugaresReais.push(place);
@@ -614,11 +586,6 @@ export async function buscarRestaurantesReaisOSM(
             lat: pLat,
             lng: pLng,
             tipo,
-            rating: 4.6,
-            reviewsCount: 28,
-            photoUrl: obterFotoTematica(nome, tipo),
-            cityName: 'Minha Região',
-            cityKey: 'minha-regiao',
             distanceKm: calcularDistanciaKm(lat, lng, pLat, pLng),
             sums: { ambiente: 120, comida: 130, atendimento: 125, custoBeneficio: 115 },
           };
@@ -633,30 +600,6 @@ export async function buscarRestaurantesReaisOSM(
   }
 
   return [];
-}
-
-// Aba Mapa: Restaurantes reais ao redor da localização do usuário.
-// Usa OpenStreetMap (gratuito, sem API key) para zero custo.
-export async function buscarProximos(
-  lat: number,
-  lng: number,
-  raio = 3000,
-  _tipos: string[] = TIPOS
-): Promise<Place[]> {
-  // 1. OpenStreetMap Overpass — gratuito, sem chave, dados reais
-  try {
-    const reaisOSM = await buscarRestaurantesReaisOSM(lat, lng, raio);
-    if (reaisOSM.length > 0) {
-      return reaisOSM;
-    }
-  } catch (err) {
-    console.warn('Falha na busca OSM:', err);
-  }
-
-  // 2. Fallback de salvaguarda caso o dispositivo esteja offline ou sem rede
-  const locaisFallback = gerarLugaresAoRedor(lat, lng);
-  cachePlaces(locaisFallback);
-  return locaisFallback;
 }
 
 // Autocomplete de lugares (ao avaliar)
@@ -747,14 +690,40 @@ export function cachePlace(place: Place): void {
   }
 }
 
-export function cachePlaces(places: Place[]): void {
-  if (Array.isArray(places)) {
-    places.forEach(cachePlace);
+// Lugares do OpenStreetMap ficam guardados no aparelho para abrir de novo depois de recarregar
+const LS_LUGARES_KEY = 'vimo_lugares_cache_v1';
+
+function lerLugaresGuardados(): Record<string, Place> {
+  try {
+    return JSON.parse(localStorage.getItem(LS_LUGARES_KEY) || '{}');
+  } catch {
+    return {};
   }
+}
+
+export function cachePlaces(places: Place[]): void {
+  if (!Array.isArray(places)) return;
+  places.forEach(cachePlace);
+  const guardaveis = places.filter((p) => p?.id?.startsWith('osm-') || p?.id?.startsWith('nom-'));
+  if (guardaveis.length === 0) return;
+  try {
+    const mapa = lerLugaresGuardados();
+    for (const p of guardaveis) {
+      delete mapa[p.id];
+      mapa[p.id] = p;
+    }
+    const ids = Object.keys(mapa);
+    for (const id of ids.slice(0, Math.max(0, ids.length - 800))) delete mapa[id];
+    localStorage.setItem(LS_LUGARES_KEY, JSON.stringify(mapa));
+  } catch {}
 }
 
 export async function getPlace(placeId: string): Promise<Place> {
   // 1. Tentar obter do cache em memória instantâneo
+  if (!MEMORY_PLACES_CACHE.has(placeId)) {
+    const guardado = lerLugaresGuardados()[placeId];
+    if (guardado) cachePlace(guardado);
+  }
   const emCache = MEMORY_PLACES_CACHE.get(placeId);
   const isOsmId =
     placeId.startsWith('local-place-') ||

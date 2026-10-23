@@ -57,8 +57,14 @@ qualquer coisa nova.
 - `ExplorarScreen` — tela inicial: feed social estilo Fitfolio (abas Explorar / Seguindo), posts
   com carrossel de fotos, curtidas, comentários e "Veja a avaliação". Carrega 20 por página e busca
   mais ao rolar (`carregarPaginaPosts` em posts.ts).
-- `DescobrirScreen` — catálogo de lugares da cidade, "Em alta na Vimo". **Nenhuma nota aparece na
-  listagem** — só ao abrir o lugar.
+- `DescobrirScreen` — catálogo de lugares da cidade. Na primeira visita pede a localização do
+  celular (`navigator.geolocation`), acha a cidade pelo Nominatim e lista restaurantes, cafés,
+  padarias e bares num raio de 5 km pelo Overpass (OpenStreetMap, grátis), do mais perto ao mais
+  longe ("Perto de você"). Sem GPS: aviso com "Escolher cidade" e busca de cidades. Lógica em
+  `src/lib/localizacao.ts`; cidade em `vimo_cidade_v1`, lugares guardados por 24 h. Lugares do OSM
+  não têm nota, preço nem foto inventados. **Nenhuma nota aparece na listagem** — só ao abrir o lugar.
+  Ao gerar os projetos nativos (Capacitor), incluir `NSLocationWhenInUseUsageDescription` no iOS e
+  `ACCESS_COARSE_LOCATION`/`ACCESS_FINE_LOCATION` no Android, senão o pedido de GPS não aparece.
 - `ComunidadeScreen` — aba Comunidade: Clubes (meus clubes, destaque do mês, populares, ranking do
   mês, públicos, privados com código de convite) e Eventos (idas marcadas com o clube). Detalhe do
   clube em `ClubeScreen` no formato Fitfolio: foto, "Você é membro", atalhos Membros / Ranking /

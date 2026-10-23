@@ -1,8 +1,21 @@
-import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, MapPin, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Search, ChevronDown, MapPin, Navigation, X } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
-import { SAMPLE_PLACES, autocompleteCidade, formatarPrecoLabel } from '../lib/places';
+import { SAMPLE_PLACES, formatarPrecoLabel } from '../lib/places';
+import {
+  buscarCidades,
+  carregarLugaresDaCidade,
+  cidadeDasCoordenadas,
+  cidadeSalva,
+  lugaresGuardados,
+  pedirLocalizacao,
+  permissaoLocalizacao,
+  salvarCidade,
+  type CidadeAtual,
+  type FalhaLocalizacao,
+} from '../lib/localizacao';
+import { Mascote } from '../components/Mascote';
 import type { Place, UserProfile } from '../types';
 import MascotMessage from '../components/MascotMessage';
 import { PlaceImage, Logo, btn, chip } from '../components/ui';
@@ -39,13 +52,84 @@ export default function DescobrirScreen({
   tema: _tema,
   onToggleTema: _onToggleTema,
 }: DescobrirScreenProps) {
-  const [cidadeAtual, setCidadeAtual] = useState({
-    cityKey: currentUser.homeCityKey || 'sao-paulo-sp',
-    nome: currentUser.homeCityName || 'São Paulo - SP',
+  const [cidadeAtual, setCidadeAtual] = useState<CidadeAtual>(() => {
+    const salva = cidadeSalva();
+    if (salva) return salva;
+    const padrao = CIDADES_SUGERIDAS.find((c) => c.cityKey === currentUser.homeCityKey) ?? CIDADES_SUGERIDAS[0];
+    return padrao;
   });
+  const [gps, setGps] = useState<'parado' | 'pedindo' | FalhaLocalizacao>('parado');
+  const [lugares, setLugares] = useState<Place[]>(() => lugaresGuardados(cidadeAtual) ?? lugaresDeExemplo(cidadeAtual));
+  const [carregandoLugares, setCarregandoLugares] = useState(true);
   const [cidadeModalAberta, setCidadeModalAberta] = useState(false);
   const [buscaCidade, setBuscaCidade] = useState('');
-  const [sugestoesCidade, setSugestoesCidade] = useState<{ texto: string; cityKey: string }[]>([]);
+  const [sugestoesCidade, setSugestoesCidade] = useState<CidadeAtual[]>([]);
+  const [buscandoCidade, setBuscandoCidade] = useState(false);
+
+  const trocarCidade = (c: CidadeAtual) => {
+    salvarCidade(c);
+    setCidadeAtual(c);
+  };
+
+  // Pede a autorização do GPS (o sistema mostra o aviso na primeira vez) e acha a cidade
+  const usarLocalizacao = async () => {
+    setGps('pedindo');
+    try {
+      const { lat, lng } = await pedirLocalizacao();
+      const cidade = await cidadeDasCoordenadas(lat, lng);
+      trocarCidade(cidade);
+      setGps('parado');
+    } catch (e) {
+      setGps(typeof e === 'string' ? (e as FalhaLocalizacao) : 'indisponivel');
+    }
+  };
+
+  // Primeira vez no Descobrir: pede o GPS. Depois, atualiza sozinho se a pessoa já autorizou.
+  const pediuRef = useRef(false);
+  useEffect(() => {
+    if (pediuRef.current) return;
+    pediuRef.current = true;
+    const salva = cidadeSalva();
+    permissaoLocalizacao().then((estado) => {
+      if (estado === 'denied') {
+        if (!salva) setGps('negado');
+      } else if (!salva || (salva.origem === 'gps' && estado === 'granted')) {
+        void usarLocalizacao();
+      }
+    });
+  }, []);
+
+  // Lugares da cidade: mostra o que está guardado e busca a lista atualizada
+  useEffect(() => {
+    let ativo = true;
+    setLugares(lugaresGuardados(cidadeAtual) ?? lugaresDeExemplo(cidadeAtual));
+    setCarregandoLugares(true);
+    carregarLugaresDaCidade(cidadeAtual)
+      .then((lista) => ativo && lista.length > 0 && setLugares(lista))
+      .catch(() => {})
+      .finally(() => ativo && setCarregandoLugares(false));
+    return () => {
+      ativo = false;
+    };
+  }, [cidadeAtual.cityKey, cidadeAtual.lat, cidadeAtual.lng]);
+
+  // Busca de cidade com pausa entre teclas (o serviço gratuito pede no máximo 1 consulta por segundo)
+  useEffect(() => {
+    const texto = buscaCidade.trim();
+    if (texto.length < 3) {
+      setSugestoesCidade([]);
+      setBuscandoCidade(false);
+      return;
+    }
+    setBuscandoCidade(true);
+    const t = setTimeout(() => {
+      buscarCidades(texto)
+        .then(setSugestoesCidade)
+        .catch(() => setSugestoesCidade([]))
+        .finally(() => setBuscandoCidade(false));
+    }, 700);
+    return () => clearTimeout(t);
+  }, [buscaCidade]);
 
   const [filtroTipo, setFiltroTipo] = useState<TipoRestauranteFiltro>('todos');
   const [buscaTermo, setBuscaTermo] = useState('');
@@ -53,7 +137,7 @@ export default function DescobrirScreen({
   useEscape(() => setCidadeModalAberta(false), cidadeModalAberta);
 
   const lugaresFiltrados = useMemo(() => {
-    let list = SAMPLE_PLACES;
+    let list = lugares;
 
     if (buscaTermo.trim().length > 0) {
       const q = buscaTermo.toLowerCase().trim();
@@ -95,7 +179,7 @@ export default function DescobrirScreen({
     }
 
     return list;
-  }, [filtroTipo, buscaTermo]);
+  }, [filtroTipo, buscaTermo, lugares]);
 
   const chips: { id: TipoRestauranteFiltro; label: string }[] = [
     { id: 'todos', label: 'Todos' },
@@ -116,18 +200,23 @@ export default function DescobrirScreen({
 
   const TIPOS: Record<string, string> = { restaurant: 'Restaurante', cafe: 'Café', bakery: 'Padaria', bar: 'Bar' };
   const metaDe = (p: Place) =>
-    [p.cuisine || (p.tipo ? TIPOS[p.tipo] || p.tipo : null), p.bairro, p.priceLevel ? formatarPrecoLabel(p.priceLevel) : null]
+    [
+      p.cuisine || (p.tipo ? TIPOS[p.tipo] || p.tipo : null),
+      cidadeAtual.origem === 'gps' && p.distanceKm != null ? formatarDistancia(p.distanceKm) : p.bairro,
+      p.priceLevel ? formatarPrecoLabel(p.priceLevel) : null,
+    ]
       .filter(Boolean)
       .join(' · ');
 
   const populares = useMemo(
     () =>
+      // Quem tem avaliação primeiro; empate (lugares sem nota) vai pelo mais perto
       [...lugaresFiltrados].sort((a, b) => {
         const notaA = a.vimoRating ?? a.googleRating ?? 0;
         const notaB = b.vimoRating ?? b.googleRating ?? 0;
         const volA = a.vimoReviewsCount ?? a.googleUserRatingCount ?? a.reviewsCount ?? 0;
         const volB = b.vimoReviewsCount ?? b.googleUserRatingCount ?? b.reviewsCount ?? 0;
-        return notaB * Math.log(volB + 1) - notaA * Math.log(volA + 1);
+        return notaB * Math.log(volB + 1) - notaA * Math.log(volA + 1) || (a.distanceKm ?? 99) - (b.distanceKm ?? 99);
       }),
     [lugaresFiltrados]
   );
@@ -207,7 +296,22 @@ export default function DescobrirScreen({
       </header>
 
       <main className="max-w-4xl mx-auto pt-2">
-        {lugaresFiltrados.length === 0 ? (
+        {gps !== 'parado' && cidadeAtual.origem !== 'gps' && (
+          <AvisoLocalizacao estado={gps} onUsar={usarLocalizacao} onEscolher={() => setCidadeModalAberta(true)} />
+        )}
+        {lugares.length === 0 ? (
+          carregandoLugares ? (
+            <EsqueletoLugares />
+          ) : (
+            <MascotMessage
+              reaction="pensativo"
+              title={`Ainda não achamos lugares em ${cidadeCurta}`}
+              subtitle="Confira a conexão ou escolha outra cidade."
+              ctaLabel="Trocar cidade"
+              onCta={() => setCidadeModalAberta(true)}
+            />
+          )
+        ) : lugaresFiltrados.length === 0 ? (
           <MascotMessage
             reaction="pensativo"
             title={buscaTermo ? `Nada encontrado para "${buscaTermo.trim()}"` : 'Nenhum lugar neste filtro'}
@@ -227,7 +331,7 @@ export default function DescobrirScreen({
         ) : (
           <div className="space-y-9">
             <section className="px-4">
-              <CabecalhoSecao titulo="Em destaque" total={lugaresFiltrados.length} />
+              <CabecalhoSecao titulo={cidadeAtual.origem === 'gps' ? 'Perto de você' : `Em destaque em ${cidadeCurta}`} total={lugaresFiltrados.length} />
               <div className="grid grid-cols-2 gap-3">
                 {populares[0] && (
                   <PosterDestaque place={populares[0]} meta={metaDe(populares[0])} onAbrir={onAbrirLugar} grande />
@@ -287,56 +391,55 @@ export default function DescobrirScreen({
               </button>
             </div>
 
+            <button
+              type="button"
+              onClick={() => {
+                setCidadeModalAberta(false);
+                void usarLocalizacao();
+              }}
+              className="mb-3 flex w-full items-center gap-3 rounded-lg bg-primary/10 px-3 py-3 text-left cursor-pointer"
+            >
+              <Navigation size={17} strokeWidth={2} className="shrink-0 text-primary" />
+              <span className="flex-1 text-[15px] font-semibold text-primary">Usar minha localização</span>
+              {cidadeAtual.origem === 'gps' && <span className="text-xs text-muted">Em uso</span>}
+            </button>
+
             <label className="flex h-11 items-center gap-2.5 rounded-lg bg-s2 px-3 ring-1 ring-transparent focus-within:ring-primary transition">
               <Search size={17} strokeWidth={1.8} className="shrink-0 text-muted" />
               <input
                 type="text"
-                autoFocus
                 value={buscaCidade}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setBuscaCidade(val);
-                  if (val.trim().length > 1) {
-                    autocompleteCidade(val)
-                      .then((res) => setSugestoesCidade(res))
-                      .catch(() => setSugestoesCidade([]));
-                  } else {
-                    setSugestoesCidade([]);
-                  }
-                }}
-                placeholder="Nome da cidade"
+                onChange={(e) => setBuscaCidade(e.target.value)}
+                placeholder="Buscar outra cidade"
                 aria-label="Buscar cidade"
                 className="w-full bg-transparent text-base text-ink placeholder:text-muted outline-none"
               />
             </label>
 
             <ul className="mt-2 max-h-64 overflow-y-auto">
-              {(buscaCidade.trim().length > 1
-                ? sugestoesCidade
-                : [
-                    { texto: 'São Paulo - SP', cityKey: 'sao-paulo-sp' },
-                    { texto: 'Rio de Janeiro - RJ', cityKey: 'rio-de-janeiro-rj' },
-                    { texto: 'Curitiba - PR', cityKey: 'curitiba-pr' },
-                    { texto: 'Belo Horizonte - MG', cityKey: 'belo-horizonte-mg' },
-                  ]
-              ).map((cid) => {
+              {buscaCidade.trim().length >= 3 && buscandoCidade && (
+                <li className="px-2 py-3 text-sm text-muted">Buscando…</li>
+              )}
+              {buscaCidade.trim().length >= 3 && !buscandoCidade && sugestoesCidade.length === 0 && (
+                <li className="px-2 py-3 text-sm text-muted">Nenhuma cidade encontrada</li>
+              )}
+              {(buscaCidade.trim().length >= 3 ? sugestoesCidade : CIDADES_SUGERIDAS).map((cid) => {
                 const atual = cid.cityKey === cidadeAtual.cityKey;
                 return (
                   <li key={cid.cityKey}>
                     <button
                       type="button"
                       onClick={() => {
-                        setCidadeAtual({ cityKey: cid.cityKey, nome: cid.texto });
+                        trocarCidade({ ...cid, origem: 'manual' });
                         setCidadeModalAberta(false);
                         setBuscaCidade('');
-                        setSugestoesCidade([]);
                       }}
                       className={`flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left text-base transition-colors hover:bg-s2 cursor-pointer ${
                         atual ? 'font-semibold text-ink' : 'text-ink-2'
                       }`}
                     >
-                      <MapPin size={16} strokeWidth={1.8} className={atual ? 'text-star' : 'text-muted'} />
-                      <span>{cid.texto}</span>
+                      <MapPin size={16} strokeWidth={1.8} className={atual ? 'text-primary' : 'text-muted'} />
+                      <span>{cid.nome}</span>
                     </button>
                   </li>
                 );
@@ -446,5 +549,72 @@ function Poster({
         </div>
       </div>
     </button>
+  );
+}
+
+const CIDADES_SUGERIDAS: CidadeAtual[] = [
+  { cityKey: 'sao-paulo-sp', nome: 'São Paulo - SP', lat: -23.5505, lng: -46.6333, origem: 'manual' },
+  { cityKey: 'rio-de-janeiro-rj', nome: 'Rio de Janeiro - RJ', lat: -22.9068, lng: -43.1729, origem: 'manual' },
+  { cityKey: 'belo-horizonte-mg', nome: 'Belo Horizonte - MG', lat: -19.9167, lng: -43.9345, origem: 'manual' },
+  { cityKey: 'curitiba-pr', nome: 'Curitiba - PR', lat: -25.4284, lng: -49.2733, origem: 'manual' },
+  { cityKey: 'porto-alegre-rs', nome: 'Porto Alegre - RS', lat: -30.0346, lng: -51.2177, origem: 'manual' },
+  { cityKey: 'brasilia-df', nome: 'Brasília - DF', lat: -15.7939, lng: -47.8828, origem: 'manual' },
+];
+
+const lugaresDeExemplo = (c: CidadeAtual) => SAMPLE_PLACES.filter((p) => p.cityKey === c.cityKey);
+
+const formatarDistancia = (km: number) =>
+  km < 1 ? `${Math.max(50, Math.round((km * 1000) / 50) * 50)} m` : `${km.toFixed(1).replace('.', ',')} km`;
+
+function AvisoLocalizacao({
+  estado,
+  onUsar,
+  onEscolher,
+}: {
+  estado: 'pedindo' | FalhaLocalizacao;
+  onUsar: () => void;
+  onEscolher: () => void;
+}) {
+  if (estado === 'pedindo') {
+    return (
+      <p className="mx-4 mb-4 flex items-center gap-2 text-[13px] text-muted" role="status">
+        <Navigation size={14} strokeWidth={2} className="text-primary" />
+        Procurando sua cidade…
+      </p>
+    );
+  }
+  const negado = estado === 'negado';
+  return (
+    <div className="mx-4 mb-5 flex items-center gap-3 rounded-2xl bg-s1 p-4 ring-1 ring-line">
+      <Mascote reacao="pensativo" tamanho={56} className="shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-semibold text-ink">
+          {negado ? 'Localização desligada' : 'Não deu para achar sua localização'}
+        </p>
+        <p className="mt-0.5 text-[13px] leading-snug text-muted">
+          {negado
+            ? 'Para ver os lugares da sua cidade, libere a localização para o Vimo nos ajustes do celular, ou escolha a cidade.'
+            : 'Tente de novo ou escolha a cidade.'}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" onClick={onUsar} className="h-9 whitespace-nowrap rounded-full bg-primary px-3.5 text-[13px] font-semibold text-white cursor-pointer">
+            {negado ? 'Tentar de novo' : 'Usar localização'}
+          </button>
+          <button type="button" onClick={onEscolher} className="h-9 whitespace-nowrap rounded-full bg-s2 px-3.5 text-[13px] font-semibold text-ink cursor-pointer">
+            Escolher cidade
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EsqueletoLugares() {
+  return (
+    <div className="grid grid-cols-2 gap-3 px-4" aria-label="Carregando lugares" role="status">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="aspect-[4/5] animate-pulse rounded-xl bg-s2" />
+      ))}
+    </div>
   );
 }
