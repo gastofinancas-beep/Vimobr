@@ -1,5 +1,5 @@
 import type { Place } from '../types';
-import { SAMPLE_PLACES, buscarRestaurantesReaisOSM, cachePlaces, slug } from './places';
+import { API_BASE, SAMPLE_PLACES, buscarRestaurantesReaisOSM, cachePlaces, slug } from './places';
 
 // Cidade do Descobrir: vem do GPS (com autorização) ou da escolha manual.
 // Nome da cidade e lugares vêm do OpenStreetMap, gratuito e sem chave.
@@ -153,7 +153,9 @@ export async function carregarLugaresDaCidade(cidade: CidadeAtual, forcar = fals
   const guardados = lugaresGuardados(cidade);
   if (guardados && !forcar && lugaresGuardadosValidos(cidade)) return guardados;
 
-  const encontrados = await buscarRestaurantesReaisOSM(cidade.lat, cidade.lng, 5000);
+  // Yelp primeiro (quando o servidor tem a chave); senão, OpenStreetMap
+  const daYelp = await lugaresDaYelp(cidade);
+  const encontrados = daYelp.length > 0 ? daYelp : await buscarRestaurantesReaisOSM(cidade.lat, cidade.lng, 5000);
   const daCidade: Place[] = encontrados
     .filter((p) => !p.id.startsWith('nom-'))
     .map((p) => ({ ...p, cityName: p.cityName ?? cidade.nome, cityKey: cidade.cityKey }));
@@ -167,4 +169,17 @@ export async function carregarLugaresDaCidade(cidade: CidadeAtual, forcar = fals
     localStorage.setItem(LS_LUGARES_CIDADE + cidade.cityKey, JSON.stringify({ em: Date.now(), lugares: lista }));
   } catch {}
   return lista;
+}
+
+async function lugaresDaYelp(cidade: CidadeAtual): Promise<Place[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/lugares/perto?lat=${cidade.lat}&lng=${cidade.lng}`, {
+      signal: AbortSignal.timeout(9000),
+    });
+    if (!res.ok) return [];
+    const dados = (await res.json()) as { lugares?: Place[] };
+    return Array.isArray(dados.lugares) ? dados.lugares : [];
+  } catch {
+    return [];
+  }
 }

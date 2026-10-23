@@ -21,7 +21,11 @@ restaurantes", com Albo e Vivino como referências de visual.
 - `recharts` (gráfico de Paladar), `motion` (animações). Sem mapa e sem Google Places: a busca
   de lugares usa dados locais e OpenStreetMap (`sugerirLugares`); `getApiKey` em places.ts
   devolve vazio de propósito para nunca gerar cobrança
-- Server leve em `server.ts` (Express) só para servir o build / variáveis de ambiente
+- Server leve em `server.ts` (Express): serve o build e faz a ponte com a **Yelp Places API**
+  (`/api/lugares/perto` e `/api/lugares/yelp/:id`). A chave `YELP_API_KEY` fica só no servidor;
+  respostas guardadas 24 h e teto diário `YELP_LIMITE_DIARIO` (padrão 250). Sem chave, ou quando o
+  teto acaba, o Descobrir cai no OpenStreetMap. No app empacotado, `VITE_API_BASE` aponta para o
+  servidor. A Yelp exige o link "Dados e fotos do Yelp" no detalhe do lugar
 
 ## Identidade visual
 
@@ -170,7 +174,8 @@ seguindo os imports relativos.
   publicado no console. Pedro pediu para não publicar ainda (2026-10-23) porque as regras vão mudar.
   Pendentes: clubes/eventos/posts, `notificacoes`, `bloqueados`, `denuncias`, exclusão de convite.
   Curtidas, comentários e contadores usam só regras (+1/-1), sem Cloud Functions.
-- Nenhuma API paga (Google Places, Maps, Mapbox). Mapa removido em 2026-10-20.
+- Nenhuma API paga, com uma exceção pedida pelo Pedro em 2026-10-23: Yelp no Descobrir, com teto
+  diário no servidor. Google Places, Maps e Mapbox continuam fora. Mapa removido em 2026-10-20.
 - PRO ainda não cobra; meio de pagamento depende de decisão do Pedro (lojas exigem compra no app).
 
 ## Rodando localmente
@@ -184,6 +189,7 @@ npm run build            # vite build — confirmar que builda limpo antes de co
 ```
 
 Variáveis de ambiente usadas pelo projeto (`.env`, nunca commitar):
+- `YELP_API_KEY`, `YELP_LIMITE_DIARIO`, `VITE_API_BASE` (ver `.env.example`)
 - Chaves do Google Maps/Places, Foursquare e Gemini não são mais usadas pelo app
 - Firebase: configurado no client (ver `src/lib/firebase.ts` ou equivalente) — confirmar projeto
   do Firebase correto antes de qualquer mudança em regras do Firestore/Storage

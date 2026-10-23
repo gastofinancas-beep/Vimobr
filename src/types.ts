@@ -70,6 +70,10 @@ export interface Place {
   site?: string;
   instagram?: string;
   servicos?: { noLocal?: boolean; retirada?: boolean; entrega?: boolean; areaExterna?: boolean; acessivel?: boolean };
+  /** Nota de outro serviço (hoje, Yelp), exibida com o nome dele */
+  notaExterna?: { fonte: string; nota: number; total: number };
+  /** Página do lugar no serviço de origem (a Yelp exige o link) */
+  urlFonte?: string;
 }
 
 export type CompanionStatus = 'pendente' | 'aprovado_coautor' | 'aprovado_presenca' | 'recusado';
