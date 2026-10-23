@@ -50,7 +50,7 @@ export function MenuModeracao({
 
   const confirmarBloqueio = () => {
     bloquear(meuUid, { uid: alvo.uid, name: alvo.nome, photo: alvo.foto ?? '' });
-    mostrarAviso(`${primeiroNome} foi bloqueado`);
+    mostrarAviso(`Você bloqueou ${primeiroNome}`);
     onFeito?.('bloqueado');
     onFechar();
   };

@@ -432,7 +432,10 @@ async function reviewsDesde(uids: string[], desde: number): Promise<Review[]> {
       }
     } catch {}
   }
-  return [...mapa.values()];
+  // Idas antigas tinham um id no aparelho e outro no servidor: a mesma ida conta uma vez só
+  const unicas = new Map<string, Review>();
+  for (const r of mapa.values()) unicas.set(`${r.uid}|${r.placeId}|${r.visitedAt}`, r);
+  return [...unicas.values()];
 }
 
 export interface PlacarMembro {
@@ -531,7 +534,7 @@ export async function avisarUltrapassagens(autor: Omit<ClubeMembro, 'entrouEm'>,
       const meuDepois = depois.find((p) => p.membro.uid === autor.uid)?.valor ?? 0;
       if (meuDepois <= meuAntes) continue;
       const passados = antes
-        .filter((p) => p.membro.uid !== autor.uid && p.valor > meuAntes && p.valor < meuDepois)
+        .filter((p) => p.membro.uid !== autor.uid && p.valor > 0 && p.valor >= meuAntes && p.valor < meuDepois)
         .map((p) => p.membro.uid);
       notificarVarios(passados, {
         tipo: 'clube_ultrapassou',

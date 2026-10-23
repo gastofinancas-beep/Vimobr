@@ -18,8 +18,9 @@ restaurantes", com Albo e Vivino como referências de visual.
 - Tailwind v4 (configuração via `@theme inline` em `src/index.css`, não `tailwind.config`)
 - Firebase (Auth + Firestore) — dados gravam local-primeiro (localStorage) e sincronizam em
   segundo plano; a tela nunca espera a rede para atualizar
-- `react-router-dom`, `recharts` (gráfico de Paladar), `@vis.gl/react-google-maps` (mapa),
-  `@google/genai` (card compartilhável gerado por IA), `motion` (animações)
+- `recharts` (gráfico de Paladar), `motion` (animações). Sem mapa e sem Google Places: a busca
+  de lugares usa dados locais e OpenStreetMap (`sugerirLugares`); `getApiKey` em places.ts
+  devolve vazio de propósito para nunca gerar cobrança
 - Server leve em `server.ts` (Express) só para servir o build / variáveis de ambiente
 
 ## Identidade visual
@@ -53,11 +54,11 @@ qualquer coisa nova.
 ## Estrutura de telas (src/screens)
 
 - `LoginScreen` — entrada (Google, e-mail/senha, ou convidado)
-- `ExplorarScreen` — tela inicial. "Populares da semana" (cards grandes estilo pôster
-  Letterboxd, 2 colunas), fileiras por tipo (Restaurantes / Cafés e padarias / Bares, só
-  aparecem com 3+ lugares) e grade "Todos os lugares". **Nenhuma nota aparece na listagem** —
-  só ao abrir o lugar. Com busca ou filtro ativo vira grade única de 2 colunas.
-- `DescobrirPertoDeMimScreen` — aba Mapa, pinos por proximidade, filtros por categoria
+- `ExplorarScreen` — tela inicial: feed social estilo Fitfolio (abas Explorar / Seguindo), posts
+  com carrossel de fotos, curtidas, comentários e "Veja a avaliação". Carrega 20 por página e busca
+  mais ao rolar (`carregarPaginaPosts` em posts.ts).
+- `DescobrirScreen` — catálogo de lugares da cidade, "Em alta na Vimo". **Nenhuma nota aparece na
+  listagem** — só ao abrir o lugar.
 - `ComunidadeScreen` — aba Comunidade: Clubes (meus clubes, destaque do mês, populares, ranking do
   mês, públicos, privados com código de convite) e Eventos (idas marcadas com o clube). Detalhe do
   clube em `ClubeScreen` no formato Fitfolio: foto, "Você é membro", atalhos Membros / Ranking /
@@ -77,7 +78,22 @@ qualquer coisa nova.
   Café & Espresso → Doces & Sobremesas → Comidinhas & Salgados → Ambiente & Conforto →
   Atendimento & Barista → Voltaria & Preço → Prato destaque → Comentário → Fotos → Amigos → Resumo.
   Nota geral é a média dos critérios, arredondada para meia estrela, e só aparece no resumo final.
-- `AmigosScreen`, `ColecaoScreen` — hoje sem uso na navegação (ver "arquivos órfãos")
+
+## Notificações (src/lib/notifications.ts)
+
+Quem age grava em `users/{destinatario}/notificacoes/{id}`; o sino (`NotificationBell`) busca do
+servidor ao abrir, a cada minuto e ao voltar para o app (`sincronizarNotificacoes`), e dispara o
+aviso do sistema no aparelho de quem recebe. Tipos de clube: `clube_entrou` (avisa o criador),
+`clube_evento` (avisa os membros), `clube_removido`, `clube_ultrapassou` (alguém passou você no
+ranking do mês, calculado por `avisarUltrapassagens` depois de salvar uma ida). Tocar numa
+notificação de clube abre o clube (`abrirClube` → evento `vimo:abrir_clube`).
+
+## Denunciar e bloquear (exigência da Apple e do Google)
+
+`src/lib/moderacao.ts` + `MenuModeracao` (`src/components/Moderacao.tsx`), no "…" de posts,
+avaliações e perfis. Denúncia vai para a coleção `denuncias` (só leitura pelo console do Firebase;
+os Termos prometem análise em até 24 horas) e esconde o conteúdo para quem denunciou. Bloquear
+esconde posts, idas e comentários da pessoa e desfaz o seguir; desbloqueia em Editar perfil.
 
 Barra inferior fixa: Explorar, Descobrir, **+** central (nova avaliação), Comunidade, Perfil.
 
@@ -117,6 +133,10 @@ com anel preto), nunca dourado/prata genéricos de ícone.
   "crawler" que clica em cada botão visível de uma tela, um de cada vez, e verifica se algo
   muda — útil para pegar botões mudos (aconteceu com os filtros do Mapa e com "voltar para minha
   localização", que nunca chamava `navigator.geolocation`).
+- Teste com duas contas: `firebase emulators:start --only firestore,auth` (Firestore 8089,
+  Auth 9099, com o `firestore.rules` do repo) e `VITE_FIREBASE_EMULADOR=1 npx vite`; o app passa a
+  usar os emuladores (só em dev). Dá para abrir dois contextos do Playwright, criar contas por
+  e-mail e testar clube, notificações, feed e bloqueio entre as duas.
 - Imagens externas (Unsplash) e fontes do Google são bloqueadas na rede de alguns ambientes de
   teste — nesses casos, servir localmente ao rodar testes automatizados (não é um problema do
   app em produção).
@@ -124,19 +144,11 @@ com anel preto), nunca dourado/prata genéricos de ícone.
   sempre envolver em try/catch com um aviso (`showToast`) de erro, nunca deixar a Promise rejeitar
   sem tratamento.
 
-## Arquivos órfãos conhecidos (dívida técnica)
+## Arquivos sem uso
 
-Uma varredura encontrou ~20 arquivos em `src/components` e `src/lib` que não são importados em
-lugar nenhum (sobras de versões anteriores do app): `AddDishModal`, `CommunityTrendsGrid`,
-`ConviteModal`, `DestaqueSemanaSection`, `DishHighlightCard`, `EmAltaPertoSection`,
-`ExplorarHeader`, `FiltrosExplorar`, `MapaView`, `ModernFeaturedCard`, `PWAInstallButton`,
-`PrivacidadeModal`, `ReservaModal`, `RestaurantCard`, `ReviewCard`, `RoteiroDetailModal`,
-`RoteiroModal`, `TopListsSection`, `WishlistTab`, `foursquare/FsqEmAltaSection`,
-`foursquare/FsqPlaceCard`, `communityPosts.ts`, `itineraries.ts`, `rankings.ts`, `dishes.ts`,
-`usePWAInstall.ts`, `ColecaoScreen.tsx`, `AmigosScreen.tsx` (feed de avaliações dos amigos, saiu da
-barra quando a aba virou Comunidade). Não quebram nada hoje, mas podem ser removidos numa
-limpeza futura (confirmar de novo com um grep de imports antes de apagar, caso algo tenha
-mudado).
+Limpos em 2026-10-23 (40 arquivos, inclusive mapa, Foursquare, `ShareReviewModal` e
+`AmigosScreen`). Para conferir de novo, listar o que não é alcançável a partir de `src/main.tsx`
+seguindo os imports relativos.
 
 ## Decisões já fechadas (não reabrir sem pedir)
 
@@ -148,8 +160,12 @@ mudado).
   aba nova sem conversar antes. "Amigos" virou "Comunidade" em 2026-10-22, a pedido do Pedro.
 - Clube privado: o código fica em `clubeConvites/{id}` (só membros leem); quem entra grava
   `clubeConvites/{id}/usos/{uid}` no mesmo lote, e a regra confere o código.
-- Regras de segurança do Firestore já publicadas (bloco de segurança); curtidas, comentários e
-  contadores de seguidores usam só regras (+1/-1), sem Cloud Functions.
+- Regras de segurança do Firestore: o `firestore.rules` do repositório está à frente do que foi
+  publicado no console. Pedro pediu para não publicar ainda (2026-10-23) porque as regras vão mudar.
+  Pendentes: clubes/eventos/posts, `notificacoes`, `bloqueados`, `denuncias`, exclusão de convite.
+  Curtidas, comentários e contadores usam só regras (+1/-1), sem Cloud Functions.
+- Nenhuma API paga (Google Places, Maps, Mapbox). Mapa removido em 2026-10-20.
+- PRO ainda não cobra; meio de pagamento depende de decisão do Pedro (lojas exigem compra no app).
 
 ## Rodando localmente
 
@@ -162,10 +178,7 @@ npm run build            # vite build — confirmar que builda limpo antes de co
 ```
 
 Variáveis de ambiente usadas pelo projeto (`.env`, nunca commitar):
-- `VITE_GOOGLE_MAPS_API_KEY` / `GOOGLE_MAPS_API_KEY` — mapa (aba Mapa)
-- `VITE_GOOGLE_PLACES_KEY` / `GOOGLE_PLACES_KEY` — busca de lugares reais
-- `VITE_FOURSQUARE_API_KEY` / `FOURSQUARE_API_KEY` — fonte alternativa de lugares
-- `GEMINI_API_KEY` — geração do card compartilhável de avaliação (`ShareReviewModal`)
+- Chaves do Google Maps/Places, Foursquare e Gemini não são mais usadas pelo app
 - Firebase: configurado no client (ver `src/lib/firebase.ts` ou equivalente) — confirmar projeto
   do Firebase correto antes de qualquer mudança em regras do Firestore/Storage
 

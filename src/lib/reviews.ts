@@ -178,7 +178,7 @@ export async function salvarAvaliacao(a: {
   ]);
 
   const calculatedOverall = calcOverall(a.ratings);
-  const newId = 'rev-' + crypto.randomUUID().slice(0, 8);
+  const newId = 'rev-' + crypto.randomUUID();
   const review: Review = {
     id: newId,
     uid: a.autor.uid,
@@ -256,7 +256,8 @@ export async function salvarAvaliacao(a: {
   if (isFirebaseConfigured) {
     void (async () => {
     try {
-      const reviewRef = doc(collection(db, 'reviews'));
+      // mesmo id do aparelho: evita contar a ida duas vezes e permite apagar depois
+      const reviewRef = doc(db, 'reviews', newId);
       const placeRef = doc(db, 'places', a.place.id);
 
       await runTransaction(db, async (tx) => {
@@ -285,7 +286,8 @@ export async function salvarAvaliacao(a: {
           ...(a.pratoDestaque ? { pratoDestaque: a.pratoDestaque } : {}),
           ...(a.companions && a.companions.length > 0 ? { companions: a.companions } : {}),
         };
-        tx.set(reviewRef, firestoreReview);
+        // Firestore recusa campos undefined (ex.: lugar sem foto); sem isso a ida não subia
+        tx.set(reviewRef, JSON.parse(JSON.stringify(firestoreReview)));
       });
     } catch (err) {
       console.warn('Firestore salvarAvaliacao error, used local fallback:', err);
