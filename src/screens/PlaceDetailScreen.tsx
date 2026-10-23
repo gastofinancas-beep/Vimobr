@@ -18,7 +18,6 @@ import {
   Globe,
   Instagram,
   ChevronDown,
-  ExternalLink,
 } from 'lucide-react';
 import { NOMES_DIAS, faixasDoDia, lerHorario, situacaoAgora } from '../lib/horario';
 import { getPlace, SAMPLE_PLACES, formatarPrecoLabel } from '../lib/places';
@@ -230,7 +229,6 @@ export default function PlaceDetailScreen({
   const todasFotos = useMemo(() => {
     const list: string[] = [];
     if (place?.photoUrl) list.push(place.photoUrl);
-    (place?.photos || []).forEach((f) => list.push(f));
     reviews.forEach((r) => {
       (r.photos || []).forEach((f) => list.push(f));
       (r.peoplePhotos || []).forEach((f) => list.push(f));
@@ -312,9 +310,8 @@ export default function PlaceDetailScreen({
   )}`;
 
   // Só dados reais: sem nota ou contagem inventada
-  const notaGoogle = place.notaExterna?.nota ?? place.googleRating ?? place.rating ?? null;
-  const qtdGoogle = place.notaExterna?.total ?? place.googleUserRatingCount ?? place.reviewsCount ?? 0;
-  const fonteNota = place.notaExterna?.fonte ?? 'Google';
+  const notaGoogle = place.googleRating ?? place.rating ?? null;
+  const qtdGoogle = place.googleUserRatingCount ?? place.reviewsCount ?? 0;
   const tipo = place.tipo ? TIPOS[place.tipo] || place.tipo : null;
   const meta = [place.cuisine || tipo, place.bairro, place.priceLevel ? formatarPrecoLabel(place.priceLevel) : null].filter(Boolean);
   const maxHist = Math.max(1, ...histograma.map((h) => h.quantidade));
@@ -387,7 +384,7 @@ export default function PlaceDetailScreen({
                 <p className="t-meta mt-0.5">
                   {scoreInfo.vimoDesbloqueado
                     ? `${reviews.length} avaliações no VIMO`
-                    : `${qtdGoogle.toLocaleString('pt-BR')} avaliações no ${fonteNota}`}
+                    : `${qtdGoogle.toLocaleString('pt-BR')} avaliações no Google`}
                 </p>
               </div>
             </div>
@@ -529,7 +526,7 @@ export default function PlaceDetailScreen({
 
           {notaGoogle !== null && (
             <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-sm">
-              <span className="text-muted">{fonteNota}</span>
+              <span className="text-muted">Google</span>
               <span className="flex items-center gap-2">
                 <span className="t-rating text-ink">{nota(notaGoogle)}</span>
                 <StarRating value={notaGoogle} size={12} />
@@ -802,12 +799,6 @@ function InformacoesLugar({ place, rotasUrl, mapaUrl }: { place: Place; rotasUrl
           <a href={place.site} target="_blank" rel="noopener noreferrer" className={`${linha} cursor-pointer`}>
             <Globe size={18} strokeWidth={1.9} className={icone} />
             <span className="min-w-0 truncate text-sm text-ink">{place.site.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>
-          </a>
-        )}
-        {place.urlFonte && place.id.startsWith('yelp-') && (
-          <a href={place.urlFonte} target="_blank" rel="noopener noreferrer" className={`${linha} cursor-pointer`}>
-            <ExternalLink size={18} strokeWidth={1.9} className={icone} />
-            <span className="text-sm text-ink">Dados e fotos do Yelp</span>
           </a>
         )}
         {place.instagram && (

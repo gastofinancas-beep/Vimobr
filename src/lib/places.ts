@@ -751,34 +751,7 @@ export function cachePlaces(places: Place[]): void {
   } catch {}
 }
 
-/** Endereço do servidor do Vimo (vazio no site; no app empacotado vem de VITE_API_BASE). */
-export const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? '').replace(/\/$/, '');
-
-/** Detalhe de um lugar da Yelp (fotos e horário) pelo servidor do Vimo. */
-async function lugarDaYelp(placeId: string): Promise<Place | null> {
-  try {
-    const res = await fetch(`${API_BASE}/api/lugares/yelp/${encodeURIComponent(placeId.slice('yelp-'.length))}`, {
-      signal: AbortSignal.timeout(9000),
-    });
-    const dados = (await res.json()) as { lugar: Place | null };
-    return dados.lugar;
-  } catch {
-    return null;
-  }
-}
-
 export async function getPlace(placeId: string): Promise<Place> {
-  if (placeId.startsWith('yelp-')) {
-    const daLista = MEMORY_PLACES_CACHE.get(placeId);
-    const detalhe = await lugarDaYelp(placeId);
-    if (detalhe) {
-      // a busca traz a distância; o detalhe traz fotos e horário
-      const junto: Place = { ...daLista, ...detalhe, distanceKm: daLista?.distanceKm, cityKey: daLista?.cityKey };
-      cachePlace(junto);
-      return junto;
-    }
-    if (daLista) return daLista;
-  }
   // 1. Tentar obter do cache em memória instantâneo
   if (!MEMORY_PLACES_CACHE.has(placeId)) {
     const guardado = lerLugaresGuardados()[placeId];
