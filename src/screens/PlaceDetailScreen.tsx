@@ -18,6 +18,8 @@ import {
   Globe,
   Instagram,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { NOMES_DIAS, faixasDoDia, lerHorario, situacaoAgora } from '../lib/horario';
 import { getPlace, SAMPLE_PLACES, formatarPrecoLabel } from '../lib/places';
@@ -70,7 +72,7 @@ export default function PlaceDetailScreen({
   const [moderando, setModerando] = useState<Review | null>(null);
   const [carregando, setCarregando] = useState(!initialPlace);
   const [fotoModal, setFotoModal] = useState<string | null>(null);
-  const [mostrarTodasFotos, setMostrarTodasFotos] = useState(false);
+  const [indiceCarrossel, setIndiceCarrossel] = useState(0);
 
   const [likedReviews, setLikedReviews] = useState<Record<string, boolean>>({});
   const [reviewLikesCount, setReviewLikesCount] = useState<Record<string, number>>({});
@@ -225,26 +227,31 @@ export default function PlaceDetailScreen({
     }));
   }, [reviews]);
 
-  // Galeria de fotos reais
-  const todasFotos = useMemo(() => {
-    const list: string[] = [];
-    if (place?.photoUrl) list.push(place.photoUrl);
-    reviews.forEach((r) => {
-      (r.photos || []).forEach((f) => list.push(f));
-      (r.peoplePhotos || []).forEach((f) => list.push(f));
-      (r.menuPhotos || []).forEach((f) => list.push(f));
+  // Carrossel de até 5 fotos: fotos do dono (se claimed) + fotos das avaliações mais curtidas
+  const carouselFotos = useMemo(() => {
+    const lista: string[] = [];
+    // Fotos do dono têm prioridade quando a página foi reivindicada
+    if (place?.claimed && place.claimedPhotos?.length) {
+      place.claimedPhotos.forEach((f) => { if (!lista.includes(f)) lista.push(f); });
+    }
+    // Reviews ordenadas pelas mais curtidas
+    const reviewsOrdenadas = [...reviews].sort((a, b) => {
+      const likesA = reviewLikesCount[a.id] ?? a.likesCount ?? 0;
+      const likesB = reviewLikesCount[b.id] ?? b.likesCount ?? 0;
+      return likesB - likesA;
     });
-    return Array.from(new Set(list));
-  }, [place, reviews]);
+    for (const r of reviewsOrdenadas) {
+      for (const f of [...(r.photos || []), ...(r.peoplePhotos || [])]) {
+        if (!lista.includes(f)) lista.push(f);
+        if (lista.length >= 5) break;
+      }
+      if (lista.length >= 5) break;
+    }
+    return lista;
+  }, [place, reviews, reviewLikesCount]);
 
-  // Sem foto do lugar, a capa é a foto mais recente das avaliações do Vimo
-  const capa = useMemo(() => {
-    if (place?.photoUrl) return place.photoUrl;
-    const comFoto = [...reviews].sort((a, b) => b.createdAt - a.createdAt).find((r) => r.photos?.length || r.peoplePhotos?.length);
-    return comFoto?.photos?.[0] ?? comFoto?.peoplePhotos?.[0];
-  }, [place, reviews]);
-
-  const fotosExibidas = mostrarTodasFotos ? todasFotos : todasFotos.slice(0, 8);
+  // Capa: primeira foto do carrossel
+  const capa = useMemo(() => carouselFotos[0] ?? undefined, [carouselFotos]);
 
   // Quantas vezes o usuário atual foi a este estabelecimento
   const minhasVisitas = useMemo(
@@ -443,37 +450,70 @@ export default function PlaceDetailScreen({
         <InformacoesLugar place={place} rotasUrl={rotasUrl} mapaUrl={googleMapsUrl} />
 
         {/* Fotos */}
-        {todasFotos.length > 0 && (
-          <section aria-labelledby="titulo-fotos" className={`mt-4 ${card} p-4`}>
-            <div className="flex items-baseline justify-between">
-              <h2 id="titulo-fotos" className="t-section text-ink">
-                Fotos <span className="font-medium text-muted tabular">{todasFotos.length}</span>
-              </h2>
-              {todasFotos.length > 8 && (
-                <button
-                  type="button"
-                  onClick={() => setMostrarTodasFotos(!mostrarTodasFotos)}
-                  className="text-sm font-medium text-primary cursor-pointer"
-                >
-                  {mostrarTodasFotos ? 'Ver menos' : 'Ver todas'}
-                </button>
+        <section aria-labelledby="titulo-fotos" className={`mt-4 ${card} p-4`}>
+          <h2 id="titulo-fotos" className="t-section text-ink mb-3">
+            Fotos
+          </h2>
+          {carouselFotos.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-6">
+              <Mascote reacao="tranquilo" tamanho={64} />
+              <p className="text-sm text-muted text-center">Nenhuma foto ainda.<br/>Seja o primeiro a registrar uma ida.</p>
+              <button
+                type="button"
+                onClick={() => onAvaliar(place)}
+                className={`${btn} bg-ink text-bg text-sm px-5 py-2`}
+              >
+                Registrar ida
+              </button>
+            </div>
+          ) : (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setFotoModal(carouselFotos[indiceCarrossel])}
+                className="block w-full aspect-video overflow-hidden rounded-lg bg-s2 cursor-zoom-in"
+                aria-label="Ver foto em tela cheia"
+              >
+                <PlaceImage
+                  src={carouselFotos[indiceCarrossel]}
+                  name={place.name}
+                  className="h-full w-full object-cover"
+                />
+              </button>
+              {carouselFotos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIndiceCarrossel((i) => (i - 1 + carouselFotos.length) % carouselFotos.length)}
+                    aria-label="Foto anterior"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-ink/60 text-bg rounded-full p-1 cursor-pointer"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIndiceCarrossel((i) => (i + 1) % carouselFotos.length)}
+                    aria-label="Próxima foto"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-ink/60 text-bg rounded-full p-1 cursor-pointer"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                  <div className="flex justify-center gap-1.5 mt-2">
+                    {carouselFotos.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setIndiceCarrossel(i)}
+                        aria-label={`Ir para foto ${i + 1}`}
+                        className={`rounded-full transition-all cursor-pointer ${i === indiceCarrossel ? 'w-4 h-2 bg-ink' : 'w-2 h-2 bg-line'}`}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </div>
-            <div className="mt-3 grid grid-cols-4 gap-1.5">
-              {fotosExibidas.map((foto, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setFotoModal(foto)}
-                  aria-label={`Ver foto ${idx + 1}`}
-                  className="aspect-square overflow-hidden rounded-sm bg-s2 cursor-pointer"
-                >
-                  <PlaceImage src={foto} name="" className="h-full w-full" />
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* Notas */}
         <section aria-labelledby="titulo-notas" className={`mt-4 ${card} p-4`}>

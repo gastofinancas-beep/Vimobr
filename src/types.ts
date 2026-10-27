@@ -70,6 +70,10 @@ export interface Place {
   site?: string;
   instagram?: string;
   servicos?: { noLocal?: boolean; retirada?: boolean; entrega?: boolean; areaExterna?: boolean; acessivel?: boolean };
+  /** true quando o estabelecimento reivindicou a página e pode gerenciar as fotos */
+  claimed?: boolean;
+  /** Fotos enviadas pelo dono; aparecem antes das fotos de avaliações quando claimed=true */
+  claimedPhotos?: string[];
 }
 
 export type CompanionStatus = 'pendente' | 'aprovado_coautor' | 'aprovado_presenca' | 'recusado';
