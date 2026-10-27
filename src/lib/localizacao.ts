@@ -1,8 +1,11 @@
 import type { Place } from '../types';
 import { SAMPLE_PLACES, buscarRestaurantesReaisOSM, cachePlaces, slug } from './places';
+import { db } from './firebase';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 
 // Cidade do Descobrir: vem do GPS (com autorização) ou da escolha manual.
-// Nome da cidade e lugares vêm do OpenStreetMap, gratuito e sem chave.
+// Lugares vêm do Firestore (coleção `places`) quando a cidade foi importada,
+// ou do OpenStreetMap como fallback.
 
 export interface CidadeAtual {
   cityKey: string;
@@ -148,18 +151,41 @@ function lugaresGuardadosValidos(cidade: CidadeAtual): boolean {
   }
 }
 
+/** Busca lugares da coleção `places` no Firestore para a cidade dada. */
+async function buscarLugaresFirestore(cidade: CidadeAtual): Promise<Place[]> {
+  try {
+    const q = query(
+      collection(db, 'places'),
+      where('cityKey', '==', cidade.cityKey),
+      orderBy('distanceKm'),
+      limit(300),
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => d.data() as Place);
+  } catch {
+    return [];
+  }
+}
+
 /** Restaurantes, cafés, padarias e bares da cidade, do mais perto ao mais longe do ponto dela. */
 export async function carregarLugaresDaCidade(cidade: CidadeAtual, forcar = false): Promise<Place[]> {
   const guardados = lugaresGuardados(cidade);
   if (guardados && !forcar && lugaresGuardadosValidos(cidade)) return guardados;
 
-  const encontrados = await buscarRestaurantesReaisOSM(cidade.lat, cidade.lng, 5000);
-  const daCidade: Place[] = encontrados
-    .filter((p) => !p.id.startsWith('nom-'))
-    .map((p) => ({ ...p, cityName: p.cityName ?? cidade.nome, cityKey: cidade.cityKey }));
-  // Exemplos do app que ficam nessa cidade continuam aparecendo junto
-  const exemplos = SAMPLE_PLACES.filter((p) => p.cityKey === cidade.cityKey);
-  const lista = [...exemplos, ...daCidade.sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99))];
+  // Tenta o Firestore primeiro; cai no OSM se a cidade não foi importada
+  const doFirestore = await buscarLugaresFirestore(cidade);
+  let lista: Place[];
+  if (doFirestore.length >= 5) {
+    const exemplos = SAMPLE_PLACES.filter((p) => p.cityKey === cidade.cityKey);
+    lista = [...exemplos, ...doFirestore];
+  } else {
+    const encontrados = await buscarRestaurantesReaisOSM(cidade.lat, cidade.lng, 5000);
+    const daCidade: Place[] = encontrados
+      .filter((p) => !p.id.startsWith('nom-'))
+      .map((p) => ({ ...p, cityName: p.cityName ?? cidade.nome, cityKey: cidade.cityKey }));
+    const exemplos = SAMPLE_PLACES.filter((p) => p.cityKey === cidade.cityKey);
+    lista = [...exemplos, ...daCidade.sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99))];
+  }
 
   if (lista.length === 0) return guardados ?? [];
   cachePlaces(lista);
