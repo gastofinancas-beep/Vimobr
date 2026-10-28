@@ -48,11 +48,16 @@ export function PlaceImage({
     <div
       role="img"
       aria-label={name || 'Lugar sem foto'}
-      className={`flex items-end ${className}`}
+      className={`relative flex items-center justify-center ${className}`}
       style={{ backgroundColor: corDoLugar(name) }}
     >
+      {name && (
+        <span className="text-3xl font-black text-white/20 select-none leading-none" aria-hidden="true">
+          {name.trim().charAt(0).toUpperCase()}
+        </span>
+      )}
       {showName && name && (
-        <span className="w-full p-2.5 text-xs font-semibold leading-snug text-white line-clamp-3">{name}</span>
+        <span className="absolute inset-x-0 bottom-0 p-2.5 text-xs font-semibold leading-snug text-white line-clamp-3">{name}</span>
       )}
     </div>
   );

@@ -508,6 +508,11 @@ function PosterDestaque({
             <p className="mt-0.5 truncate text-[11px] text-white/70 leading-tight">{meta}</p>
           )}
         </div>
+        {place.vimoRating != null && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 pointer-events-none backdrop-blur-sm">
+            <span className="text-[12px] font-bold text-white tabular-nums leading-none">{place.vimoRating.toFixed(1).replace('.', ',')}</span>
+          </div>
+        )}
       </div>
     </button>
   );
@@ -547,6 +552,11 @@ function Poster({
             <p className="mt-0.5 truncate text-[11px] text-white/75 leading-tight">{meta}</p>
           )}
         </div>
+        {!pequeno && place.vimoRating != null && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/65 px-1.5 py-0.5 pointer-events-none backdrop-blur-sm">
+            <span className="text-[11px] font-bold text-white tabular-nums leading-none">{place.vimoRating.toFixed(1).replace('.', ',')}</span>
+          </div>
+        )}
       </div>
     </button>
   );
