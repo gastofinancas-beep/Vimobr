@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Store,
 } from 'lucide-react';
 import { NOMES_DIAS, faixasDoDia, lerHorario, situacaoAgora } from '../lib/horario';
 import { getPlace, SAMPLE_PLACES, formatarPrecoLabel } from '../lib/places';
@@ -33,6 +34,7 @@ import {
 } from '../lib/reviews';
 import { semBloqueados } from '../lib/moderacao';
 import { MenuModeracao } from '../components/Moderacao';
+import { enviarReivindicacao } from '../lib/reivindicacao';
 import StarRating from '../components/StarRating';
 import MascotMessage from '../components/MascotMessage';
 import { Avatar, PlaceImage, Spinner, btn, card } from '../components/ui';
@@ -85,6 +87,11 @@ export default function PlaceDetailScreen({
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [toastReacao, setToastReacao] = useState<Reacao>('sucesso');
+
+  const [modalReivindicar, setModalReivindicar] = useState(false);
+  const [mensagemReivindicacao, setMensagemReivindicacao] = useState('');
+  const [enviandoReivindicacao, setEnviandoReivindicacao] = useState(false);
+  const [reivindicacaoEnviada, setReivindicacaoEnviada] = useState(false);
   useEscape(() => setFotoModal(null), !!fotoModal);
 
   // Carrega dados do estabelecimento e avaliações reais
@@ -708,7 +715,86 @@ export default function PlaceDetailScreen({
             </div>
           )}
         </section>
+
+        {/* Reivindicar página */}
+        {!place?.claimed && !reivindicacaoEnviada && (
+          <section className={`mt-4 p-4 rounded-2xl border border-[var(--line)]`}>
+            <div className="flex items-start gap-3">
+              <Store size={18} className="mt-0.5 shrink-0 text-[var(--muted)]" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">É o proprietário deste estabelecimento?</p>
+                <p className="text-xs text-[var(--muted)] mt-0.5">Reivindique a página para gerenciar as informações.</p>
+                <button
+                  type="button"
+                  onClick={() => setModalReivindicar(true)}
+                  className="mt-3 text-sm font-medium text-[var(--primary)] cursor-pointer hover:opacity-75 transition-opacity"
+                >
+                  Reivindicar página
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {reivindicacaoEnviada && (
+          <section className={`mt-4 p-4 rounded-2xl border border-[var(--line)]`}>
+            <p className="text-sm text-[var(--muted)] text-center">Solicitação enviada. Entraremos em contato em breve.</p>
+          </section>
+        )}
+
       </main>
+
+      {/* Modal reivindicar */}
+      {modalReivindicar && (
+        <div className="fixed inset-0 z-40 bg-black/60 flex items-end justify-center p-4 animate-in">
+          <div className="bg-[var(--bg)] rounded-2xl w-full max-w-md p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display font-700 text-base">Reivindicar página</h2>
+              <button type="button" onClick={() => setModalReivindicar(false)} aria-label="Fechar" className="cursor-pointer">
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-sm text-[var(--muted)]">
+              Descreva seu vínculo com <strong>{place?.name}</strong> (proprietário, gerente, responsável).
+            </p>
+            <textarea
+              value={mensagemReivindicacao}
+              onChange={(e) => setMensagemReivindicacao(e.target.value)}
+              placeholder="Ex.: sou o proprietário do estabelecimento desde 2018..."
+              rows={4}
+              className="w-full text-sm border border-[var(--line)] rounded-xl px-3 py-2 bg-transparent resize-none focus:outline-none focus:border-[var(--ink)] transition-colors"
+            />
+            <button
+              type="button"
+              disabled={mensagemReivindicacao.trim().length < 10 || enviandoReivindicacao}
+              onClick={async () => {
+                if (!place) return;
+                setEnviandoReivindicacao(true);
+                try {
+                  await enviarReivindicacao(
+                    place.id,
+                    place.name,
+                    currentUser.uid,
+                    currentUser.displayName,
+                    currentUser.handle,
+                    mensagemReivindicacao,
+                  );
+                  setReivindicacaoEnviada(true);
+                  setModalReivindicar(false);
+                } catch (err: any) {
+                  setToastMsg(err.message || 'Erro ao enviar solicitação');
+                  setToastReacao('erro');
+                } finally {
+                  setEnviandoReivindicacao(false);
+                }
+              }}
+              className="w-full py-3 rounded-xl bg-[var(--ink)] text-[var(--bg)] text-sm font-medium disabled:opacity-40 cursor-pointer transition-opacity hover:opacity-80"
+            >
+              {enviandoReivindicacao ? 'Enviando...' : 'Enviar solicitação'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Foto em tela cheia */}
       {moderando && (
