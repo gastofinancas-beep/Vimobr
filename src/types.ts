@@ -74,6 +74,29 @@ export interface Place {
   claimed?: boolean;
   /** Fotos enviadas pelo dono; aparecem antes das fotos de avaliações quando claimed=true */
   claimedPhotos?: string[];
+  /** Fonte dos dados do cadastro */
+  source?: 'openstreetmap' | 'user_submitted' | 'official';
+  /** URL da fonte original */
+  sourceUrl?: string;
+  /** Estado (UF), ex.: "SP" */
+  state?: string;
+  /** UID do proprietário após reivindicação aprovada */
+  ownerId?: string;
+  /** Data de criação no banco VIMO */
+  createdAt?: number;
+}
+
+export interface PlaceClaim {
+  id: string;
+  placeId: string;
+  placeName: string;
+  userId: string;
+  userName: string;
+  userHandle: string;
+  mensagem: string;
+  status: 'pendente' | 'aprovado' | 'rejeitado';
+  createdAt: number;
+  resolvidoEm?: number;
 }
 
 export type CompanionStatus = 'pendente' | 'aprovado_coautor' | 'aprovado_presenca' | 'recusado';
