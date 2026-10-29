@@ -1,6 +1,6 @@
 import type { Place } from '../types';
 import { db } from './firebase';
-import { doc, setDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, collection, getDocs, query, orderBy, startAt, endAt, limit } from 'firebase/firestore';
 
 // Google Places é pago por chamada. Decisão do produto: nenhuma API paga, então a chave
 // fica desligada mesmo que exista no .env, e as buscas usam OpenStreetMap e dados locais.
@@ -30,7 +30,7 @@ export function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lo
 }
 
 export const slug = (s: string) =>
-  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
     .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 export function extrairBairro(address: string): string {
@@ -925,11 +925,99 @@ export const photoUrl = (photoName?: string, maxWidth = 800) => {
   return photoName && key ? `${BASE}/${photoName}/media?maxWidthPx=${maxWidth}&key=${key}` : '';
 };
 
+/**
+ * Busca lugares no banco do app (cache em memória + Firestore) pelo nome.
+ * Se não encontrar nada localmente, consulta o OpenStreetMap via Nominatim,
+ * salva os resultados no Firestore como nosso banco de dados e os retorna.
+ */
+export async function buscarLugaresLocais(q: string): Promise<Place[]> {
+  const qLower = q.toLowerCase().trim();
+  if (!qLower) return [];
+
+  // 1. Cache em memória (lugares já carregados nesta sessão)
+  const doCache: Place[] = [];
+  MEMORY_PLACES_CACHE.forEach((p) => {
+    if (p.name.toLowerCase().includes(qLower)) doCache.push(p);
+  });
+
+  // 2. Firestore: prefix-search por nome (ordena pelo campo 'name')
+  const doFirestore: Place[] = [];
+  try {
+    const nomeCapitalized = q.trim().charAt(0).toUpperCase() + q.trim().slice(1);
+    const snap = await getDocs(
+      query(
+        collection(db, 'places'),
+        orderBy('name'),
+        startAt(nomeCapitalized),
+        endAt(nomeCapitalized + ''),
+        limit(10),
+      )
+    );
+    snap.forEach((d) => {
+      const place = d.data() as Place;
+      if (place?.id) {
+        cachePlace(place);
+        if (!doCache.some((c) => c.id === place.id)) doFirestore.push(place);
+      }
+    });
+  } catch {}
+
+  const local = [...doCache, ...doFirestore];
+  if (local.length > 0) return local.slice(0, 10);
+
+  // 3. Fallback OSM via Nominatim — busca pelo nome e salva no nosso banco
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=br&limit=10&addressdetails=1`,
+      { headers: { 'User-Agent': 'VimoGastronomia/1.0' }, signal: AbortSignal.timeout(6000) }
+    );
+    if (res.ok) {
+      const data = await res.json() as Array<any>;
+      const osmPlaces: Place[] = data
+        .filter((item: any) => ['restaurant', 'cafe', 'bakery', 'bar', 'pub', 'fast_food', 'food'].includes(item.type) || item.class === 'amenity')
+        .map((item: any) => {
+          const nome = item.name || item.display_name.split(',')[0] || q;
+          const tipo: Place['tipo'] =
+            item.type === 'cafe' ? 'cafe'
+            : item.type === 'bakery' ? 'bakery'
+            : (item.type === 'bar' || item.type === 'pub') ? 'bar'
+            : 'restaurant';
+          const addr = item.address;
+          const bairroOsm = addr?.suburb || addr?.quarter || addr?.neighbourhood || addr?.city_district || '';
+          const cidade = addr?.city || addr?.town || addr?.village || 'Brasil';
+          return {
+            id: `nom-${item.place_id}`,
+            name: nome,
+            address: `${addr?.road ? addr.road + (addr?.house_number ? ', ' + addr.house_number : '') + ' — ' : ''}${bairroOsm || cidade}`,
+            bairro: bairroOsm,
+            cityName: cidade,
+            cityKey: cidade.toLowerCase().replace(/\s+/g, '-'),
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon),
+            tipo,
+            source: 'openstreetmap' as const,
+          } as Place;
+        });
+      if (osmPlaces.length > 0) {
+        // Salva no Firestore como nosso banco de dados (em segundo plano)
+        cachePlaces(osmPlaces);
+        osmPlaces.forEach((p) => {
+          setDoc(doc(collection(db, 'places'), p.id), p).catch(() => {});
+        });
+        return osmPlaces;
+      }
+    }
+  } catch {}
+
+  return [];
+}
+
 /** Cria um lugar novo enviado pelo usuário, salva no cache local e no Firestore. */
 export async function criarLugarUsuario(dados: {
   nome: string;
   tipo: 'restaurant' | 'cafe' | 'bakery' | 'bar';
   endereco?: string;
+  bairro?: string;
   submittedBy?: string;
 }): Promise<Place> {
   const id = `user-${Date.now()}-${slug(dados.nome).slice(0, 24)}`;
@@ -943,6 +1031,7 @@ export async function criarLugarUsuario(dados: {
     source: 'user_submitted',
     verificacao: 'verifying',
     createdAt: Date.now(),
+    ...(dados.bairro ? { bairro: dados.bairro.trim() } : {}),
     ...(dados.submittedBy ? { submittedBy: dados.submittedBy } : {}),
   };
   cachePlace(place);
@@ -951,4 +1040,3 @@ export async function criarLugarUsuario(dados: {
   } catch {}
   return place;
 }
-
