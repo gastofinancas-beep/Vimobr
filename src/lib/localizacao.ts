@@ -1,7 +1,7 @@
 import type { Place } from '../types';
 import { SAMPLE_PLACES, buscarRestaurantesReaisOSM, cachePlaces, slug } from './places';
 import { db } from './firebase';
-import { collection, query, where, getDocs, orderBy, limit, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, writeBatch, doc } from 'firebase/firestore';
 import { auth } from './firebase';
 
 // Cidade do Descobrir: vem do GPS (com autorização) ou da escolha manual.
@@ -174,14 +174,15 @@ async function salvarLugaresFirestore(lugares: Place[], cidade: CidadeAtual): Pr
 /** Busca lugares da coleção `places` no Firestore para a cidade dada. */
 async function buscarLugaresFirestore(cidade: CidadeAtual): Promise<Place[]> {
   try {
+    // Sem orderBy para não exigir índice composto — ordena em memória depois
     const q = query(
       collection(db, 'places'),
       where('cityKey', '==', cidade.cityKey),
-      orderBy('distanceKm'),
       limit(300),
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => d.data() as Place);
+    const places = snap.docs.map((d) => d.data() as Place);
+    return places.sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99));
   } catch {
     return [];
   }

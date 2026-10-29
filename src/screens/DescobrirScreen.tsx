@@ -441,7 +441,7 @@ export default function DescobrirScreen({
                       <MapPin size={16} strokeWidth={1.8} className={atual ? 'text-primary' : 'text-muted'} />
                       <span>{cid.nome}</span>
                     </button>
-                  </li>
+      </li>
                 );
               })}
             </ul>
@@ -486,6 +486,9 @@ function PosterDestaque({
   onAbrir: (p: Place) => void;
   grande?: boolean;
 }) {
+  const TIPOS_LABEL: Record<string, string> = { restaurant: 'Restaurante', cafe: 'Café', bakery: 'Padaria', bar: 'Bar' };
+  const tipoLabel = place.cuisine || (place.tipo ? TIPOS_LABEL[place.tipo] : undefined);
+  const temFoto = !!(place.photoUrl || place.coverImage || (place.photos && place.photos.length > 0));
   return (
     <button
       type="button"
@@ -495,22 +498,31 @@ function PosterDestaque({
     >
       <div className={`relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98] ${grande ? 'h-full min-h-[200px]' : 'aspect-[4/5]'}`}>
         <PlaceImage
-          src={place.photoUrl}
+          src={place.photoUrl || place.coverImage}
           name={place.name}
           className={`w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${grande ? 'h-full absolute inset-0' : 'h-full'}`}
         />
-        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/85 via-black/35 to-transparent rounded-b-xl pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-black/90 via-black/40 to-transparent rounded-b-xl pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 px-3 pb-3 pointer-events-none">
           <p className="font-bold text-[13px] leading-tight text-white" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}>
             {place.name}
           </p>
-          {meta && (
-            <p className="mt-0.5 truncate text-[11px] text-white/70 leading-tight">{meta}</p>
-          )}
+          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+            {tipoLabel && (
+              <span className="text-[10px] font-semibold text-white/60 uppercase tracking-wide leading-tight">{tipoLabel}</span>
+            )}
+            {tipoLabel && meta && <span className="text-white/40 text-[10px]">·</span>}
+            {meta && <span className="text-[11px] text-white/70 leading-tight truncate">{meta}</span>}
+          </div>
         </div>
         {place.vimoRating != null && (
           <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 pointer-events-none backdrop-blur-sm">
             <span className="text-[12px] font-bold text-white tabular-nums leading-none">{place.vimoRating.toFixed(1).replace('.', ',')}</span>
+          </div>
+        )}
+        {!temFoto && tipoLabel && (
+          <div className="absolute top-2 left-2 pointer-events-none">
+            <span className="rounded-full bg-white/15 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold text-white">{tipoLabel}</span>
           </div>
         )}
       </div>
@@ -529,6 +541,9 @@ function Poster({
   onAbrir: (p: Place) => void;
   pequeno?: boolean;
 }) {
+  const TIPOS_LABEL: Record<string, string> = { restaurant: 'Restaurante', cafe: 'Café', bakery: 'Padaria', bar: 'Bar' };
+  const tipoLabel = place.tipo ? TIPOS_LABEL[place.tipo] : undefined;
+  const metaInfo = meta || place.bairro || tipoLabel || '';
   return (
     <button
       type="button"
@@ -538,18 +553,21 @@ function Poster({
     >
       <div className="relative overflow-hidden rounded-xl bg-s2 ring-1 ring-inset ring-black/5 transition-transform duration-200 group-active:scale-[0.98]">
         <PlaceImage
-          src={place.photoUrl}
+          src={place.photoUrl || place.coverImage}
           name={place.name}
           className="aspect-[4/5] w-full transition-transform duration-500 ease-out group-hover:scale-[1.04]"
         />
-        <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-b-xl pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/85 via-black/30 to-transparent rounded-b-xl pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 pointer-events-none">
           <p className={`font-bold leading-tight text-white drop-shadow-sm ${pequeno ? 'text-[11px]' : 'text-[13px]'}`}
             style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
             {place.name}
           </p>
-          {meta && !pequeno && (
-            <p className="mt-0.5 truncate text-[11px] text-white/75 leading-tight">{meta}</p>
+          {metaInfo && !pequeno && (
+            <p className="mt-0.5 truncate text-[11px] text-white/75 leading-tight">{metaInfo}</p>
+          )}
+          {pequeno && tipoLabel && (
+            <p className="mt-0.5 truncate text-[10px] text-white/60 leading-tight">{tipoLabel}</p>
           )}
         </div>
         {!pequeno && place.vimoRating != null && (
