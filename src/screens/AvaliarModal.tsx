@@ -18,7 +18,7 @@ import {
   Clock,
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
-import { autocomplete, criarLugarUsuario, getPlace, photoUrl, SAMPLE_PLACES } from '../lib/places';
+import { buscarLugaresLocais, criarLugarUsuario, getPlace, photoUrl } from '../lib/places';
 import { verificarLugar, type StatusVerificacao } from '../lib/verificacaoLugar';
 import { getLocalReviews, salvarAvaliacao } from '../lib/reviews';
 import { avisarUltrapassagens } from '../lib/clubes';
@@ -140,6 +140,7 @@ export default function AvaliarModal({
   const [novoNome, setNovoNome] = useState('');
   const [novoTipo, setNovoTipo] = useState<'restaurant' | 'cafe' | 'bakery' | 'bar'>('restaurant');
   const [novoEndereco, setNovoEndereco] = useState('');
+  const [novoBairro, setNovoBairro] = useState('');
   const [salvandoLugar, setSalvandoLugar] = useState(false);
 
   const [dataVisita, setDataVisita] = useState(hojeISO());
@@ -212,7 +213,7 @@ export default function AvaliarModal({
     return Math.round(media * 2) / 2;
   }, [notasDadas]);
 
-  // Autocomplete de lugar
+  // Busca lugares no banco do próprio app
   const lidarBuscaLugar = async (q: string) => {
     setBuscaLugar(q);
     if (q.trim().length < 2) {
@@ -221,13 +222,10 @@ export default function AvaliarModal({
     }
     setBuscandoLugar(true);
     try {
-      const res = await autocomplete(q);
+      const res = await buscarLugaresLocais(q);
       setSugestoesLugar(res);
     } catch {
-      const filtrados = SAMPLE_PLACES.filter((p) =>
-        p.name.toLowerCase().includes(q.toLowerCase())
-      );
-      setSugestoesLugar(filtrados);
+      setSugestoesLugar([]);
     } finally {
       setBuscandoLugar(false);
     }
@@ -469,34 +467,6 @@ export default function AvaliarModal({
           </div>
         )}
 
-        {/* Banner de verificação do lugar cadastrado pelo usuário */}
-        {verificacaoStatus && verificacaoStatus !== 'verified' && (
-          <div
-            className={`mx-4 mt-3 px-3 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 shrink-0 ${
-              verificacaoStatus === 'verifying'
-                ? 'bg-primary/10 text-primary'
-                : verificacaoStatus === 'pending_review'
-                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
-                : 'bg-danger/10 text-danger'
-            }`}
-          >
-            {verificacaoStatus === 'verifying' && (
-              <><Loader2 size={15} className="shrink-0 animate-spin" /><span>Verificando o lugar...</span></>
-            )}
-            {verificacaoStatus === 'pending_review' && (
-              <><Clock size={15} className="shrink-0" /><span>Cadastro enviado para análise. Sua avaliação será publicada normalmente.</span></>
-            )}
-            {verificacaoStatus === 'verification_error' && (
-              <><AlertCircle size={15} className="shrink-0" /><span>Não foi possível verificar o lugar. Sua avaliação será salva assim mesmo.</span></>
-            )}
-          </div>
-        )}
-        {verificacaoStatus === 'verified' && (
-          <div className="mx-4 mt-3 px-3 py-2.5 rounded-lg bg-green-500/10 text-green-700 dark:text-green-400 text-sm font-medium flex items-center gap-2 shrink-0">
-            <ShieldCheck size={15} className="shrink-0" />
-            <span>Lugar confirmado.</span>
-          </div>
-        )}
 
         {/* Conteúdo Dinâmico por Passo */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
@@ -596,90 +566,117 @@ export default function AvaliarModal({
                     </div>
                   )}
 
-                  {!adicionandoLugar && (
+                  {!adicionandoLugar && sugestoesLugar.length > 0 && (
                     <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                      {(sugestoesLugar.length > 0 ? sugestoesLugar : SAMPLE_PLACES.slice(0, 5)).map(
-                        (p) => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => selecionarLugar(p)}
-                            className="w-full text-left p-2.5 rounded-xl bg-[var(--s2)] hover:bg-[var(--line)] transition flex items-center gap-3 cursor-pointer"
-                          >
-                            <div className="w-9 h-9 rounded-lg overflow-hidden bg-[var(--s1)] shrink-0">
-                              {p.photoUrl || (p.photoName ? photoUrl(p.photoName) : undefined) ? (
-                                <img
-                                  src={p.photoUrl || (p.photoName ? photoUrl(p.photoName) : '')}
-                                  alt=""
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[var(--muted)]">
-                                  <Utensils size={14} />
-                                </div>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-xs font-bold text-[var(--ink)] truncate">
-                                {p.name}
+                      {sugestoesLugar.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => selecionarLugar(p)}
+                          className="w-full text-left p-2.5 rounded-xl bg-[var(--s2)] hover:bg-[var(--line)] transition flex items-center gap-3 cursor-pointer"
+                        >
+                          <div className="w-9 h-9 rounded-lg overflow-hidden bg-[var(--s1)] shrink-0">
+                            {p.photoUrl || (p.photoName ? photoUrl(p.photoName) : undefined) ? (
+                              <img
+                                src={p.photoUrl || (p.photoName ? photoUrl(p.photoName) : '')}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[var(--muted)]">
+                                <Utensils size={14} />
                               </div>
-                              <div className="text-[11px] text-[var(--muted)] truncate">
-                                {p.address || p.bairro}
-                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-[var(--ink)] truncate">
+                              {p.name}
                             </div>
-                          </button>
-                        )
-                      )}
+                            <div className="text-[11px] text-[var(--muted)] truncate">
+                              {p.address || p.bairro}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   )}
 
                   {/* Formulário para adicionar lugar novo */}
                   {adicionandoLugar ? (
                     <div className="rounded-2xl border border-[var(--line)] bg-[var(--s2)] p-4 space-y-3">
-                      <p className="text-sm font-semibold text-[var(--ink)]">Novo lugar</p>
-                      <input
-                        type="text"
-                        value={novoNome}
-                        onChange={(e) => setNovoNome(e.target.value)}
-                        placeholder="Nome do lugar *"
-                        className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
-                        autoFocus
-                      />
-                      <select
-                        value={novoTipo}
-                        onChange={(e) => setNovoTipo(e.target.value as typeof novoTipo)}
-                        className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] focus:outline-none focus:border-[var(--primary)] transition"
-                      >
-                        <option value="restaurant">Restaurante</option>
-                        <option value="cafe">Café</option>
-                        <option value="bakery">Padaria</option>
-                        <option value="bar">Bar</option>
-                      </select>
-                      <input
-                        type="text"
-                        value={novoEndereco}
-                        onChange={(e) => setNovoEndereco(e.target.value)}
-                        placeholder="Endereço ou bairro (opcional)"
-                        className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
-                      />
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--ink)]">Cadastrar novo lugar</p>
+                        <p className="text-xs text-[var(--muted)] mt-0.5">Preencha com atenção para facilitar a verificação.</p>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Nome do lugar *</label>
+                        <input
+                          type="text"
+                          value={novoNome}
+                          onChange={(e) => setNovoNome(e.target.value)}
+                          placeholder="Ex: Restaurante do João"
+                          className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
+                          autoFocus
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Tipo *</label>
+                        <select
+                          value={novoTipo}
+                          onChange={(e) => setNovoTipo(e.target.value as typeof novoTipo)}
+                          className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] focus:outline-none focus:border-[var(--primary)] transition"
+                        >
+                          <option value="restaurant">Restaurante</option>
+                          <option value="cafe">Café</option>
+                          <option value="bakery">Padaria</option>
+                          <option value="bar">Bar</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Bairro *</label>
+                        <input
+                          type="text"
+                          value={novoBairro}
+                          onChange={(e) => setNovoBairro(e.target.value)}
+                          placeholder="Ex: Centro, Vila Madalena"
+                          className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Endereço (rua e número)</label>
+                        <input
+                          type="text"
+                          value={novoEndereco}
+                          onChange={(e) => setNovoEndereco(e.target.value)}
+                          placeholder="Ex: Rua das Flores, 123"
+                          className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
+                        />
+                      </div>
+
                       <div className="flex gap-2 pt-1">
                         <button
                           type="button"
-                          onClick={() => setAdicionandoLugar(false)}
+                          onClick={() => { setAdicionandoLugar(false); setNovoBairro(''); setNovoEndereco(''); }}
                           className="flex-1 h-10 rounded-xl border border-[var(--line)] text-sm font-semibold text-[var(--muted)] hover:text-[var(--ink)] transition cursor-pointer"
                         >
                           Cancelar
                         </button>
                         <button
                           type="button"
-                          disabled={novoNome.trim().length < 2 || salvandoLugar}
+                          disabled={novoNome.trim().length < 2 || novoBairro.trim().length < 2 || salvandoLugar}
                           onClick={async () => {
                             setSalvandoLugar(true);
                             try {
+                              const enderecoCompleto = [novoEndereco.trim(), novoBairro.trim()].filter(Boolean).join(', ');
                               const criado = await criarLugarUsuario({
                                 nome: novoNome,
                                 tipo: novoTipo,
-                                endereco: novoEndereco,
+                                endereco: enderecoCompleto,
+                                bairro: novoBairro,
                                 submittedBy: currentUser.uid,
                               });
                               setLugar(criado);
@@ -687,7 +684,7 @@ export default function AvaliarModal({
                               setErroValidacao(null);
                               setVerificacaoStatus('verifying');
                               // Verificação em segundo plano — não bloqueia o fluxo
-                              verificarLugar(criado.id, novoNome, novoEndereco).then((status) => {
+                              verificarLugar(criado.id, novoNome, enderecoCompleto).then((status) => {
                                 setVerificacaoStatus(status);
                               });
                             } finally {
@@ -701,13 +698,19 @@ export default function AvaliarModal({
                       </div>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => { setAdicionandoLugar(true); setNovoNome(buscaLugar); }}
-                      className="w-full py-2.5 text-sm font-semibold text-[var(--primary)] hover:underline cursor-pointer text-center"
-                    >
-                      Não encontrou? Adicionar lugar
-                    </button>
+                    /* Mostra "Adicionar lugar" só quando a busca não achou nada */
+                    !buscandoLugar && buscaLugar.trim().length >= 2 && sugestoesLugar.length === 0 && (
+                      <div className="text-center py-3 space-y-2">
+                        <p className="text-sm text-[var(--muted)]">Nenhum resultado para "{buscaLugar}".</p>
+                        <button
+                          type="button"
+                          onClick={() => { setAdicionandoLugar(true); setNovoNome(buscaLugar); }}
+                          className="text-sm font-semibold text-[var(--primary)] hover:underline cursor-pointer"
+                        >
+                          Cadastrar este lugar
+                        </button>
+                      </div>
+                    )
                   )}
                 </div>
               )}
@@ -1020,6 +1023,30 @@ export default function AvaliarModal({
                   Confira antes de publicar no seu diário.
                 </p>
               </div>
+
+              {/* Status de verificação — só aparece para lugares cadastrados pelo usuário */}
+              {verificacaoStatus && (
+                <div className={`px-3 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                  verificacaoStatus === 'verifying'
+                    ? 'bg-primary/10 text-primary'
+                    : verificacaoStatus === 'verified'
+                    ? 'bg-green-500/10 text-green-700 dark:text-green-400'
+                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                }`}>
+                  {verificacaoStatus === 'verifying' && (
+                    <><Loader2 size={15} className="shrink-0 animate-spin" /><span>Verificando o lugar em segundo plano...</span></>
+                  )}
+                  {verificacaoStatus === 'verified' && (
+                    <><ShieldCheck size={15} className="shrink-0" /><span>Lugar confirmado. Sua avaliação será publicada normalmente.</span></>
+                  )}
+                  {verificacaoStatus === 'pending_review' && (
+                    <><Clock size={15} className="shrink-0" /><span>Lugar não encontrado na nossa base. Sua avaliação vai para análise antes de ser publicada.</span></>
+                  )}
+                  {verificacaoStatus === 'verification_error' && (
+                    <><Clock size={15} className="shrink-0" /><span>Não foi possível verificar o lugar agora. Sua avaliação vai para análise.</span></>
+                  )}
+                </div>
+              )}
 
               <div className="p-4 rounded-2xl bg-[var(--s2)] border border-[var(--line)] space-y-3.5">
                 {/* Nome do lugar */}
