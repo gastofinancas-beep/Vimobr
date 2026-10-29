@@ -15,7 +15,7 @@ import {
   Bike,
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
-import { autocomplete, getPlace, photoUrl, SAMPLE_PLACES } from '../lib/places';
+import { autocomplete, criarLugarUsuario, getPlace, photoUrl, SAMPLE_PLACES } from '../lib/places';
 import { getLocalReviews, salvarAvaliacao } from '../lib/reviews';
 import { avisarUltrapassagens } from '../lib/clubes';
 import { buscarUsuariosParaMarcar } from '../lib/companions';
@@ -132,6 +132,11 @@ export default function AvaliarModal({
   const [buscaLugar, setBuscaLugar] = useState('');
   const [sugestoesLugar, setSugestoesLugar] = useState<Place[]>([]);
   const [buscandoLugar, setBuscandoLugar] = useState(false);
+  const [adicionandoLugar, setAdicionandoLugar] = useState(false);
+  const [novoNome, setNovoNome] = useState('');
+  const [novoTipo, setNovoTipo] = useState<'restaurant' | 'cafe' | 'bakery' | 'bar'>('restaurant');
+  const [novoEndereco, setNovoEndereco] = useState('');
+  const [salvandoLugar, setSalvandoLugar] = useState(false);
 
   const [dataVisita, setDataVisita] = useState(hojeISO());
   const [notasCriterios, setNotasCriterios] = useState<Record<string, number>>({});
@@ -555,40 +560,109 @@ export default function AvaliarModal({
                     </div>
                   )}
 
-                  <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                    {(sugestoesLugar.length > 0 ? sugestoesLugar : SAMPLE_PLACES.slice(0, 5)).map(
-                      (p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => selecionarLugar(p)}
-                          className="w-full text-left p-2.5 rounded-xl bg-[var(--s2)] hover:bg-[var(--line)] transition flex items-center gap-3 cursor-pointer"
-                        >
-                          <div className="w-9 h-9 rounded-lg overflow-hidden bg-[var(--s1)] shrink-0">
-                            {p.photoUrl || (p.photoName ? photoUrl(p.photoName) : undefined) ? (
-                              <img
-                                src={p.photoUrl || (p.photoName ? photoUrl(p.photoName) : '')}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[var(--muted)]">
-                                <Utensils size={14} />
+                  {!adicionandoLugar && (
+                    <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                      {(sugestoesLugar.length > 0 ? sugestoesLugar : SAMPLE_PLACES.slice(0, 5)).map(
+                        (p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => selecionarLugar(p)}
+                            className="w-full text-left p-2.5 rounded-xl bg-[var(--s2)] hover:bg-[var(--line)] transition flex items-center gap-3 cursor-pointer"
+                          >
+                            <div className="w-9 h-9 rounded-lg overflow-hidden bg-[var(--s1)] shrink-0">
+                              {p.photoUrl || (p.photoName ? photoUrl(p.photoName) : undefined) ? (
+                                <img
+                                  src={p.photoUrl || (p.photoName ? photoUrl(p.photoName) : '')}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[var(--muted)]">
+                                  <Utensils size={14} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-bold text-[var(--ink)] truncate">
+                                {p.name}
                               </div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-bold text-[var(--ink)] truncate">
-                              {p.name}
+                              <div className="text-[11px] text-[var(--muted)] truncate">
+                                {p.address || p.bairro}
+                              </div>
                             </div>
-                            <div className="text-[11px] text-[var(--muted)] truncate">
-                              {p.address || p.bairro}
-                            </div>
-                          </div>
+                          </button>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  {/* Formulário para adicionar lugar novo */}
+                  {adicionandoLugar ? (
+                    <div className="rounded-2xl border border-[var(--line)] bg-[var(--s2)] p-4 space-y-3">
+                      <p className="text-sm font-semibold text-[var(--ink)]">Novo lugar</p>
+                      <input
+                        type="text"
+                        value={novoNome}
+                        onChange={(e) => setNovoNome(e.target.value)}
+                        placeholder="Nome do lugar *"
+                        className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
+                        autoFocus
+                      />
+                      <select
+                        value={novoTipo}
+                        onChange={(e) => setNovoTipo(e.target.value as typeof novoTipo)}
+                        className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] focus:outline-none focus:border-[var(--primary)] transition"
+                      >
+                        <option value="restaurant">Restaurante</option>
+                        <option value="cafe">Café</option>
+                        <option value="bakery">Padaria</option>
+                        <option value="bar">Bar</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={novoEndereco}
+                        onChange={(e) => setNovoEndereco(e.target.value)}
+                        placeholder="Endereço ou bairro (opcional)"
+                        className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
+                      />
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setAdicionandoLugar(false)}
+                          className="flex-1 h-10 rounded-xl border border-[var(--line)] text-sm font-semibold text-[var(--muted)] hover:text-[var(--ink)] transition cursor-pointer"
+                        >
+                          Cancelar
                         </button>
-                      )
-                    )}
-                  </div>
+                        <button
+                          type="button"
+                          disabled={novoNome.trim().length < 2 || salvandoLugar}
+                          onClick={async () => {
+                            setSalvandoLugar(true);
+                            try {
+                              const criado = await criarLugarUsuario({ nome: novoNome, tipo: novoTipo, endereco: novoEndereco });
+                              setLugar(criado);
+                              setAdicionandoLugar(false);
+                              setErroValidacao(null);
+                            } finally {
+                              setSalvandoLugar(false);
+                            }
+                          }}
+                          className="flex-1 h-10 rounded-xl bg-[var(--primary)] text-sm font-semibold text-white disabled:opacity-40 transition cursor-pointer"
+                        >
+                          {salvandoLugar ? 'Salvando…' : 'Confirmar'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setAdicionandoLugar(true); setNovoNome(buscaLugar); }}
+                      className="w-full py-2.5 text-sm font-semibold text-[var(--primary)] hover:underline cursor-pointer text-center"
+                    >
+                      Não encontrou? Adicionar lugar
+                    </button>
+                  )}
                 </div>
               )}
             </div>

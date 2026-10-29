@@ -1,4 +1,6 @@
 import type { Place } from '../types';
+import { db } from './firebase';
+import { doc, setDoc, collection } from 'firebase/firestore';
 
 // Google Places é pago por chamada. Decisão do produto: nenhuma API paga, então a chave
 // fica desligada mesmo que exista no .env, e as buscas usam OpenStreetMap e dados locais.
@@ -922,4 +924,28 @@ export const photoUrl = (photoName?: string, maxWidth = 800) => {
   const key = getApiKey();
   return photoName && key ? `${BASE}/${photoName}/media?maxWidthPx=${maxWidth}&key=${key}` : '';
 };
+
+/** Cria um lugar novo enviado pelo usuário, salva no cache local e no Firestore. */
+export async function criarLugarUsuario(dados: {
+  nome: string;
+  tipo: 'restaurant' | 'cafe' | 'bakery' | 'bar';
+  endereco?: string;
+}): Promise<Place> {
+  const id = `user-${Date.now()}-${slug(dados.nome).slice(0, 24)}`;
+  const place: Place = {
+    id,
+    name: dados.nome.trim(),
+    tipo: dados.tipo,
+    address: dados.endereco?.trim() || '',
+    lat: 0,
+    lng: 0,
+    source: 'user_submitted',
+    createdAt: Date.now(),
+  };
+  cachePlace(place);
+  try {
+    await setDoc(doc(collection(db, 'places'), id), place);
+  } catch {}
+  return place;
+}
 
