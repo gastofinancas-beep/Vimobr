@@ -84,6 +84,12 @@ export interface Place {
   ownerId?: string;
   /** Data de criação no banco VIMO */
   createdAt?: number;
+  /** Status de verificação de lugares cadastrados por usuários */
+  verificacao?: 'verifying' | 'verified' | 'pending_review' | 'verification_error';
+  /** ID do lugar no Google Places, armazenado somente após verificação bem-sucedida */
+  googlePlaceId?: string;
+  /** UID do usuário que cadastrou o lugar */
+  submittedBy?: string;
 }
 
 export interface PlaceClaim {

@@ -930,6 +930,7 @@ export async function criarLugarUsuario(dados: {
   nome: string;
   tipo: 'restaurant' | 'cafe' | 'bakery' | 'bar';
   endereco?: string;
+  submittedBy?: string;
 }): Promise<Place> {
   const id = `user-${Date.now()}-${slug(dados.nome).slice(0, 24)}`;
   const place: Place = {
@@ -940,7 +941,9 @@ export async function criarLugarUsuario(dados: {
     lat: 0,
     lng: 0,
     source: 'user_submitted',
+    verificacao: 'verifying',
     createdAt: Date.now(),
+    ...(dados.submittedBy ? { submittedBy: dados.submittedBy } : {}),
   };
   cachePlace(place);
   try {

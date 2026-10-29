@@ -13,9 +13,13 @@ import {
   AlertCircle,
   UtensilsCrossed,
   Bike,
+  Loader2,
+  ShieldCheck,
+  Clock,
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
 import { autocomplete, criarLugarUsuario, getPlace, photoUrl, SAMPLE_PLACES } from '../lib/places';
+import { verificarLugar, type StatusVerificacao } from '../lib/verificacaoLugar';
 import { getLocalReviews, salvarAvaliacao } from '../lib/reviews';
 import { avisarUltrapassagens } from '../lib/clubes';
 import { buscarUsuariosParaMarcar } from '../lib/companions';
@@ -160,6 +164,9 @@ export default function AvaliarModal({
   const [erroValidacao, setErroValidacao] = useState<string | null>(null);
   const [publicado, setPublicado] = useState(false);
   const [reviewIdPublicado, setReviewIdPublicado] = useState<string | null>(null);
+
+  // Status de verificação para lugares cadastrados pelo usuário
+  const [verificacaoStatus, setVerificacaoStatus] = useState<StatusVerificacao | null>(null);
 
   // Critérios específicos do estabelecimento
   const criteriosObj = useMemo(() => obterCriteriosParaLugar(lugar), [lugar]);
@@ -462,6 +469,35 @@ export default function AvaliarModal({
           </div>
         )}
 
+        {/* Banner de verificação do lugar cadastrado pelo usuário */}
+        {verificacaoStatus && verificacaoStatus !== 'verified' && (
+          <div
+            className={`mx-4 mt-3 px-3 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 shrink-0 ${
+              verificacaoStatus === 'verifying'
+                ? 'bg-primary/10 text-primary'
+                : verificacaoStatus === 'pending_review'
+                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                : 'bg-danger/10 text-danger'
+            }`}
+          >
+            {verificacaoStatus === 'verifying' && (
+              <><Loader2 size={15} className="shrink-0 animate-spin" /><span>Verificando o lugar...</span></>
+            )}
+            {verificacaoStatus === 'pending_review' && (
+              <><Clock size={15} className="shrink-0" /><span>Cadastro enviado para análise. Sua avaliação será publicada normalmente.</span></>
+            )}
+            {verificacaoStatus === 'verification_error' && (
+              <><AlertCircle size={15} className="shrink-0" /><span>Não foi possível verificar o lugar. Sua avaliação será salva assim mesmo.</span></>
+            )}
+          </div>
+        )}
+        {verificacaoStatus === 'verified' && (
+          <div className="mx-4 mt-3 px-3 py-2.5 rounded-lg bg-green-500/10 text-green-700 dark:text-green-400 text-sm font-medium flex items-center gap-2 shrink-0">
+            <ShieldCheck size={15} className="shrink-0" />
+            <span>Lugar confirmado.</span>
+          </div>
+        )}
+
         {/* Conteúdo Dinâmico por Passo */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {/* =========================================================================
@@ -640,10 +676,20 @@ export default function AvaliarModal({
                           onClick={async () => {
                             setSalvandoLugar(true);
                             try {
-                              const criado = await criarLugarUsuario({ nome: novoNome, tipo: novoTipo, endereco: novoEndereco });
+                              const criado = await criarLugarUsuario({
+                                nome: novoNome,
+                                tipo: novoTipo,
+                                endereco: novoEndereco,
+                                submittedBy: currentUser.uid,
+                              });
                               setLugar(criado);
                               setAdicionandoLugar(false);
                               setErroValidacao(null);
+                              setVerificacaoStatus('verifying');
+                              // Verificação em segundo plano — não bloqueia o fluxo
+                              verificarLugar(criado.id, novoNome, novoEndereco).then((status) => {
+                                setVerificacaoStatus(status);
+                              });
                             } finally {
                               setSalvandoLugar(false);
                             }
