@@ -23,6 +23,7 @@ import EditarPerfilModal from './components/EditarPerfilModal';
 import SearchModal from './components/SearchModal';
 import TutorialModal, { tutorialJaVisto } from './components/TutorialModal';
 import { EVENTO_ABRIR_CLUBE } from './lib/clubes';
+import AdminImportarScreen from './screens/AdminImportarScreen';
 
 
 const DEFAULT_CURRENT_USER: UserProfile = {
@@ -243,6 +244,18 @@ export default function App() {
       <LoginScreen
         onLoginSuccess={handleLoginSuccess}
         onExploreAsGuest={handleExploreAsGuest}
+      />
+    );
+  }
+
+  // Tela admin de importação — acessível via URL com hash #admin
+  if (typeof window !== 'undefined' && window.location.hash === '#admin') {
+    return (
+      <AdminImportarScreen
+        onVoltar={() => {
+          window.location.hash = '';
+          window.location.reload();
+        }}
       />
     );
   }
