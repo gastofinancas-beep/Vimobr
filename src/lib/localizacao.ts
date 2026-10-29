@@ -1,7 +1,8 @@
 import type { Place } from '../types';
 import { SAMPLE_PLACES, buscarRestaurantesReaisOSM, cachePlaces, slug } from './places';
 import { db } from './firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, writeBatch, doc } from 'firebase/firestore';
+import { auth } from './firebase';
 
 // Cidade do Descobrir: vem do GPS (com autorização) ou da escolha manual.
 // Lugares vêm do Firestore (coleção `places`) quando a cidade foi importada,
@@ -151,6 +152,25 @@ function lugaresGuardadosValidos(cidade: CidadeAtual): boolean {
   }
 }
 
+/** Salva lugares no Firestore em segundo plano; só roda quando o usuário está autenticado. */
+async function salvarLugaresFirestore(lugares: Place[], cidade: CidadeAtual): Promise<void> {
+  if (!auth.currentUser) return;
+  try {
+    const col = collection(db, 'places');
+    for (let i = 0; i < lugares.length; i += 400) {
+      const batch = writeBatch(db);
+      for (const place of lugares.slice(i, i + 400)) {
+        batch.set(
+          doc(col, place.id),
+          { ...place, cityName: place.cityName ?? cidade.nome, cityKey: cidade.cityKey, source: 'openstreetmap', createdAt: Date.now() },
+          { merge: true },
+        );
+      }
+      await batch.commit();
+    }
+  } catch {}
+}
+
 /** Busca lugares da coleção `places` no Firestore para a cidade dada. */
 async function buscarLugaresFirestore(cidade: CidadeAtual): Promise<Place[]> {
   try {
@@ -185,6 +205,8 @@ export async function carregarLugaresDaCidade(cidade: CidadeAtual, forcar = fals
       .map((p) => ({ ...p, cityName: p.cityName ?? cidade.nome, cityKey: cidade.cityKey }));
     const exemplos = SAMPLE_PLACES.filter((p) => p.cityKey === cidade.cityKey);
     lista = [...exemplos, ...daCidade.sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99))];
+    // Salva no Firestore em segundo plano para que a próxima visita (de qualquer usuário) seja instantânea
+    if (daCidade.length > 0) void salvarLugaresFirestore(daCidade, cidade);
   }
 
   if (lista.length === 0) return guardados ?? [];
