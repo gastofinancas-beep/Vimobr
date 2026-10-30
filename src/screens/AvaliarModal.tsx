@@ -50,6 +50,15 @@ const hojeISO = (): string => {
   return `${d.getFullYear()}-${m}-${dia}`;
 };
 
+// Cache do modelo NSFW para não recarregar entre FotoPickers
+let _nsfwModel: import('nsfwjs').NSFWJS | null = null;
+async function carregarModeloNsfw() {
+  if (_nsfwModel) return _nsfwModel;
+  const nsfwjs = await import('nsfwjs');
+  _nsfwModel = await nsfwjs.load();
+  return _nsfwModel;
+}
+
 function FotoPicker({
   titulo,
   dica,
@@ -63,12 +72,64 @@ function FotoPicker({
   fotos: Foto[];
   onChange: (f: Foto[]) => void;
 }) {
-  const adicionar = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const novas = Array.from(e.target.files ?? [])
-      .slice(0, max - fotos.length)
-      .map((file) => ({ file, url: URL.createObjectURL(file) }));
-    onChange([...fotos, ...novas]);
+  const [verificando, setVerificando] = useState(false);
+  const [erroNsfw, setErroNsfw] = useState<string | null>(null);
+
+  const adicionar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).slice(0, max - fotos.length);
     e.target.value = '';
+    if (files.length === 0) return;
+
+    setVerificando(true);
+    setErroNsfw(null);
+
+    try {
+      const model = await carregarModeloNsfw();
+      const aprovadas: Foto[] = [];
+      let bloqueadas = 0;
+
+      for (const file of files) {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = url;
+        });
+
+        let bloqueada = false;
+        try {
+          const predictions = await model.classify(img);
+          const porn = predictions.find((p) => p.className === 'Porn')?.probability ?? 0;
+          const hentai = predictions.find((p) => p.className === 'Hentai')?.probability ?? 0;
+          if (porn > 0.7 || hentai > 0.7) bloqueada = true;
+        } catch {
+          // falha na classificação: permite a foto
+        }
+
+        if (bloqueada) {
+          URL.revokeObjectURL(url);
+          bloqueadas++;
+        } else {
+          aprovadas.push({ file, url });
+        }
+      }
+
+      if (bloqueadas > 0) {
+        setErroNsfw(
+          bloqueadas === 1
+            ? 'Uma foto foi bloqueada por conteúdo impróprio.'
+            : `${bloqueadas} fotos foram bloqueadas por conteúdo impróprio.`,
+        );
+      }
+      if (aprovadas.length > 0) onChange([...fotos, ...aprovadas]);
+    } catch {
+      // modelo não carregou: permite todas as fotos sem verificação
+      const novas = files.map((file) => ({ file, url: URL.createObjectURL(file) }));
+      onChange([...fotos, ...novas]);
+    } finally {
+      setVerificando(false);
+    }
   };
 
   const remover = (i: number) => {
@@ -87,6 +148,13 @@ function FotoPicker({
           {fotos.length}/{max}
         </span>
       </div>
+
+      {erroNsfw && (
+        <div className="flex items-center gap-2 text-xs text-red-500 bg-red-50 dark:bg-red-950/30 rounded-xl px-3 py-2">
+          <AlertCircle size={14} className="shrink-0" />
+          {erroNsfw}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {fotos.map((f, i) => (
@@ -107,15 +175,18 @@ function FotoPicker({
         ))}
 
         {fotos.length < max && (
-          <label className="w-16 h-16 rounded-xl border border-dashed border-[var(--line)] hover:border-[var(--primary)] flex flex-col items-center justify-center text-[var(--muted)] hover:text-[var(--primary)] cursor-pointer transition">
-            <Camera size={18} />
-            <span className="text-[11px] mt-1 font-semibold">+ foto</span>
+          <label
+            className={`w-16 h-16 rounded-xl border border-dashed border-[var(--line)] hover:border-[var(--primary)] flex flex-col items-center justify-center text-[var(--muted)] hover:text-[var(--primary)] transition ${verificando ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+          >
+            {verificando ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
+            <span className="text-[11px] mt-1 font-semibold">{verificando ? '...' : '+ foto'}</span>
             <input
               type="file"
               accept="image/*"
               multiple
               onChange={adicionar}
               className="hidden"
+              disabled={verificando}
             />
           </label>
         )}
