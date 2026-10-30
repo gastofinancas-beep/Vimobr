@@ -430,13 +430,9 @@ export async function searchPlaces(
             lat: pLat,
             lng: pLng,
             tipo,
-            rating: 4.7,
-            reviewsCount: 35,
-            photoUrl: obterFotoTematica(nome, tipo),
             cityName: 'Brasil',
             cityKey: 'brasil',
             distanceKm: opts?.lat && opts?.lng ? calcularDistanciaKm(opts.lat, opts.lng, pLat, pLng) : undefined,
-            sums: { ambiente: 120, comida: 130, atendimento: 125, custoBeneficio: 115 },
           };
         });
 
@@ -622,7 +618,6 @@ export async function buscarRestaurantesReaisOSM(
             lng: pLng,
             tipo,
             distanceKm: calcularDistanciaKm(lat, lng, pLat, pLng),
-            sums: { ambiente: 120, comida: 130, atendimento: 125, custoBeneficio: 115 },
           };
         });
 
@@ -970,7 +965,7 @@ export async function buscarLugaresLocais(q: string): Promise<Place[]> {
         collection(db, 'places'),
         orderBy('name'),
         startAt(nomeCapitalized),
-        endAt(nomeCapitalized + ''),
+        endAt(nomeCapitalized + ''),
         limit(10),
       )
     );
