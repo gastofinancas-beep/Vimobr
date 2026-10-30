@@ -763,7 +763,9 @@ export async function getPlace(placeId: string): Promise<Place> {
   const isOsmId =
     placeId.startsWith('local-place-') ||
     placeId.startsWith('osm-') ||
-    placeId.startsWith('node-');
+    placeId.startsWith('node-') ||
+    placeId.startsWith('user-') ||
+    placeId.startsWith('nom-');
 
   // Lugares Google (não-OSM) são retornados direto do cache
   if (emCache && !isOsmId) return emCache;
@@ -834,7 +836,26 @@ export async function getPlace(placeId: string): Promise<Place> {
     }
     if (osmPlace) return osmPlace;
 
-    // Stub mínimo quando o lugar OSM não está no cache
+    // Para lugares criados pelo usuário (user-*): tenta recuperar do Firestore
+    if (placeId.startsWith('user-')) {
+      try {
+        const { getDoc, doc: fsDoc } = await import('firebase/firestore');
+        const snap = await getDoc(fsDoc(db, 'places', placeId));
+        if (snap.exists()) {
+          const p = snap.data() as Place;
+          cachePlace(p);
+          // Salva no localStorage para próximas visitas
+          try {
+            const mapa = lerLugaresGuardados();
+            mapa[p.id] = p;
+            localStorage.setItem(LS_LUGARES_KEY, JSON.stringify(mapa));
+          } catch {}
+          return p;
+        }
+      } catch {}
+    }
+
+    // Stub mínimo quando o lugar local não está no cache nem no Firestore
     const fallbackPlace: Place = {
       id: placeId,
       name: 'Lugar selecionado',
@@ -949,7 +970,7 @@ export async function buscarLugaresLocais(q: string): Promise<Place[]> {
         collection(db, 'places'),
         orderBy('name'),
         startAt(nomeCapitalized),
-        endAt(nomeCapitalized + ''),
+        endAt(nomeCapitalized + ''),
         limit(10),
       )
     );
@@ -1035,6 +1056,12 @@ export async function criarLugarUsuario(dados: {
     ...(dados.submittedBy ? { submittedBy: dados.submittedBy } : {}),
   };
   cachePlace(place);
+  // Persiste no localStorage para sobreviver a recarregamentos (mesmo padrão dos lugares OSM)
+  try {
+    const mapa = lerLugaresGuardados();
+    mapa[id] = place;
+    localStorage.setItem(LS_LUGARES_KEY, JSON.stringify(mapa));
+  } catch {}
   try {
     await setDoc(doc(collection(db, 'places'), id), place);
   } catch {}
