@@ -24,6 +24,13 @@ const HOST = process.env.HOST || hostArg || '0.0.0.0';
 
 app.use(express.json({ limit: '10mb' }));
 
+type GooglePlace = {
+  id: string;
+  displayName?: { text: string };
+  formattedAddress?: string;
+  location?: { latitude: number; longitude: number };
+};
+
 // Verificação de lugar via Google Places (server-side, chave nunca exposta ao cliente)
 app.post('/api/verificar-lugar', async (req, res) => {
   const { placeId, nome, endereco } = req.body as { placeId?: string; nome?: string; endereco?: string };
@@ -33,19 +40,17 @@ app.post('/api/verificar-lugar', async (req, res) => {
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
-    // Sem chave configurada: marca como pendente para revisão manual
     return res.json({ status: 'pending_review' });
   }
 
   try {
-    const query = encodeURIComponent(`${nome}${endereco ? ' ' + endereco : ''}`);
     const url = `https://places.googleapis.com/v1/places:searchText`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress',
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location',
       },
       body: JSON.stringify({ textQuery: `${nome}${endereco ? ', ' + endereco : ''}`, maxResultCount: 1 }),
       signal: AbortSignal.timeout(8000),
@@ -56,25 +61,36 @@ app.post('/api/verificar-lugar', async (req, res) => {
       return res.json({ status: 'verification_error' });
     }
 
-    const data = await resp.json() as { places?: Array<{ id: string; displayName?: { text: string }; formattedAddress?: string }> };
+    const data = await resp.json() as { places?: GooglePlace[] };
     const found = data.places?.[0];
 
     if (!found) {
       return res.json({ status: 'pending_review' });
     }
 
-    // Verificação básica de correspondência por nome (normaliza e compara)
-    const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+    // Verifica correspondência por nome
+    const normalize = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
     const nomeNorm = normalize(nome);
     const googleNome = normalize(found.displayName?.text || '');
     const palavrasNome = nomeNorm.split(/\s+/).filter(w => w.length > 2);
     const match = palavrasNome.length > 0 && palavrasNome.some(p => googleNome.includes(p));
 
-    if (match) {
-      return res.json({ status: 'verified', googlePlaceId: found.id });
-    } else {
+    if (!match) {
       return res.json({ status: 'pending_review' });
     }
+
+    // Retorna dados enriquecidos para o Vimo atualizar o registro próprio
+    return res.json({
+      status: 'verified',
+      googlePlaceId: found.id,
+      enrichedData: {
+        name: found.displayName?.text || nome,
+        address: found.formattedAddress || endereco || '',
+        lat: found.location?.latitude ?? 0,
+        lng: found.location?.longitude ?? 0,
+      },
+    });
   } catch (err) {
     console.error('[verificar-lugar] erro:', err);
     return res.json({ status: 'verification_error' });

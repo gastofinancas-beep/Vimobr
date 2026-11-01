@@ -797,8 +797,12 @@ export default function AvaliarModal({
                                 setErroValidacao(null);
                                 setVerificacaoStatus('verifying');
                                 // Verificação em segundo plano — não bloqueia o fluxo
-                                verificarLugar(criado.id, novoNome, enderecoCompleto).then((status) => {
-                                  setVerificacaoStatus(status);
+                                verificarLugar(criado.id, novoNome, enderecoCompleto).then((resultado) => {
+                                  setVerificacaoStatus(resultado.status);
+                                  // Se o lugar já existe no Vimo (deduplicação), troca automaticamente
+                                  if (resultado.lugarExistente) {
+                                    setLugar(resultado.lugarExistente);
+                                  }
                                 });
                               } finally {
                                 setSalvandoLugar(false);

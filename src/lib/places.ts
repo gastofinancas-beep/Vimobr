@@ -1,6 +1,6 @@
 import type { Place } from '../types';
 import { db } from './firebase';
-import { doc, setDoc, collection, getDocs, query, orderBy, startAt, endAt, limit } from 'firebase/firestore';
+import { doc, setDoc, collection, getDocs, query, orderBy, startAt, endAt, limit, where } from 'firebase/firestore';
 
 // Google Places é pago por chamada. Decisão do produto: nenhuma API paga, então a chave
 // fica desligada mesmo que exista no .env, e as buscas usam OpenStreetMap e dados locais.
@@ -1061,4 +1061,61 @@ export async function criarLugarUsuario(dados: {
     await setDoc(doc(collection(db, 'places'), id), place);
   } catch {}
   return place;
+}
+
+/**
+ * Busca no cache local e no Firestore se já existe um lugar com o dado googlePlaceId.
+ * Usado para evitar duplicatas quando dois usuários cadastram o mesmo estabelecimento.
+ */
+export async function buscarPorGooglePlaceId(googlePlaceId: string): Promise<Place | null> {
+  // Verifica cache em memória primeiro
+  for (const place of MEMORY_PLACES_CACHE.values()) {
+    if (place.googlePlaceId === googlePlaceId) return place;
+  }
+  // Fallback: consulta Firestore
+  try {
+    const snap = await getDocs(query(collection(db, 'places'), where('googlePlaceId', '==', googlePlaceId), limit(1)));
+    if (!snap.empty) {
+      const place = snap.docs[0].data() as Place;
+      cachePlace(place);
+      return place;
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Atualiza um lugar já cadastrado pelo usuário com os dados confirmados pelo Google Places.
+ * O nome e endereço ficam mais precisos e o lugar é marcado como verificado.
+ */
+export async function enriquecerLugar(placeId: string, dados: {
+  googlePlaceId: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+}): Promise<Place | null> {
+  const atual = MEMORY_PLACES_CACHE.get(placeId);
+  if (!atual) return null;
+
+  const atualizado: Place = {
+    ...atual,
+    googlePlaceId: dados.googlePlaceId,
+    address: dados.address || atual.address,
+    lat: dados.lat || atual.lat,
+    lng: dados.lng || atual.lng,
+    verificacao: 'verified',
+  };
+  cachePlace(atualizado);
+  // Persiste localmente
+  try {
+    const mapa = lerLugaresGuardados();
+    mapa[placeId] = atualizado;
+    localStorage.setItem(LS_LUGARES_KEY, JSON.stringify(mapa));
+  } catch {}
+  // Atualiza Firestore em segundo plano
+  try {
+    await setDoc(doc(collection(db, 'places'), placeId), atualizado, { merge: true });
+  } catch {}
+  return atualizado;
 }
