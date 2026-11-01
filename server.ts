@@ -27,8 +27,6 @@ app.use(express.json({ limit: '10mb' }));
 type GooglePlace = {
   id: string;
   displayName?: { text: string };
-  formattedAddress?: string;
-  location?: { latitude: number; longitude: number };
 };
 
 // Verificação de lugar via Google Places (server-side, chave nunca exposta ao cliente)
@@ -50,7 +48,7 @@ app.post('/api/verificar-lugar', async (req, res) => {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location',
+        'X-Goog-FieldMask': 'places.id,places.displayName',
       },
       body: JSON.stringify({ textQuery: `${nome}${endereco ? ', ' + endereco : ''}`, maxResultCount: 1 }),
       signal: AbortSignal.timeout(8000),
@@ -80,17 +78,10 @@ app.post('/api/verificar-lugar', async (req, res) => {
       return res.json({ status: 'pending_review' });
     }
 
-    // Retorna dados enriquecidos para o Vimo atualizar o registro próprio
-    return res.json({
-      status: 'verified',
-      googlePlaceId: found.id,
-      enrichedData: {
-        name: found.displayName?.text || nome,
-        address: found.formattedAddress || endereco || '',
-        lat: found.location?.latitude ?? 0,
-        lng: found.location?.longitude ?? 0,
-      },
-    });
+    // Retorna só o place_id do Google — único campo que os Termos de Uso permitem guardar
+    // indefinidamente. Nome, endereço e coordenadas ficam com o que o usuário digitou ou
+    // com dados do OSM; o place_id serve apenas como chave de deduplicação.
+    return res.json({ status: 'verified', googlePlaceId: found.id });
   } catch (err) {
     console.error('[verificar-lugar] erro:', err);
     return res.json({ status: 'verification_error' });

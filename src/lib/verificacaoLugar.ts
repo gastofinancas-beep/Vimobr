@@ -1,6 +1,6 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { cachePlace, MEMORY_PLACES_CACHE, buscarPorGooglePlaceId, enriquecerLugar } from './places';
+import { cachePlace, MEMORY_PLACES_CACHE, buscarPorGooglePlaceId } from './places';
 import type { Place } from '../types';
 
 export type StatusVerificacao = 'verifying' | 'verified' | 'pending_review' | 'verification_error';
@@ -12,9 +12,11 @@ export type ResultadoVerificacao = {
 };
 
 /**
- * Chama o backend para verificar o lugar.
- * Se verificado: enriquece o registro Vimo com dados do Google (nome, endereço, lat/lng).
- * Se já existir um lugar Vimo com o mesmo googlePlaceId: retorna esse lugar para evitar duplicata.
+ * Chama o backend para verificar se o lugar existe no Google Places.
+ * Se confirmado: grava o googlePlaceId no registro Vimo (chave de deduplicação).
+ * Se já houver outro lugar Vimo com o mesmo googlePlaceId: retorna o existente.
+ * Dados do Google (nome, endereço, coordenadas) NÃO são copiados — os Termos do Google
+ * só permitem armazenar o place_id de forma persistente.
  */
 export async function verificarLugar(
   placeId: string,
@@ -34,31 +36,18 @@ export async function verificarLugar(
       return { status: 'verification_error' };
     }
 
-    const data = await resp.json() as {
-      status: StatusVerificacao;
-      googlePlaceId?: string;
-      enrichedData?: { name: string; address: string; lat: number; lng: number };
-    };
+    const data = await resp.json() as { status: StatusVerificacao; googlePlaceId?: string };
 
     if (data.status === 'verified' && data.googlePlaceId) {
-      // Verifica se já existe outro lugar Vimo com esse googlePlaceId (deduplicação)
+      // Deduplicação: se já existe outro lugar Vimo com esse googlePlaceId, usa ele
       const existente = await buscarPorGooglePlaceId(data.googlePlaceId);
       if (existente && existente.id !== placeId) {
-        // Já existe — marca o recém-criado como duplicata e retorna o lugar original
         await _gravarStatus(placeId, 'verified', data.googlePlaceId);
         return { status: 'verified', lugarExistente: existente };
       }
-
-      // Enriquece o registro com dados do Google
-      if (data.enrichedData) {
-        await enriquecerLugar(placeId, { googlePlaceId: data.googlePlaceId, ...data.enrichedData });
-      } else {
-        await _gravarStatus(placeId, 'verified', data.googlePlaceId);
-      }
-      return { status: 'verified' };
     }
 
-    await _gravarStatus(placeId, data.status);
+    await _gravarStatus(placeId, data.status, data.googlePlaceId);
     return { status: data.status };
   } catch {
     await _gravarStatus(placeId, 'verification_error');

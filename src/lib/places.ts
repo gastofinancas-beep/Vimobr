@@ -1084,38 +1084,3 @@ export async function buscarPorGooglePlaceId(googlePlaceId: string): Promise<Pla
   return null;
 }
 
-/**
- * Atualiza um lugar já cadastrado pelo usuário com os dados confirmados pelo Google Places.
- * O nome e endereço ficam mais precisos e o lugar é marcado como verificado.
- */
-export async function enriquecerLugar(placeId: string, dados: {
-  googlePlaceId: string;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-}): Promise<Place | null> {
-  const atual = MEMORY_PLACES_CACHE.get(placeId);
-  if (!atual) return null;
-
-  const atualizado: Place = {
-    ...atual,
-    googlePlaceId: dados.googlePlaceId,
-    address: dados.address || atual.address,
-    lat: dados.lat || atual.lat,
-    lng: dados.lng || atual.lng,
-    verificacao: 'verified',
-  };
-  cachePlace(atualizado);
-  // Persiste localmente
-  try {
-    const mapa = lerLugaresGuardados();
-    mapa[placeId] = atualizado;
-    localStorage.setItem(LS_LUGARES_KEY, JSON.stringify(mapa));
-  } catch {}
-  // Atualiza Firestore em segundo plano
-  try {
-    await setDoc(doc(collection(db, 'places'), placeId), atualizado, { merge: true });
-  } catch {}
-  return atualizado;
-}
