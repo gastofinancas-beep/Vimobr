@@ -16,6 +16,10 @@ import {
   Loader2,
   ShieldCheck,
   Clock,
+  Store,
+  Phone,
+  Globe,
+  ChevronRight,
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
 import { buscarLugaresLocais, criarLugarUsuario, getPlace, photoUrl } from '../lib/places';
@@ -674,111 +678,155 @@ export default function AvaliarModal({
 
                   {/* Formulário para adicionar lugar novo */}
                   {adicionandoLugar ? (
-                    <div className="rounded-2xl border border-[var(--line)] bg-[var(--s2)] p-4 space-y-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--ink)]">Cadastrar novo lugar</p>
-                        <p className="text-xs text-[var(--muted)] mt-0.5">Preencha com atenção para facilitar a verificação.</p>
+                    <div className="rounded-2xl border border-[var(--primary)]/20 bg-[var(--s1)] overflow-hidden">
+                      {/* Cabeçalho */}
+                      <div className="px-4 py-3.5 bg-[var(--primary)]/5 border-b border-[var(--primary)]/10 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center shrink-0">
+                          <Store size={16} className="text-[var(--primary)]" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--ink)]">Cadastrar novo lugar</p>
+                          <p className="text-xs text-[var(--muted)]">Verificamos as informações automaticamente</p>
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Nome do lugar *</label>
-                        <input
-                          type="text"
-                          value={novoNome}
-                          onChange={(e) => setNovoNome(e.target.value)}
-                          placeholder="Ex: Restaurante do João"
-                          className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
-                          autoFocus
-                        />
-                      </div>
+                      <div className="p-4 space-y-3.5">
+                        {/* Nome */}
+                        <div>
+                          <label className="text-xs font-semibold text-[var(--ink)] mb-1.5 block">
+                            Nome do lugar <span className="text-[var(--primary)]">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={novoNome}
+                            onChange={(e) => setNovoNome(e.target.value)}
+                            placeholder="Nome completo como aparece na fachada"
+                            className="w-full h-11 rounded-xl border border-[var(--line)] bg-[var(--bg)] px-3.5 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
+                            autoFocus
+                          />
+                        </div>
 
-                      <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Tipo *</label>
-                        <select
-                          value={novoTipo}
-                          onChange={(e) => setNovoTipo(e.target.value as typeof novoTipo)}
-                          className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] focus:outline-none focus:border-[var(--primary)] transition"
-                        >
-                          <option value="restaurant">Restaurante</option>
-                          <option value="cafe">Café</option>
-                          <option value="bakery">Padaria</option>
-                          <option value="bar">Bar</option>
-                        </select>
-                      </div>
+                        {/* Tipo */}
+                        <div>
+                          <label className="text-xs font-semibold text-[var(--ink)] mb-1.5 block">
+                            Categoria <span className="text-[var(--primary)]">*</span>
+                          </label>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {(['restaurant', 'cafe', 'bakery', 'bar'] as const).map((t) => {
+                              const labels = { restaurant: 'Restaurante', cafe: 'Café', bakery: 'Padaria', bar: 'Bar' };
+                              return (
+                                <button
+                                  key={t}
+                                  type="button"
+                                  onClick={() => setNovoTipo(t)}
+                                  className={`h-9 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                                    novoTipo === t
+                                      ? 'bg-[var(--primary)] border-[var(--primary)] text-white'
+                                      : 'bg-[var(--bg)] border-[var(--line)] text-[var(--muted)] hover:border-[var(--ink)] hover:text-[var(--ink)]'
+                                  }`}
+                                >
+                                  {labels[t]}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
 
-                      <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Bairro *</label>
-                        <input
-                          type="text"
-                          value={novoBairro}
-                          onChange={(e) => setNovoBairro(e.target.value)}
-                          placeholder="Ex: Centro, Vila Madalena"
-                          className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
-                        />
-                      </div>
+                        {/* Bairro e Endereço em linha */}
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="text-xs font-semibold text-[var(--ink)] mb-1.5 block">
+                              Bairro <span className="text-[var(--primary)]">*</span>
+                            </label>
+                            <div className="relative">
+                              <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+                              <input
+                                type="text"
+                                value={novoBairro}
+                                onChange={(e) => setNovoBairro(e.target.value)}
+                                placeholder="Ex: Pinheiros"
+                                className="w-full h-11 rounded-xl border border-[var(--line)] bg-[var(--bg)] pl-8 pr-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-[var(--ink)] mb-1.5 block">Rua e número</label>
+                            <input
+                              type="text"
+                              value={novoEndereco}
+                              onChange={(e) => setNovoEndereco(e.target.value)}
+                              placeholder="Ex: Rua das Flores, 123"
+                              className="w-full h-11 rounded-xl border border-[var(--line)] bg-[var(--bg)] px-3.5 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
+                            />
+                          </div>
+                        </div>
 
-                      <div>
-                        <label className="text-xs font-medium text-[var(--muted)] mb-1 block">Endereço (rua e número)</label>
-                        <input
-                          type="text"
-                          value={novoEndereco}
-                          onChange={(e) => setNovoEndereco(e.target.value)}
-                          placeholder="Ex: Rua das Flores, 123"
-                          className="w-full h-10 rounded-lg border border-[var(--line)] bg-[var(--s1)] px-3 text-sm text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--primary)] transition"
-                        />
-                      </div>
+                        {/* Nota sobre verificação */}
+                        <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-[var(--s2)] border border-[var(--line)]">
+                          <ShieldCheck size={14} className="text-[var(--muted)] mt-0.5 shrink-0" />
+                          <p className="text-xs text-[var(--muted)] leading-relaxed">
+                            Verificamos automaticamente se o lugar existe. Se confirmado, sua avaliação aparece de imediato. Se não, vai para análise comunitária antes de ser publicada.
+                          </p>
+                        </div>
 
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => { setAdicionandoLugar(false); setNovoBairro(''); setNovoEndereco(''); }}
-                          className="flex-1 h-10 rounded-xl border border-[var(--line)] text-sm font-semibold text-[var(--muted)] hover:text-[var(--ink)] transition cursor-pointer"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={novoNome.trim().length < 2 || novoBairro.trim().length < 2 || salvandoLugar}
-                          onClick={async () => {
-                            setSalvandoLugar(true);
-                            try {
-                              const enderecoCompleto = [novoEndereco.trim(), novoBairro.trim()].filter(Boolean).join(', ');
-                              const criado = await criarLugarUsuario({
-                                nome: novoNome,
-                                tipo: novoTipo,
-                                endereco: enderecoCompleto,
-                                bairro: novoBairro,
-                                submittedBy: currentUser.uid,
-                              });
-                              setLugar(criado);
-                              setAdicionandoLugar(false);
-                              setErroValidacao(null);
-                              setVerificacaoStatus('verifying');
-                              // Verificação em segundo plano — não bloqueia o fluxo
-                              verificarLugar(criado.id, novoNome, enderecoCompleto).then((status) => {
-                                setVerificacaoStatus(status);
-                              });
-                            } finally {
-                              setSalvandoLugar(false);
-                            }
-                          }}
-                          className="flex-1 h-10 rounded-xl bg-[var(--primary)] text-sm font-semibold text-white disabled:opacity-40 transition cursor-pointer"
-                        >
-                          {salvandoLugar ? 'Salvando…' : 'Confirmar'}
-                        </button>
+                        {/* Botões */}
+                        <div className="flex gap-2 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => { setAdicionandoLugar(false); setNovoBairro(''); setNovoEndereco(''); }}
+                            className="h-11 px-4 rounded-xl border border-[var(--line)] text-sm font-semibold text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--ink)] transition cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={novoNome.trim().length < 2 || novoBairro.trim().length < 2 || salvandoLugar}
+                            onClick={async () => {
+                              setSalvandoLugar(true);
+                              try {
+                                const enderecoCompleto = [novoEndereco.trim(), novoBairro.trim()].filter(Boolean).join(', ');
+                                const criado = await criarLugarUsuario({
+                                  nome: novoNome,
+                                  tipo: novoTipo,
+                                  endereco: enderecoCompleto,
+                                  bairro: novoBairro,
+                                  submittedBy: currentUser.uid,
+                                });
+                                setLugar(criado);
+                                setAdicionandoLugar(false);
+                                setErroValidacao(null);
+                                setVerificacaoStatus('verifying');
+                                // Verificação em segundo plano — não bloqueia o fluxo
+                                verificarLugar(criado.id, novoNome, enderecoCompleto).then((status) => {
+                                  setVerificacaoStatus(status);
+                                });
+                              } finally {
+                                setSalvandoLugar(false);
+                              }
+                            }}
+                            className="flex-1 h-11 rounded-xl bg-[var(--primary)] text-sm font-semibold text-white disabled:opacity-40 transition cursor-pointer flex items-center justify-center gap-2"
+                          >
+                            {salvandoLugar ? (
+                              <><Loader2 size={15} className="animate-spin" />Salvando…</>
+                            ) : (
+                              <><Check size={15} />Confirmar cadastro</>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
                     /* Mostra "Adicionar lugar" só quando a busca não achou nada */
                     !buscandoLugar && buscaLugar.trim().length >= 2 && sugestoesLugar.length === 0 && (
-                      <div className="text-center py-3 space-y-2">
-                        <p className="text-sm text-[var(--muted)]">Nenhum resultado para "{buscaLugar}".</p>
+                      <div className="rounded-2xl border border-[var(--line)] bg-[var(--s2)] p-4">
+                        <p className="text-sm text-[var(--muted)] mb-3">Nenhum resultado para "{buscaLugar}".</p>
                         <button
                           type="button"
                           onClick={() => { setAdicionandoLugar(true); setNovoNome(buscaLugar); }}
-                          className="text-sm font-semibold text-[var(--primary)] hover:underline cursor-pointer"
+                          className="w-full h-11 rounded-xl border border-[var(--primary)] text-sm font-semibold text-[var(--primary)] hover:bg-[var(--primary)]/5 transition cursor-pointer flex items-center justify-between px-4"
                         >
-                          Cadastrar este lugar
+                          <span>Cadastrar "{buscaLugar}"</span>
+                          <ChevronRight size={16} />
                         </button>
                       </div>
                     )
@@ -1097,24 +1145,39 @@ export default function AvaliarModal({
 
               {/* Status de verificação — só aparece para lugares cadastrados pelo usuário */}
               {verificacaoStatus && (
-                <div className={`px-3 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                <div className={`px-3.5 py-3 rounded-xl text-sm flex items-start gap-2.5 ${
                   verificacaoStatus === 'verifying'
-                    ? 'bg-primary/10 text-primary'
+                    ? 'bg-[var(--primary)]/8 border border-[var(--primary)]/20'
                     : verificacaoStatus === 'verified'
-                    ? 'bg-green-500/10 text-green-700 dark:text-green-400'
-                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                    ? 'bg-green-500/8 border border-green-500/20'
+                    : 'bg-amber-500/8 border border-amber-500/20'
                 }`}>
                   {verificacaoStatus === 'verifying' && (
-                    <><Loader2 size={15} className="shrink-0 animate-spin" /><span>Verificando o lugar em segundo plano...</span></>
+                    <>
+                      <Loader2 size={15} className="shrink-0 animate-spin mt-0.5 text-[var(--primary)]" />
+                      <div>
+                        <p className="font-semibold text-[var(--primary)]">Verificando o lugar...</p>
+                        <p className="text-xs text-[var(--muted)] mt-0.5">Isso acontece em segundo plano e não atrasa a publicação.</p>
+                      </div>
+                    </>
                   )}
                   {verificacaoStatus === 'verified' && (
-                    <><ShieldCheck size={15} className="shrink-0" /><span>Lugar confirmado. Sua avaliação será publicada normalmente.</span></>
+                    <>
+                      <ShieldCheck size={15} className="shrink-0 mt-0.5 text-green-600 dark:text-green-400" />
+                      <div>
+                        <p className="font-semibold text-green-700 dark:text-green-400">Lugar confirmado</p>
+                        <p className="text-xs text-[var(--muted)] mt-0.5">Sua avaliação será publicada normalmente.</p>
+                      </div>
+                    </>
                   )}
-                  {verificacaoStatus === 'pending_review' && (
-                    <><Clock size={15} className="shrink-0" /><span>Lugar não encontrado na nossa base. Sua avaliação vai para análise antes de ser publicada.</span></>
-                  )}
-                  {verificacaoStatus === 'verification_error' && (
-                    <><Clock size={15} className="shrink-0" /><span>Não foi possível verificar o lugar agora. Sua avaliação vai para análise.</span></>
+                  {(verificacaoStatus === 'pending_review' || verificacaoStatus === 'verification_error') && (
+                    <>
+                      <Clock size={15} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                      <div>
+                        <p className="font-semibold text-amber-700 dark:text-amber-400">Lugar em análise</p>
+                        <p className="text-xs text-[var(--muted)] mt-0.5">Não encontramos o lugar na nossa base. A avaliação aguarda confirmação comunitária antes de aparecer para todos.</p>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
