@@ -31,9 +31,9 @@ type GooglePlace = {
 
 // Verificação de lugar via Google Places (server-side, chave nunca exposta ao cliente)
 app.post('/api/verificar-lugar', async (req, res) => {
-  const { placeId, nome, endereco } = req.body as { placeId?: string; nome?: string; endereco?: string };
-  if (!placeId || !nome) {
-    return res.status(400).json({ erro: 'placeId e nome são obrigatórios' });
+  const { nome, endereco } = req.body as { placeId?: string; nome?: string; endereco?: string };
+  if (!nome) {
+    return res.status(400).json({ erro: 'nome é obrigatório' });
   }
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;

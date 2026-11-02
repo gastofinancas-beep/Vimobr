@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
 import { buscarLugaresLocais, criarLugarUsuario, getPlace, photoUrl } from '../lib/places';
-import { verificarLugar, type StatusVerificacao } from '../lib/verificacaoLugar';
+import { verificarAntesDeRegistrar, type StatusVerificacao } from '../lib/verificacaoLugar';
 import { getLocalReviews, salvarAvaliacao } from '../lib/reviews';
 import { avisarUltrapassagens } from '../lib/clubes';
 import { buscarUsuariosParaMarcar } from '../lib/companions';
@@ -217,6 +217,7 @@ export default function AvaliarModal({
   const [novoEndereco, setNovoEndereco] = useState('');
   const [novoBairro, setNovoBairro] = useState('');
   const [salvandoLugar, setSalvandoLugar] = useState(false);
+  const [erroVerificacaoLugar, setErroVerificacaoLugar] = useState<string | null>(null);
 
   const [dataVisita, setDataVisita] = useState(hojeISO());
   const [notasCriterios, setNotasCriterios] = useState<Record<string, number>>({});
@@ -241,8 +242,6 @@ export default function AvaliarModal({
   const [publicado, setPublicado] = useState(false);
   const [reviewIdPublicado, setReviewIdPublicado] = useState<string | null>(null);
 
-  // Status de verificação para lugares cadastrados pelo usuário
-  const [verificacaoStatus, setVerificacaoStatus] = useState<StatusVerificacao | null>(null);
 
   // Critérios específicos do estabelecimento
   const criteriosObj = useMemo(() => obterCriteriosParaLugar(lugar), [lugar]);
@@ -783,27 +782,34 @@ export default function AvaliarModal({
                             disabled={novoNome.trim().length < 2 || novoBairro.trim().length < 2 || salvandoLugar}
                             onClick={async () => {
                               setSalvandoLugar(true);
+                              setErroVerificacaoLugar(null);
                               try {
                                 const enderecoCompleto = [novoEndereco.trim(), novoBairro.trim()].filter(Boolean).join(', ');
+                                // Verifica no Google antes de criar qualquer registro
+                                const verificacao = await verificarAntesDeRegistrar(novoNome, enderecoCompleto);
+                                if (!verificacao.ok) {
+                                  setErroVerificacaoLugar('Não encontramos este lugar no Google Maps. Confira o nome e tente novamente.');
+                                  return;
+                                }
+                                // Deduplicação: lugar já existe no Vimo
+                                if (verificacao.lugarExistente) {
+                                  setLugar(verificacao.lugarExistente);
+                                  setAdicionandoLugar(false);
+                                  setErroValidacao(null);
+                                  return;
+                                }
+                                // Cria com googlePlaceId já definido (verified)
                                 const criado = await criarLugarUsuario({
                                   nome: novoNome,
                                   tipo: novoTipo,
                                   endereco: enderecoCompleto,
                                   bairro: novoBairro,
                                   submittedBy: currentUser.uid,
+                                  googlePlaceId: verificacao.googlePlaceId,
                                 });
                                 setLugar(criado);
                                 setAdicionandoLugar(false);
                                 setErroValidacao(null);
-                                setVerificacaoStatus('verifying');
-                                // Verificação em segundo plano — não bloqueia o fluxo
-                                verificarLugar(criado.id, novoNome, enderecoCompleto).then((resultado) => {
-                                  setVerificacaoStatus(resultado.status);
-                                  // Se o lugar já existe no Vimo (deduplicação), troca automaticamente
-                                  if (resultado.lugarExistente) {
-                                    setLugar(resultado.lugarExistente);
-                                  }
-                                });
                               } finally {
                                 setSalvandoLugar(false);
                               }
@@ -811,12 +817,19 @@ export default function AvaliarModal({
                             className="flex-1 h-11 rounded-xl bg-[var(--primary)] text-sm font-semibold text-white disabled:opacity-40 transition cursor-pointer flex items-center justify-center gap-2"
                           >
                             {salvandoLugar ? (
-                              <><Loader2 size={15} className="animate-spin" />Salvando…</>
+                              <><Loader2 size={15} className="animate-spin" />Verificando…</>
                             ) : (
                               <><Check size={15} />Confirmar cadastro</>
                             )}
                           </button>
                         </div>
+
+                        {erroVerificacaoLugar && (
+                          <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-red-500/8 border border-red-500/20">
+                            <AlertCircle size={14} className="text-red-500 mt-0.5 shrink-0" />
+                            <p className="text-xs text-red-600 dark:text-red-400">{erroVerificacaoLugar}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -1146,45 +1159,6 @@ export default function AvaliarModal({
                   Confira antes de publicar no seu diário.
                 </p>
               </div>
-
-              {/* Status de verificação — só aparece para lugares cadastrados pelo usuário */}
-              {verificacaoStatus && (
-                <div className={`px-3.5 py-3 rounded-xl text-sm flex items-start gap-2.5 ${
-                  verificacaoStatus === 'verifying'
-                    ? 'bg-[var(--primary)]/8 border border-[var(--primary)]/20'
-                    : verificacaoStatus === 'verified'
-                    ? 'bg-green-500/8 border border-green-500/20'
-                    : 'bg-amber-500/8 border border-amber-500/20'
-                }`}>
-                  {verificacaoStatus === 'verifying' && (
-                    <>
-                      <Loader2 size={15} className="shrink-0 animate-spin mt-0.5 text-[var(--primary)]" />
-                      <div>
-                        <p className="font-semibold text-[var(--primary)]">Verificando o lugar...</p>
-                        <p className="text-xs text-[var(--muted)] mt-0.5">Isso acontece em segundo plano e não atrasa a publicação.</p>
-                      </div>
-                    </>
-                  )}
-                  {verificacaoStatus === 'verified' && (
-                    <>
-                      <ShieldCheck size={15} className="shrink-0 mt-0.5 text-green-600 dark:text-green-400" />
-                      <div>
-                        <p className="font-semibold text-green-700 dark:text-green-400">Lugar confirmado</p>
-                        <p className="text-xs text-[var(--muted)] mt-0.5">Sua avaliação será publicada normalmente.</p>
-                      </div>
-                    </>
-                  )}
-                  {(verificacaoStatus === 'pending_review' || verificacaoStatus === 'verification_error') && (
-                    <>
-                      <Clock size={15} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-                      <div>
-                        <p className="font-semibold text-amber-700 dark:text-amber-400">Lugar em análise</p>
-                        <p className="text-xs text-[var(--muted)] mt-0.5">Não encontramos o lugar na nossa base. A avaliação aguarda confirmação comunitária antes de aparecer para todos.</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
 
               <div className="p-4 rounded-2xl bg-[var(--s2)] border border-[var(--line)] space-y-3.5">
                 {/* Nome do lugar */}

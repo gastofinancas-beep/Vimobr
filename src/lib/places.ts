@@ -1035,6 +1035,8 @@ export async function criarLugarUsuario(dados: {
   endereco?: string;
   bairro?: string;
   submittedBy?: string;
+  /** place_id do Google, quando já verificado antes de criar */
+  googlePlaceId?: string;
 }): Promise<Place> {
   const id = `user-${Date.now()}-${slug(dados.nome).slice(0, 24)}`;
   const place: Place = {
@@ -1045,10 +1047,11 @@ export async function criarLugarUsuario(dados: {
     lat: 0,
     lng: 0,
     source: 'user_submitted',
-    verificacao: 'verifying',
+    verificacao: dados.googlePlaceId ? 'verified' : 'verifying',
     createdAt: Date.now(),
     ...(dados.bairro ? { bairro: dados.bairro.trim() } : {}),
     ...(dados.submittedBy ? { submittedBy: dados.submittedBy } : {}),
+    ...(dados.googlePlaceId ? { googlePlaceId: dados.googlePlaceId } : {}),
   };
   cachePlace(place);
   // Persiste no localStorage para sobreviver a recarregamentos (mesmo padrão dos lugares OSM)

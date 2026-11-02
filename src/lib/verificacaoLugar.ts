@@ -11,6 +11,50 @@ export type ResultadoVerificacao = {
   lugarExistente?: Place;
 };
 
+export type ResultadoPreVerificacao = {
+  /** true = Google confirmou, pode criar o lugar */
+  ok: boolean;
+  googlePlaceId?: string;
+  /** Lugar Vimo já existente com esse googlePlaceId */
+  lugarExistente?: Place;
+};
+
+/**
+ * Verifica o lugar NO GOOGLE ANTES de criar qualquer registro no Vimo.
+ * Retorna ok=false se o Google não confirmar — nesse caso o lugar não deve ser salvo.
+ */
+export async function verificarAntesDeRegistrar(
+  nome: string,
+  endereco: string,
+): Promise<ResultadoPreVerificacao> {
+  try {
+    const resp = await fetch('/api/verificar-lugar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, endereco }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!resp.ok) return { ok: false };
+
+    const data = await resp.json() as { status: StatusVerificacao; googlePlaceId?: string };
+
+    if (data.status !== 'verified' || !data.googlePlaceId) {
+      return { ok: false };
+    }
+
+    // Deduplicação: lugar com esse googlePlaceId já existe no Vimo?
+    const existente = await buscarPorGooglePlaceId(data.googlePlaceId);
+    if (existente) {
+      return { ok: true, googlePlaceId: data.googlePlaceId, lugarExistente: existente };
+    }
+
+    return { ok: true, googlePlaceId: data.googlePlaceId };
+  } catch {
+    return { ok: false };
+  }
+}
+
 /**
  * Chama o backend para verificar se o lugar existe no Google Places.
  * Se confirmado: grava o googlePlaceId no registro Vimo (chave de deduplicação).
