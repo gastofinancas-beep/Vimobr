@@ -26,10 +26,10 @@ app.use(express.json({ limit: '10mb' }));
 
 type GooglePlace = {
   id: string;
-  displayName?: { text: string };
 };
 
 // Verificação de lugar via Google Places (server-side, chave nunca exposta ao cliente)
+// Usa SKU "Text Search Essentials (IDs Only)" — gratuito ilimitado (campo places.id apenas).
 app.post('/api/verificar-lugar', async (req, res) => {
   const { nome, endereco } = req.body as { placeId?: string; nome?: string; endereco?: string };
   if (!nome) {
@@ -48,7 +48,7 @@ app.post('/api/verificar-lugar', async (req, res) => {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.id,places.displayName',
+        'X-Goog-FieldMask': 'places.id',
       },
       body: JSON.stringify({ textQuery: `${nome}${endereco ? ', ' + endereco : ''}`, maxResultCount: 1 }),
       signal: AbortSignal.timeout(8000),
@@ -63,18 +63,6 @@ app.post('/api/verificar-lugar', async (req, res) => {
     const found = data.places?.[0];
 
     if (!found) {
-      return res.json({ status: 'pending_review' });
-    }
-
-    // Verifica correspondência por nome
-    const normalize = (s: string) =>
-      s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
-    const nomeNorm = normalize(nome);
-    const googleNome = normalize(found.displayName?.text || '');
-    const palavrasNome = nomeNorm.split(/\s+/).filter(w => w.length > 2);
-    const match = palavrasNome.length > 0 && palavrasNome.some(p => googleNome.includes(p));
-
-    if (!match) {
       return res.json({ status: 'pending_review' });
     }
 
