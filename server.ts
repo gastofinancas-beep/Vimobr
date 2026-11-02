@@ -26,10 +26,13 @@ app.use(express.json({ limit: '10mb' }));
 
 type GooglePlace = {
   id: string;
+  displayName?: { text: string };
 };
 
 // Verificação de lugar via Google Places (server-side, chave nunca exposta ao cliente)
-// Usa SKU "Text Search Essentials (IDs Only)" — gratuito ilimitado (campo places.id apenas).
+// SKU "Text Search Pro" (places.id + places.displayName): 5.000 req/mês grátis.
+// O check de nome usa fuzzy match (qualquer palavra > 2 letras) para tolerar variações
+// de grafia do usuário. Cidade/bairro ficam implícitos na textQuery.
 app.post('/api/verificar-lugar', async (req, res) => {
   const { nome, endereco } = req.body as { placeId?: string; nome?: string; endereco?: string };
   if (!nome) {
@@ -48,7 +51,7 @@ app.post('/api/verificar-lugar', async (req, res) => {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.id',
+        'X-Goog-FieldMask': 'places.id,places.displayName',
       },
       body: JSON.stringify({ textQuery: `${nome}${endereco ? ', ' + endereco : ''}`, maxResultCount: 1 }),
       signal: AbortSignal.timeout(8000),
@@ -63,6 +66,18 @@ app.post('/api/verificar-lugar', async (req, res) => {
     const found = data.places?.[0];
 
     if (!found) {
+      return res.json({ status: 'pending_review' });
+    }
+
+    // Verifica se o nome digitado pelo usuário tem alguma palavra presente no nome do Google.
+    // Fuzzy: remove acentos e pontuação, ignora palavras com ≤ 2 letras (artigos, preposições).
+    const normalize = (s: string) =>
+      s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+    const palavras = normalize(nome).split(/\s+/).filter(w => w.length > 2);
+    const googleNome = normalize(found.displayName?.text || '');
+    const match = palavras.length > 0 && palavras.some(p => googleNome.includes(p));
+
+    if (!match) {
       return res.json({ status: 'pending_review' });
     }
 
