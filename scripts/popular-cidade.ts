@@ -10,7 +10,7 @@
  *     Baixe em: Firebase Console → Configurações do projeto → Contas de serviço → Gerar nova chave privada
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -194,10 +194,19 @@ const require = createRequire(import.meta.url);
 const { initializeApp, cert } = require('firebase-admin/app') as typeof import('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore') as typeof import('firebase-admin/firestore');
 
+// Aceita credencial via variável de ambiente OU arquivo firebase-key.json
+let serviceAccount: Record<string, unknown>;
 const keyPath = resolve(__dirname, 'firebase-key.json');
-const serviceAccount = JSON.parse(readFileSync(keyPath, 'utf-8'));
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} else if (existsSync(keyPath)) {
+  serviceAccount = JSON.parse(readFileSync(keyPath, 'utf-8'));
+} else {
+  console.error('Credencial não encontrada. Defina FIREBASE_SERVICE_ACCOUNT ou crie scripts/firebase-key.json');
+  process.exit(1);
+}
 
-initializeApp({ credential: cert(serviceAccount) });
+initializeApp({ credential: cert(serviceAccount as Parameters<typeof cert>[0]) });
 const db = getFirestore((firebaseConfig as Record<string, string>).firestoreDatabaseId ?? '(default)');
 
 console.log(`Gravando no Firestore (projeto: ${firebaseConfig.projectId})...`);
