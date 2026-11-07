@@ -130,7 +130,7 @@ export default function ClubeScreen({
     const r = await entrarComConvite(clube, eu, codigo);
     setConferindo(false);
     if (!r.ok) {
-      setErroConvite(r.erro);
+      setErroConvite((r as { ok: false; erro: string }).erro);
       return;
     }
     setPedindoConvite(false);

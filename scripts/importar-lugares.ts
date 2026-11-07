@@ -23,18 +23,21 @@ if (!seedPath) {
 const lugares = JSON.parse(readFileSync(resolve(seedPath), 'utf-8')) as Record<string, unknown>[];
 console.log(`Importando ${lugares.length} lugares para o Firestore (projeto: ${firebaseConfig.projectId})...`);
 
-// Importação dinâmica para não exigir firebase-admin em tempo de build
-const admin = await import('firebase-admin').then((m) => m.default);
+const { createRequire } = await import('module');
+const require = createRequire(import.meta.url);
+const { initializeApp, cert, getApps, applicationDefault } = require('firebase-admin/app') as typeof import('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore') as typeof import('firebase-admin/firestore');
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
-  });
+if (!getApps().length) {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    initializeApp({ credential: cert(sa) });
+  } else {
+    initializeApp({ credential: applicationDefault() });
+  }
 }
 
-const db = admin.firestore();
-db.settings({ databaseId: (firebaseConfig as Record<string, string>).firestoreDatabaseId ?? '(default)' });
+const db = getFirestore((firebaseConfig as Record<string, string>).firestoreDatabaseId ?? '(default)');
 
 const BATCH_SIZE = 500;
 let total = 0;

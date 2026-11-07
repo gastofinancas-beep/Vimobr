@@ -6,6 +6,29 @@ import { fileURLToPath } from 'url';
 
 dotenv.config();
 
+// Auto-seed de cidades no startup (roda em segundo plano, não bloqueia o servidor)
+async function seedCidadesNecessarias(): Promise<void> {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) return;
+  try {
+    const { cidadeJaImportada, importarCidade } = await import('./scripts/seed-cidades.js');
+    const cidades = [
+      { nome: 'São José dos Campos', lat: -23.1896, lng: -45.8841, key: 'sao-jose-dos-campos-sp' },
+    ];
+    for (const c of cidades) {
+      const jaTemDados = await cidadeJaImportada(c.key);
+      if (!jaTemDados) {
+        console.log(`[seed] Iniciando importação de ${c.nome}...`);
+        const r = await importarCidade(c.nome, c.lat, c.lng, c.key);
+        console.log(`[seed] ${c.nome}: ${r.importados} lugares importados`);
+      } else {
+        console.log(`[seed] ${c.nome} já está no banco (OK)`);
+      }
+    }
+  } catch (e: any) {
+    console.warn('[seed] Erro no auto-seed:', e.message);
+  }
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -91,6 +114,24 @@ app.post('/api/verificar-lugar', async (req, res) => {
   }
 });
 
+// Endpoint para disparar importação manual de uma cidade (requer FIREBASE_SERVICE_ACCOUNT)
+app.post('/api/seed-cidade', async (req, res) => {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    return res.status(501).json({ erro: 'FIREBASE_SERVICE_ACCOUNT não configurado' });
+  }
+  const { cidade, lat, lng, cityKey } = req.body as { cidade?: string; lat?: number; lng?: number; cityKey?: string };
+  if (!cidade || !lat || !lng) {
+    return res.status(400).json({ erro: 'cidade, lat e lng são obrigatórios' });
+  }
+  try {
+    const { importarCidade } = await import('./scripts/seed-cidades.js');
+    const r = await importarCidade(cidade, lat, lng, cityKey);
+    return res.json(r);
+  } catch (e: any) {
+    return res.status(500).json({ erro: e.message });
+  }
+});
+
 // Setup do Vite em dev vs arquivos estáticos em produção
 async function startServer() {
   if (!isProd) {
@@ -136,6 +177,8 @@ async function startServer() {
 
   const server = app.listen(PORT, HOST, () => {
     console.log(`Servidor Vimo rodando em http://${HOST}:${PORT} (${isProd ? 'produção' : 'desenvolvimento'})`);
+    // Seed em segundo plano — não aguarda para não atrasar o servidor
+    void seedCidadesNecessarias();
   });
 
   const handleShutdown = (signal: string) => {

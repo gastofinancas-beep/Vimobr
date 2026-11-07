@@ -507,12 +507,12 @@ export async function buscarRestaurantesReaisOSM(
 
   // Consulta abrangente incluindo restaurantes, bares, cafeterias, padarias, empórios e comércios gastronômicos
   // Só lugares onde se come ou bebe (mercado, açougue e conveniência ficam de fora)
-  const query = `[out:json][timeout:12];(
+  const query = `[out:json][timeout:25];(
     node["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|biergarten)$"]["name"](around:${raioMeters},${lat},${lng});
     node["shop"~"^(bakery|pastry|coffee|confectionery)$"]["name"](around:${raioMeters},${lat},${lng});
     way["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|biergarten)$"]["name"](around:${raioMeters},${lat},${lng});
     way["shop"~"^(bakery|pastry|coffee|confectionery)$"]["name"](around:${raioMeters},${lat},${lng});
-  );out center 150;`;
+  );out center 1000;`;
 
   for (const mirror of overpassMirrors) {
     try {
