@@ -201,7 +201,7 @@ export async function carregarLugaresDaCidade(cidade: CidadeAtual, forcar = fals
     lista = [...exemplos, ...doFirestore];
   } else {
     // Raio maior (15 km) para cobrir cidades médias e grandes; o cache de 24h amortiza o custo
-    const encontrados = await buscarRestaurantesReaisOSM(cidade.lat, cidade.lng, 15000);
+    const encontrados = await buscarRestaurantesReaisOSM(cidade.lat, cidade.lng, 8000);
     const daCidade: Place[] = encontrados
       .filter((p) => !p.id.startsWith('nom-'))
       .map((p) => ({ ...p, cityName: p.cityName ?? cidade.nome, cityKey: cidade.cityKey }));

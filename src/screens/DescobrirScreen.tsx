@@ -61,6 +61,7 @@ export default function DescobrirScreen({
   const [gps, setGps] = useState<'parado' | 'pedindo' | FalhaLocalizacao>('parado');
   const [lugares, setLugares] = useState<Place[]>(() => lugaresGuardados(cidadeAtual) ?? lugaresDeExemplo(cidadeAtual));
   const [carregandoLugares, setCarregandoLugares] = useState(true);
+  const [tentativaCarregar, setTentativaCarregar] = useState(0);
   const [cidadeModalAberta, setCidadeModalAberta] = useState(false);
   const [buscaCidade, setBuscaCidade] = useState('');
   const [sugestoesCidade, setSugestoesCidade] = useState<CidadeAtual[]>([]);
@@ -104,14 +105,15 @@ export default function DescobrirScreen({
     let ativo = true;
     setLugares(lugaresGuardados(cidadeAtual) ?? lugaresDeExemplo(cidadeAtual));
     setCarregandoLugares(true);
-    carregarLugaresDaCidade(cidadeAtual)
+    carregarLugaresDaCidade(cidadeAtual, tentativaCarregar > 0)
       .then((lista) => ativo && lista.length > 0 && setLugares(lista))
       .catch(() => {})
       .finally(() => ativo && setCarregandoLugares(false));
     return () => {
       ativo = false;
     };
-  }, [cidadeAtual.cityKey, cidadeAtual.lat, cidadeAtual.lng]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cidadeAtual.cityKey, cidadeAtual.lat, cidadeAtual.lng, tentativaCarregar]);
 
   // Busca de cidade com pausa entre teclas (o serviço gratuito pede no máximo 1 consulta por segundo)
   useEffect(() => {
@@ -303,13 +305,31 @@ export default function DescobrirScreen({
           carregandoLugares ? (
             <EsqueletoLugares />
           ) : (
-            <MascotMessage
-              reaction="pensativo"
-              title={`Ainda não achamos lugares em ${cidadeCurta}`}
-              subtitle="Confira a conexão ou escolha outra cidade."
-              ctaLabel="Trocar cidade"
-              onCta={() => setCidadeModalAberta(true)}
-            />
+            <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+              <Mascote reacao="pensativo" tamanho={88} />
+              <h3 className="mt-4 font-display text-lg font-bold tracking-tight text-ink">
+                {`Ainda não achamos lugares em ${cidadeCurta}`}
+              </h3>
+              <p className="mt-1.5 max-w-[280px] text-sm text-muted">
+                Verifique a conexão e tente novamente, ou escolha outra cidade.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 w-full max-w-[260px]">
+                <button
+                  type="button"
+                  onClick={() => setTentativaCarregar((n) => n + 1)}
+                  className={btn.primary}
+                >
+                  Tentar novamente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCidadeModalAberta(true)}
+                  className={btn.secondary}
+                >
+                  Trocar cidade
+                </button>
+              </div>
+            </div>
           )
         ) : lugaresFiltrados.length === 0 ? (
           <MascotMessage
