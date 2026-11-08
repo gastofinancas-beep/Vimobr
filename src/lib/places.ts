@@ -517,7 +517,7 @@ export async function buscarRestaurantesReaisOSM(
   for (const mirror of overpassMirrors) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 7500);
+      const timeout = setTimeout(() => controller.abort(), 25000);
 
       const res = await fetch(
         `${mirror}?data=${encodeURIComponent(query)}`,
