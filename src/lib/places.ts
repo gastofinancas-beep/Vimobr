@@ -512,7 +512,7 @@ export async function buscarRestaurantesReaisOSM(
     node["shop"~"^(bakery|pastry|coffee|confectionery)$"]["name"](around:${raioMeters},${lat},${lng});
     way["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|biergarten)$"]["name"](around:${raioMeters},${lat},${lng});
     way["shop"~"^(bakery|pastry|coffee|confectionery)$"]["name"](around:${raioMeters},${lat},${lng});
-  );out center 1000;`;
+  );out center 300;`;
 
   for (const mirror of overpassMirrors) {
     try {
