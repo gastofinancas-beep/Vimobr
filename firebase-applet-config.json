@@ -1,12 +1,9 @@
 {
-  "projectId": "gen-lang-client-0076762644",
-  "appId": "1:361917389780:web:46b26baf0e2ab7d2549441",
-  "apiKey": "AIzaSyD7AgyHyCaJYc2sAapHGIsE6N5GjwaD9sE",
-  "authDomain": "gen-lang-client-0076762644.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-vimoversooficial-a3f53c1f-0b84-453c-b938-9dab0be97b2e",
-  "storageBucket": "gen-lang-client-0076762644.firebasestorage.app",
-  "messagingSenderId": "361917389780",
-  "measurementId": "",
-  "oAuthClientId": "361917389780-ceq4f11g9kfu7ascmgkl6394lmp81aoq.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "projectId": "vimobr",
+  "appId": "1:341833153433:web:388ea1a70f18275e07b108",
+  "apiKey": "AIzaSyD6jYqwVEBluarineMbjPVhLg9Fd7C_H1E",
+  "authDomain": "vimobr.firebaseapp.com",
+  "storageBucket": "vimobr.firebasestorage.app",
+  "messagingSenderId": "341833153433",
+  "measurementId": "G-7VXKT63ZGG"
 }

@@ -180,6 +180,8 @@ seguindo os imports relativos.
   total; variáveis `VERIFICAR_LIMITE_PESSOA_DIA` e `VERIFICAR_LIMITE_GERAL_DIA`).
 - Exclusão de conta (`src/lib/excluirConta.ts`) apaga avaliações, posts, fotos, eventos e clubes
   criados pela pessoa, e exige login recente.
+- Projeto Firebase próprio desde 2026-11-14: `vimobr` (dona: conta `vimoreview`), banco `(default)`.
+  O projeto antigo do AI Studio (`gen-lang-client-0076762644`) ficou com o app Gasto; não usar.
 - Nenhuma API paga (Google Places, Maps, Mapbox). Mapa removido em 2026-10-20.
 - PRO ainda não cobra; meio de pagamento depende de decisão do Pedro (lojas exigem compra no app).
 

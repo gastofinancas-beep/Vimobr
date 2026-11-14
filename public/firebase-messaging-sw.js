@@ -1,14 +1,14 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
+// Mesmo projeto do app (firebase-applet-config.json)
 const firebaseConfig = {
-  projectId: "hybrid-eye-kdpgw",
-  appId: "1:184363791886:web:bf1f7b02c3172ac9c42e5f",
-  apiKey: "AIzaSyB8n7iD03XeL8i9ISywY8Vn4LPpfSZWrbo",
-  authDomain: "hybrid-eye-kdpgw.firebaseapp.com",
-  firestoreDatabaseId: "ai-studio-remixvimo-ef5ce5a4-a170-4d95-b6d1-e73c235c337a",
-  storageBucket: "hybrid-eye-kdpgw.firebasestorage.app",
-  messagingSenderId: "184363791886"
+  projectId: "vimobr",
+  appId: "1:341833153433:web:388ea1a70f18275e07b108",
+  apiKey: "AIzaSyD6jYqwVEBluarineMbjPVhLg9Fd7C_H1E",
+  authDomain: "vimobr.firebaseapp.com",
+  storageBucket: "vimobr.firebasestorage.app",
+  messagingSenderId: "341833153433"
 };
 
 try {
