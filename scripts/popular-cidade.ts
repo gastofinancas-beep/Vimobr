@@ -207,7 +207,7 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 }
 
 initializeApp({ credential: cert(serviceAccount as Parameters<typeof cert>[0]) });
-const db = getFirestore((firebaseConfig as Record<string, string>).firestoreDatabaseId ?? '(default)');
+const db = getFirestore((firebaseConfig as Record<string, string>).firestoreDatabaseId || '(default)');
 
 console.log(`Gravando no Firestore (projeto: ${firebaseConfig.projectId})...`);
 const BATCH_SIZE = 500;

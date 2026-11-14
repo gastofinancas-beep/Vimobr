@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// Fotos do Vimo. Cada pessoa só grava na própria pasta, só imagem e no máximo 5 MB
+// (o app já reduz as fotos para 1.600 px antes de enviar). Qualquer pessoa vê as fotos,
+// porque elas aparecem no feed, nas avaliações e nos perfis.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{tipo}/{uid}/{arquivo} {
+      allow read: if tipo in ['reviews', 'posts', 'avatars'];
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && tipo in ['reviews', 'posts', 'avatars']
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 5 * 1024 * 1024;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Todo o resto fica fechado
+    match /{caminho=**} {
+      allow read, write: if false;
+    }
+  }
+}

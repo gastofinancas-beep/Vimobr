@@ -12,13 +12,16 @@ export const isFirebaseConfigured = Boolean(
 
 export const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth: Auth = getAuth(app);
+// Projeto próprio usa o banco padrão; o campo só existe em projetos criados pelo AI Studio
+const bancoDeDados = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId || '(default)';
+
 // Campos undefined são ignorados em vez de derrubar a gravação inteira
 function criarFirestore(): Firestore {
   try {
-    return initializeFirestore(app, { ignoreUndefinedProperties: true }, firebaseConfig.firestoreDatabaseId);
+    return initializeFirestore(app, { ignoreUndefinedProperties: true }, bancoDeDados);
   } catch {
     // recarga do módulo em desenvolvimento: a instância já existe
-    return getFirestore(app, firebaseConfig.firestoreDatabaseId);
+    return getFirestore(app, bancoDeDados);
   }
 }
 export const db: Firestore = criarFirestore();

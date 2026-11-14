@@ -37,7 +37,7 @@ if (!getApps().length) {
   }
 }
 
-const db = getFirestore((firebaseConfig as Record<string, string>).firestoreDatabaseId ?? '(default)');
+const db = getFirestore((firebaseConfig as Record<string, string>).firestoreDatabaseId || '(default)');
 
 const BATCH_SIZE = 500;
 let total = 0;

@@ -217,7 +217,7 @@ function initAdmin(): { db: any } | null {
       const serviceAccount = JSON.parse(envJson);
       initializeApp({ credential: cert(serviceAccount) });
     }
-    const db = getFirestore((firebaseConfig as Record<string, string>).firestoreDatabaseId ?? '(default)');
+    const db = getFirestore((firebaseConfig as Record<string, string>).firestoreDatabaseId || '(default)');
     return { db };
   } catch (e: any) {
     console.error('[seed] Falha ao inicializar firebase-admin:', e.message);
