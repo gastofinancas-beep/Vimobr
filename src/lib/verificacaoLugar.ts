@@ -1,7 +1,13 @@
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { auth, db } from './firebase';
 import { cachePlace, MEMORY_PLACES_CACHE, buscarPorGooglePlaceId } from './places';
 import type { Place } from '../types';
+
+/** O servidor só atende quem está logado: o token do Firebase vai no pedido. */
+async function cabecalhos(): Promise<Record<string, string>> {
+  const token = await auth.currentUser?.getIdToken().catch(() => null);
+  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
 
 export type StatusVerificacao = 'verifying' | 'verified' | 'pending_review' | 'verification_error';
 
@@ -14,6 +20,8 @@ export type ResultadoVerificacao = {
 export type ResultadoPreVerificacao = {
   /** true = Google confirmou, pode criar o lugar */
   ok: boolean;
+  /** Por que o servidor nem chegou a consultar: sem login ou limite do dia */
+  motivo?: 'login' | 'limite';
   googlePlaceId?: string;
   /** Lugar Vimo já existente com esse googlePlaceId */
   lugarExistente?: Place;
@@ -30,11 +38,13 @@ export async function verificarAntesDeRegistrar(
   try {
     const resp = await fetch('/api/verificar-lugar', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await cabecalhos(),
       body: JSON.stringify({ nome, endereco }),
       signal: AbortSignal.timeout(15000),
     });
 
+    if (resp.status === 401) return { ok: false, motivo: 'login' };
+    if (resp.status === 429) return { ok: false, motivo: 'limite' };
     if (!resp.ok) return { ok: false };
 
     const data = await resp.json() as { status: StatusVerificacao; googlePlaceId?: string };
@@ -70,7 +80,7 @@ export async function verificarLugar(
   try {
     const resp = await fetch('/api/verificar-lugar', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await cabecalhos(),
       body: JSON.stringify({ placeId, nome, endereco }),
       signal: AbortSignal.timeout(15000),
     });

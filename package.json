@@ -14,7 +14,8 @@
     "cap:sync": "npx cap sync",
     "cap:assets": "npx capacitor-assets generate",
     "cap:ios": "vite build && npx cap sync ios && npx cap open ios",
-    "cap:android": "vite build && npx cap sync android && npx cap open android"
+    "cap:android": "vite build && npx cap sync android && npx cap open android",
+    "test:regras": "npx firebase-tools emulators:exec --only firestore --project demo-vimo \"node testes/regras.mjs\""
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
@@ -36,6 +37,7 @@
     "tsx": "^4.19.4"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",

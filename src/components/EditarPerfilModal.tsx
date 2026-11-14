@@ -2,9 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { carregarBloqueados, desbloquear, type PessoaBloqueada } from '../lib/moderacao';
 import { AlertCircle, Camera, Check, X, MapPin, Loader, Trash2 } from 'lucide-react';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { deleteUser } from 'firebase/auth';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { storage, auth, db, isFirebaseConfigured } from '../lib/firebase';
+import { excluirContaCompleta } from '../lib/excluirConta';
+import { storage, auth, isFirebaseConfigured } from '../lib/firebase';
 import { autocompleteCidade, slug } from '../lib/places';
 import { Avatar } from './ui';
 import type { UserProfile } from '../types';
@@ -101,16 +100,20 @@ export default function EditarPerfilModal({
     setExcluindo(true);
     try {
       if (isFirebaseConfigured && auth.currentUser) {
-        await deleteDoc(doc(db, 'users', usuario.uid));
-        await deleteUser(auth.currentUser);
+        await excluirContaCompleta(usuario.uid);
       }
       localStorage.clear();
       window.location.reload();
-    } catch {
+    } catch (err) {
       setExcluindo(false);
       setConfirmarExclusao(false);
       setTextoConfirmacao('');
-      setErro('Não foi possível excluir a conta. Tente fazer login novamente e repita a ação.');
+      // O Firebase só apaga o login de quem entrou há pouco tempo
+      setErro(
+        (err as { code?: string })?.code === 'auth/requires-recent-login'
+          ? 'Por segurança, saia da conta, entre de novo e repita a exclusão. Nada foi apagado ainda.'
+          : 'Não foi possível excluir a conta. Tente fazer login novamente e repita a ação.',
+      );
     }
   };
 

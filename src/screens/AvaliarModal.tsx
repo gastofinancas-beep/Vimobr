@@ -821,7 +821,13 @@ export default function AvaliarModal({
                                 // Verifica no Google antes de criar qualquer registro
                                 const verificacao = await verificarAntesDeRegistrar(novoNome, enderecoCompleto);
                                 if (!verificacao.ok) {
-                                  setErroVerificacaoLugar('Não encontramos este lugar no Google Maps. Confira o nome e tente novamente.');
+                                  setErroVerificacaoLugar(
+                                    verificacao.motivo === 'login'
+                                      ? 'Entre na sua conta para cadastrar um lugar.'
+                                      : verificacao.motivo === 'limite'
+                                      ? 'Limite de cadastros de hoje atingido. Tente amanhã.'
+                                      : 'Não encontramos este lugar no Google Maps. Confira o nome e tente novamente.',
+                                  );
                                   return;
                                 }
                                 // Deduplicação: lugar já existe no Vimo

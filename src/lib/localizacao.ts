@@ -163,7 +163,6 @@ async function salvarLugaresFirestore(lugares: Place[], cidade: CidadeAtual): Pr
         batch.set(
           doc(col, place.id),
           { ...place, cityName: place.cityName ?? cidade.nome, cityKey: cidade.cityKey, source: 'openstreetmap', createdAt: Date.now() },
-          { merge: true },
         );
       }
       await batch.commit();
@@ -206,7 +205,10 @@ export async function carregarLugaresDaCidade(cidade: CidadeAtual, forcar = fals
       .map((p) => ({ ...p, cityName: p.cityName ?? cidade.nome, cityKey: cidade.cityKey }));
     lista = daCidade.sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99));
     // Salva no Firestore em segundo plano para que a próxima visita (de qualquer usuário) seja instantânea
-    if (daCidade.length > 0) void salvarLugaresFirestore(daCidade, cidade);
+    // Só os que ainda não existem: lugar já gravado não é reescrito pelo app
+    const jaNoBanco = new Set(doFirestore.map((p) => p.id));
+    const novos = daCidade.filter((p) => !jaNoBanco.has(p.id));
+    if (novos.length > 0) void salvarLugaresFirestore(novos, cidade);
   }
 
   if (lista.length === 0) return guardados ?? [];

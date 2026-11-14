@@ -11,6 +11,7 @@ import {
   updateDoc,
   addDoc,
   increment,
+  writeBatch,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured, storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -336,7 +337,13 @@ export async function curtirPost(postId: string, uid: string): Promise<boolean> 
 
   if (isFirebaseConfigured) {
     try {
-      updateDoc(doc(db, 'posts', postId), { likesCount: increment(curtiu ? 1 : -1) }).catch(() => {});
+      // O registro de quem curtiu vai junto: a regra só aceita o contador com ele
+      const lote = writeBatch(db);
+      const minhaCurtida = doc(db, 'posts', postId, 'likes', uid);
+      if (curtiu) lote.set(minhaCurtida, { at: Date.now() });
+      else lote.delete(minhaCurtida);
+      lote.update(doc(db, 'posts', postId), { likesCount: increment(curtiu ? 1 : -1) });
+      lote.commit().catch(() => {});
     } catch {}
   }
 

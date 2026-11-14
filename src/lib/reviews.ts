@@ -7,6 +7,7 @@ import { auth, db, storage, isFirebaseConfigured } from './firebase';
 import { CRITERIOS, type Comment, type FeedMode, type Place, type Ratings, type Review, type ReviewCompanion, type VereditoCritico, type OcasiaoIdeal, type VoltariaOpcao, type PratoAvaliado, type PrecoPercepcao } from '../types';
 import { SAMPLE_PLACES } from './places';
 import { criarNotificacao } from './notifications';
+import { seguirUsuario, deixarDeSeguir as deixarDeSeguirUsuario, seguindoLocais } from './follows';
 
 const toReview = (d: any): Review => ({ id: d.id, ...(d.data() as Omit<Review, 'id'>) });
 
@@ -225,7 +226,23 @@ export async function excluirAvaliacao(reviewId: string): Promise<void> {
   saveLocalReviews(atualizadas);
   if (!isFirebaseConfigured) return;
   try {
-    await deleteDoc(doc(db, 'reviews', reviewId));
+    // Apaga a avaliação e desconta as notas dela do lugar na mesma gravação
+    const reviewRef = doc(db, 'reviews', reviewId);
+    await runTransaction(db, async (tx) => {
+      const rev = await tx.get(reviewRef);
+      if (!rev.exists()) return;
+      const dados = rev.data() as Omit<Review, 'id'>;
+      const placeRef = dados.placeId ? doc(db, 'places', dados.placeId) : null;
+      const lugar = placeRef ? await tx.get(placeRef) : null;
+      tx.delete(reviewRef);
+      if (placeRef && lugar?.exists() && (lugar.data()?.reviewsCount ?? 0) > 0) {
+        const sums: Record<string, number> = { ...(lugar.data()?.sums ?? {}) };
+        Object.entries(dados.ratings || {}).forEach(([chave, valor]) => {
+          if (typeof valor === 'number' && valor > 0 && sums[chave]) sums[chave] = Math.max(0, sums[chave] - valor);
+        });
+        tx.update(placeRef, { reviewsCount: lugar.data()!.reviewsCount - 1, sums });
+      }
+    });
   } catch (err) {
     console.warn('Erro ao excluir avaliação no Firestore:', err);
   }
@@ -359,59 +376,17 @@ export async function salvarAvaliacao(a: {
   return newId;
 }
 
-// ---------- Seguir
+// ---------- Seguir (um sistema só: ver follows.ts)
 export async function seguir(meu: string, alvo: string) {
-  // Local storage
-  try {
-    const raw = localStorage.getItem(LS_FOLLOWING_KEY + '_' + meu);
-    const set = new Set<string>(raw ? JSON.parse(raw) : []);
-    set.add(alvo);
-    localStorage.setItem(LS_FOLLOWING_KEY + '_' + meu, JSON.stringify([...set]));
-  } catch {}
-
-  if (isFirebaseConfigured) {
-    try {
-      const b = writeBatch(db);
-      b.set(doc(db, 'users', meu, 'following', alvo), { at: Date.now() });
-      b.set(doc(db, 'users', alvo, 'followers', meu), { at: Date.now() });
-      b.set(doc(db, 'users', meu), { followingCount: increment(1) }, { merge: true });
-      b.set(doc(db, 'users', alvo), { followersCount: increment(1) }, { merge: true });
-      await b.commit();
-    } catch (err) {
-      console.warn('Firestore seguir error:', err);
-    }
-  }
+  await seguirUsuario(meu, alvo);
 }
 
 export async function deixarDeSeguir(meu: string, alvo: string) {
-  try {
-    const raw = localStorage.getItem(LS_FOLLOWING_KEY + '_' + meu);
-    const list: string[] = raw ? JSON.parse(raw) : [];
-    const filtered = list.filter((id) => id !== alvo);
-    localStorage.setItem(LS_FOLLOWING_KEY + '_' + meu, JSON.stringify(filtered));
-  } catch {}
-
-  if (isFirebaseConfigured) {
-    try {
-      const b = writeBatch(db);
-      b.delete(doc(db, 'users', meu, 'following', alvo));
-      b.delete(doc(db, 'users', alvo, 'followers', meu));
-      b.set(doc(db, 'users', meu), { followingCount: increment(-1) }, { merge: true });
-      b.set(doc(db, 'users', alvo), { followersCount: increment(-1) }, { merge: true });
-      await b.commit();
-    } catch (err) {
-      console.warn('Firestore deixarDeSeguir error:', err);
-    }
-  }
+  await deixarDeSeguirUsuario(meu, alvo);
 }
 
 export async function idsSeguindo(meu: string): Promise<string[]> {
-  try {
-    const raw = localStorage.getItem(LS_FOLLOWING_KEY + '_' + meu);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return seguindoLocais(meu);
 }
 
 // ---------- Aba EXPLORAR (3 modos)

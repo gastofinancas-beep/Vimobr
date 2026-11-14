@@ -45,7 +45,7 @@ const hostArg = hostIndex !== -1 && args[hostIndex + 1] ? args[hostIndex + 1] : 
 const PORT = Number(process.env.PORT) || portArg || 3000;
 const HOST = process.env.HOST || hostArg || '0.0.0.0';
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '100kb' }));
 
 type GooglePlace = {
   id: string;
@@ -56,15 +56,70 @@ type GooglePlace = {
 // SKU "Text Search Pro" (places.id + places.displayName): 5.000 req/mês grátis.
 // O check de nome usa fuzzy match (qualquer palavra > 2 letras) para tolerar variações
 // de grafia do usuário. Cidade/bairro ficam implícitos na textQuery.
+//
+// Proteção contra abuso (a consulta ao Google é o único ponto do app que pode gerar cobrança):
+// só atende quem está logado no app, com limite por pessoa e um teto diário geral que mantém
+// o mês dentro da cota grátis mesmo no pior caso.
+const LIMITE_POR_PESSOA_DIA = Number(process.env.VERIFICAR_LIMITE_PESSOA_DIA) || 10;
+const LIMITE_GERAL_DIA = Number(process.env.VERIFICAR_LIMITE_GERAL_DIA) || 150; // 150 x 31 = 4.650 < 5.000
+const usoDoDia = { dia: '', total: 0, porPessoa: new Map<string, number>() };
+
+function dentroDoLimite(uid: string): boolean {
+  const hoje = new Date().toISOString().slice(0, 10);
+  if (usoDoDia.dia !== hoje) {
+    usoDoDia.dia = hoje;
+    usoDoDia.total = 0;
+    usoDoDia.porPessoa.clear();
+  }
+  const dele = usoDoDia.porPessoa.get(uid) ?? 0;
+  if (dele >= LIMITE_POR_PESSOA_DIA || usoDoDia.total >= LIMITE_GERAL_DIA) return false;
+  usoDoDia.porPessoa.set(uid, dele + 1);
+  usoDoDia.total += 1;
+  return true;
+}
+
+let verificadorDeLogin: Promise<import('firebase-admin/auth').Auth> | null = null;
+
+/** Confere o token do Firebase Auth enviado pelo app. Não precisa de service account. */
+async function uidDoPedido(req: express.Request): Promise<string | null> {
+  const cabecalho = req.headers.authorization || '';
+  const token = cabecalho.startsWith('Bearer ') ? cabecalho.slice(7) : '';
+  if (!token) return null;
+  try {
+    if (!verificadorDeLogin) {
+      verificadorDeLogin = (async () => {
+        const { initializeApp } = await import('firebase-admin/app');
+        const { getAuth } = await import('firebase-admin/auth');
+        const { default: config } = await import('./firebase-applet-config.json', { with: { type: 'json' } });
+        return getAuth(initializeApp({ projectId: config.projectId }, 'verificador-de-login'));
+      })();
+    }
+    const decodificado = await (await verificadorDeLogin).verifyIdToken(token);
+    return decodificado.uid;
+  } catch (err) {
+    console.warn('[verificar-lugar] token recusado:', (err as Error).message);
+    return null;
+  }
+}
+
 app.post('/api/verificar-lugar', async (req, res) => {
   const { nome, endereco } = req.body as { placeId?: string; nome?: string; endereco?: string };
-  if (!nome) {
+  if (!nome || typeof nome !== 'string' || nome.length > 120 || (endereco && String(endereco).length > 200)) {
     return res.status(400).json({ erro: 'nome é obrigatório' });
+  }
+
+  const uid = await uidDoPedido(req);
+  if (!uid) {
+    return res.status(401).json({ erro: 'Entre na sua conta para cadastrar um lugar.' });
   }
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
     return res.json({ status: 'pending_review' });
+  }
+
+  if (!dentroDoLimite(uid)) {
+    return res.status(429).json({ erro: 'Limite de cadastros de hoje atingido. Tente amanhã.' });
   }
 
   try {

@@ -5,9 +5,52 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    function passoDeUm(depois, antes) {
+      return depois == antes || depois == antes + 1 || depois == antes - 1;
+    }
+
+    // Curtida e comentário de outra pessoa: só os dois contadores mudam, de 1 em 1.
+    // Somar curtida exige criar o registro de quem curtiu na mesma gravação; tirar exige apagá-lo.
+    function soContadores(minhaCurtida) {
+      let likesAntes = resource.data.get('likesCount', 0);
+      let likesDepois = request.resource.data.get('likesCount', 0);
+      let comentAntes = resource.data.get('commentsCount', 0);
+      let comentDepois = request.resource.data.get('commentsCount', 0);
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount'])
+        && (likesDepois == likesAntes
+          || (likesDepois == likesAntes + 1 && !exists(minhaCurtida) && existsAfter(minhaCurtida))
+          || (likesDepois == likesAntes - 1 && exists(minhaCurtida) && !existsAfter(minhaCurtida)))
+        && (comentDepois == comentAntes || comentDepois == comentAntes + 1);
+    }
+
     match /users/{userId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // O dono cria e edita o próprio perfil, mas não mexe no plano nem nos contadores:
+      // o PRO só é ativado pelo console ou pelo servidor (pagamento), nunca pelo app.
+      allow create: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.get('plano', 'gratis') != 'pro'
+        && request.resource.data.get('followersCount', 0) == 0
+        && request.resource.data.get('followingCount', 0) == 0;
+      allow update: if request.auth != null
+        && ((request.auth.uid == userId && edicaoDoDono()) || seguindoOuDeixando());
+      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      function edicaoDoDono() {
+        return request.resource.data.get('plano', 'gratis') == resource.data.get('plano', 'gratis')
+          && request.resource.data.get('followersCount', 0) == resource.data.get('followersCount', 0)
+          && passoDeUm(request.resource.data.get('followingCount', 0), resource.data.get('followingCount', 0));
+      }
+      // Outra pessoa só altera o meu número de seguidores, de 1 em 1, e na mesma
+      // gravação em que entra em (ou sai de) users/{eu}/followers/{ela}.
+      function seguindoOuDeixando() {
+        let antes = resource.data.get('followersCount', 0);
+        let depois = request.resource.data.get('followersCount', 0);
+        let vaga = /databases/$(database)/documents/users/$(userId)/followers/$(request.auth.uid);
+        return request.auth.uid != userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followersCount'])
+          && ((depois == antes + 1 && !exists(vaga) && existsAfter(vaga))
+            || (depois == antes - 1 && exists(vaga) && !existsAfter(vaga)));
+      }
 
       match /fcmTokens/{tokenId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -24,7 +67,11 @@ service cloud.firestore {
         allow create: if request.auth != null
           && request.auth.uid != userId
           && request.resource.data.remetente.uid == request.auth.uid
-          && request.resource.data.lida == false;
+          && request.resource.data.lida == false
+          && request.resource.data.tipo in ['curtida', 'comentario', 'marcacao_presenca', 'seguir',
+            'clube_entrou', 'clube_evento', 'clube_removido', 'clube_ultrapassou']
+          && request.resource.data.get('texto', '') is string
+          && request.resource.data.get('texto', '').size() <= 400;
         allow update: if request.auth != null && request.auth.uid == userId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida', 'companionStatus']);
       }
@@ -59,11 +106,17 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.visibilidade != 'privado';
-      // curtidas e comentários só mexem nos contadores
+      // O autor edita o post (sem trocar de dono). Os outros só mexem nos contadores,
+      // de 1 em 1, e a curtida precisa do registro em posts/{id}/likes/{uid}.
       allow update: if request.auth != null
-        && (resource.data.uid == request.auth.uid
-          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount']));
+        && ((resource.data.uid == request.auth.uid && request.resource.data.uid == resource.data.uid)
+          || soContadores(/databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid)));
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+
+      match /likes/{userId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
 
       match /comments/{commentId} {
         allow read: if true;
@@ -125,8 +178,14 @@ service cloud.firestore {
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      // Só o autor publica e edita a própria avaliação; os outros só curtem e comentam
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.get('likesCount', 0) == 0
+        && request.resource.data.get('commentsCount', 0) == 0;
+      allow update: if request.auth != null
+        && ((resource.data.uid == request.auth.uid && request.resource.data.uid == resource.data.uid)
+          || soContadores(/databases/$(database)/documents/reviews/$(reviewId)/likes/$(request.auth.uid)));
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
 
       match /likes/{userId} {
@@ -136,14 +195,27 @@ service cloud.firestore {
 
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if request.auth != null;
+        allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
         allow update, delete: if request.auth != null && resource.data.uid == request.auth.uid;
       }
     }
 
+    // Catálogo: qualquer pessoa logada acrescenta um lugar, mas ninguém apaga nem
+    // reescreve o que já existe. Depois de criado, o app só mexe na contagem de
+    // avaliações (de 1 em 1) e, quem cadastrou, no resultado da verificação.
     match /places/{placeId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.get('name', '') is string
+        && request.resource.data.get('name', '').size() <= 120
+        && request.resource.data.get('reviewsCount', 0) <= 1
+        && !request.resource.data.keys().hasAny(['claimed', 'claimedPhotos']);
+      allow update: if request.auth != null
+        && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviewsCount', 'sums'])
+            && passoDeUm(request.resource.data.get('reviewsCount', 0), resource.data.get('reviewsCount', 0)))
+          || (resource.data.get('submittedBy', '') == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['verificacao', 'googlePlaceId'])));
+      allow delete: if false;
     }
 
     // Reivindicações de estabelecimentos: usuário logado envia; só a equipe resolve (pelo console)

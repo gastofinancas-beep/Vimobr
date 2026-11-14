@@ -170,6 +170,16 @@ seguindo os imports relativos.
   publicado no console. Pedro pediu para não publicar ainda (2026-10-23) porque as regras vão mudar.
   Pendentes: clubes/eventos/posts, `notificacoes`, `bloqueados`, `denuncias`, exclusão de convite.
   Curtidas, comentários e contadores usam só regras (+1/-1), sem Cloud Functions.
+  Regras reescritas em 2026-11-14 (ainda não publicadas): `plano` e contadores do perfil não são
+  graváveis pelo app (PRO só pelo console/servidor), avaliação só é editada pelo autor, lugar não é
+  apagado nem reescrito, curtida exige o registro em `likes/{uid}`. Teste: `npm run test:regras`
+  (emulador; precisa de Java). Ao mexer nas regras, rodar esse teste.
+- Seguir tem um sistema só (`src/lib/follows.ts`): `users/{eu}/following/{alvo}` +
+  `users/{alvo}/followers/{eu}` + contadores, tudo no mesmo lote.
+- `/api/verificar-lugar` exige o token do Firebase Auth e tem limite diário (10 por pessoa, 150 no
+  total; variáveis `VERIFICAR_LIMITE_PESSOA_DIA` e `VERIFICAR_LIMITE_GERAL_DIA`).
+- Exclusão de conta (`src/lib/excluirConta.ts`) apaga avaliações, posts, fotos, eventos e clubes
+  criados pela pessoa, e exige login recente.
 - Nenhuma API paga (Google Places, Maps, Mapbox). Mapa removido em 2026-10-20.
 - PRO ainda não cobra; meio de pagamento depende de decisão do Pedro (lojas exigem compra no app).
 

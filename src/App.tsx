@@ -9,6 +9,7 @@ import type { Place, UserProfile } from './types';
 import Navigation, { type TabKey } from './components/Navigation';
 import { definirMascotePro } from './components/Mascote';
 import { ehPro } from './lib/plano';
+import { sincronizarSeguindo } from './lib/follows';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { AvisoHost } from './components/Aviso';
 import LoginScreen from './screens/LoginScreen';
@@ -137,6 +138,7 @@ export default function App() {
         try {
           const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
           if (userDoc.exists()) {
+            void sincronizarSeguindo(fbUser.uid);
             const data = userDoc.data() as UserProfile & { displayNameLower?: string };
             setCurrentUser(data);
             localStorage.setItem('vimo_current_user', JSON.stringify(data));
