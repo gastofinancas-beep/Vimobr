@@ -136,7 +136,7 @@ export default function LoginScreen({ onLoginSuccess, onExploreAsGuest }: LoginS
             displayName: fbUser.displayName || 'Usuário Google',
             handle: `@${(fbUser.email || 'usuario').split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '')}`,
             photoURL: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-            bio: 'Explorando sabores incríveis com boa companhia.',
+            bio: '',
             homeCityKey: 'sao-paulo-sp',
             homeCityName: 'São Paulo - SP',
             followersCount: 0,

@@ -273,11 +273,19 @@ export default function SearchModal({
             carregando && lugares.length === 0 ? (
               <Spinner label="Buscando lugares" />
             ) : lugares.length === 0 ? (
-              <MascotMessage
-                reaction="confuso"
-                title="Nenhum lugar encontrado"
-                subtitle="Tente outro nome, culinária ou bairro."
-              />
+              query.trim().length === 0 ? (
+                <MascotMessage
+                  reaction="tranquilo"
+                  title="Busque um lugar"
+                  subtitle="Digite o nome, a culinária ou o bairro."
+                />
+              ) : (
+                <MascotMessage
+                  reaction="confuso"
+                  title="Nenhum lugar encontrado"
+                  subtitle="Tente outro nome, culinária ou bairro."
+                />
+              )
             ) : (
               lugares.map((p) => (
                 <button

@@ -1,6 +1,7 @@
 // Source: Google Maps Platform Code Assist
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
+import ErroGlobal from './components/ErroGlobal';
 import './index.css';
 import { migrarChavesGarfoParaVimo } from './lib/migrarGarfo';
 
@@ -24,5 +25,9 @@ console.error = (...args: unknown[]) => {
   origConsoleError.apply(console, args);
 };
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  <ErroGlobal>
+    <App />
+  </ErroGlobal>,
+);
 

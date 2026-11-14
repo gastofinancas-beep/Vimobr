@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, ChevronDown, MapPin, Navigation, X } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import NotificationsModal from '../components/NotificationsModal';
-import { SAMPLE_PLACES, formatarPrecoLabel } from '../lib/places';
+import { formatarPrecoLabel } from '../lib/places';
 import {
   buscarCidades,
   carregarLugaresDaCidade,
@@ -609,7 +609,7 @@ const CIDADES_SUGERIDAS: CidadeAtual[] = [
   { cityKey: 'brasilia-df', nome: 'Brasília - DF', lat: -15.7939, lng: -47.8828, origem: 'manual' },
 ];
 
-const lugaresDeExemplo = (c: CidadeAtual) => SAMPLE_PLACES.filter((p) => p.cityKey === c.cityKey);
+const lugaresDeExemplo = (_c: CidadeAtual): Place[] => [];
 
 const formatarDistancia = (km: number) =>
   km < 1 ? `${Math.max(50, Math.round((km * 1000) / 50) * 50)} m` : `${km.toFixed(1).replace('.', ',')} km`;

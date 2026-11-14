@@ -23,7 +23,6 @@ import EditarPerfilModal from './components/EditarPerfilModal';
 import SearchModal from './components/SearchModal';
 import TutorialModal, { tutorialJaVisto } from './components/TutorialModal';
 import { EVENTO_ABRIR_CLUBE } from './lib/clubes';
-import AdminImportarScreen from './screens/AdminImportarScreen';
 
 
 const DEFAULT_CURRENT_USER: UserProfile = {
@@ -138,9 +137,14 @@ export default function App() {
         try {
           const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
           if (userDoc.exists()) {
-            const data = userDoc.data() as UserProfile;
+            const data = userDoc.data() as UserProfile & { displayNameLower?: string };
             setCurrentUser(data);
             localStorage.setItem('vimo_current_user', JSON.stringify(data));
+            // Contas antigas não tinham o campo usado na busca por nome
+            const nomeBusca = (data.displayName || '').trim().toLowerCase();
+            if (nomeBusca && data.displayNameLower !== nomeBusca) {
+              setDoc(doc(db, 'users', fbUser.uid), { displayNameLower: nomeBusca }, { merge: true }).catch(() => {});
+            }
           } else {
             // Primeiro acesso: abrir onboarding
             setMostrarOnboarding(true);
@@ -185,7 +189,13 @@ export default function App() {
 
     if (isFirebaseConfigured && auth.currentUser) {
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid), perfil, { merge: true });
+        // Contadores e plano não saem do aparelho: a cópia local pode estar velha
+        const { followersCount: _s, followingCount: _g, plano: _p, ...campos } = perfil;
+        await setDoc(
+          doc(db, 'users', auth.currentUser.uid),
+          { ...campos, displayNameLower: perfil.displayName.trim().toLowerCase() },
+          { merge: true },
+        );
       } catch (err) {
         console.warn('Erro ao salvar perfil no Firestore:', err);
       }
@@ -244,18 +254,6 @@ export default function App() {
       <LoginScreen
         onLoginSuccess={handleLoginSuccess}
         onExploreAsGuest={handleExploreAsGuest}
-      />
-    );
-  }
-
-  // Tela admin de importação — acessível via URL com hash #admin
-  if (typeof window !== 'undefined' && window.location.hash === '#admin') {
-    return (
-      <AdminImportarScreen
-        onVoltar={() => {
-          window.location.hash = '';
-          window.location.reload();
-        }}
       />
     );
   }

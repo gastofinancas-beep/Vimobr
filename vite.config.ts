@@ -51,6 +51,8 @@ export default defineConfig(() => {
         workbox: {
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          // Modelos de checagem de foto (dezenas de MB) baixam só quando a pessoa escolhe uma foto
+          globIgnores: ['**/group1-shard*', '**/model.min-*'],
         },
       }),
     ],

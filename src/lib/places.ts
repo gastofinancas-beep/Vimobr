@@ -159,184 +159,9 @@ const mapPlace = (p: any): Place => {
   };
 };
 
-// Fallback places for São Paulo / Demo when API key is not present or offline
-export const SAMPLE_PLACES: Place[] = [
-  {
-    id: 'chIJf-place-01',
-    name: 'Maniçoba Bistrô & Café',
-    address: 'Rua dos Pinheiros, 452 - Pinheiros, São Paulo - SP',
-    lat: -23.561684,
-    lng: -46.682371,
-    photoUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_MODERATE',
-    rating: 4.8,
-    googleRating: 4.8,
-    googleUserRatingCount: 2340,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 2340,
-    tipo: 'restaurant',
-    sums: { ambiente: 182, comida: 186, atendimento: 175, custoBeneficio: 171 },
-  },
-  {
-    id: 'chIJf-place-02',
-    name: 'Padaria Artesanal Farinha & Flor',
-    address: 'Alameda Lorena, 1290 - Jardins, São Paulo - SP',
-    lat: -23.566212,
-    lng: -46.667823,
-    photoUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_INEXPENSIVE',
-    rating: 4.9,
-    googleRating: 4.9,
-    googleUserRatingCount: 1890,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 1890,
-    tipo: 'bakery',
-    sums: { ambiente: 307, comida: 318, atendimento: 310, custoBeneficio: 300 },
-  },
-  {
-    id: 'chIJf-place-03',
-    name: 'Torra Especial & Espresso Bar',
-    address: 'Rua Fradique Coutinho, 780 - Vila Madalena, São Paulo - SP',
-    lat: -23.557431,
-    lng: -46.689542,
-    photoUrl: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_MODERATE',
-    rating: 4.7,
-    googleRating: 4.7,
-    googleUserRatingCount: 940,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 940,
-    tipo: 'cafe',
-    sums: { ambiente: 201, comida: 198, atendimento: 192, custoBeneficio: 188 },
-  },
-  {
-    id: 'chIJf-place-04',
-    name: 'Bar do Canto & Coquetelaria',
-    address: 'Rua Mourato Coelho, 1022 - Vila Madalena, São Paulo - SP',
-    lat: -23.555891,
-    lng: -46.691456,
-    photoUrl: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_EXPENSIVE',
-    rating: 4.6,
-    googleRating: 4.6,
-    googleUserRatingCount: 1120,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 1120,
-    tipo: 'bar',
-    sums: { ambiente: 139, comida: 131, atendimento: 133, custoBeneficio: 122 },
-  },
-  {
-    id: 'chIJf-place-05',
-    name: 'Trattoria del Nonno',
-    address: 'Rua Avanhandava, 81 - Bela Vista, São Paulo - SP',
-    lat: -23.549210,
-    lng: -46.647180,
-    photoUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_EXPENSIVE',
-    rating: 4.8,
-    googleRating: 4.8,
-    googleUserRatingCount: 3450,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 3450,
-    tipo: 'restaurant',
-    sums: { ambiente: 245, comida: 250, atendimento: 242, custoBeneficio: 230 },
-  },
-  {
-    id: 'chIJf-place-06',
-    name: 'Confeitaria Dourada',
-    address: 'Rua Oscar Freire, 320 - Cerqueira César, São Paulo - SP',
-    lat: -23.562910,
-    lng: -46.669810,
-    photoUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_EXPENSIVE',
-    rating: 4.5,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 23,
-    tipo: 'bakery',
-    sums: { ambiente: 108, comida: 104, atendimento: 101, custoBeneficio: 92 },
-  },
-  {
-    id: 'chIJf-place-07',
-    name: 'Boteco da Lapa',
-    address: 'Rua Guaicurus, 142 - Lapa, São Paulo - SP',
-    lat: -23.525100,
-    lng: -46.698200,
-    photoUrl: 'https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_INEXPENSIVE',
-    rating: 4.4,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 35,
-    tipo: 'bar',
-    sums: { ambiente: 140, comida: 165, atendimento: 154, custoBeneficio: 168 },
-  },
-  {
-    id: 'chIJf-place-08',
-    name: 'Forno & Napoletana Pizza Bar',
-    address: 'Rua Simão Álvares, 480 - Pinheiros, São Paulo - SP',
-    lat: -23.559200,
-    lng: -46.690400,
-    photoUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_MODERATE',
-    rating: 4.9,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 78,
-    tipo: 'restaurant',
-    sums: { ambiente: 380, comida: 392, atendimento: 375, custoBeneficio: 370 },
-  },
-  {
-    id: 'chIJf-place-09',
-    name: 'Omakase Shima Sushi Bar',
-    address: 'Rua Thomaz Gonzaga, 88 - Liberdade, São Paulo - SP',
-    lat: -23.558100,
-    lng: -46.634200,
-    photoUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_EXPENSIVE',
-    rating: 4.9,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 54,
-    tipo: 'restaurant',
-    sums: { ambiente: 265, comida: 270, atendimento: 264, custoBeneficio: 240 },
-  },
-  {
-    id: 'chIJf-place-10',
-    name: 'Parrilla & Fogo Central',
-    address: 'Rua Cunha Gago, 312 - Pinheiros, São Paulo - SP',
-    lat: -23.568400,
-    lng: -46.696100,
-    photoUrl: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_EXPENSIVE',
-    rating: 4.8,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 46,
-    tipo: 'restaurant',
-    sums: { ambiente: 220, comida: 232, atendimento: 218, custoBeneficio: 210 },
-  },
-  {
-    id: 'chIJf-place-11',
-    name: 'Burger Craft & Brioche',
-    address: 'Rua dos Pinheiros, 700 - Pinheiros, São Paulo - SP',
-    lat: -23.564500,
-    lng: -46.685200,
-    photoUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1200&q=80',
-    priceLevel: 'PRICE_LEVEL_INEXPENSIVE',
-    rating: 4.7,
-    cityName: 'São Paulo - SP',
-    cityKey: 'sao-paulo-sp',
-    reviewsCount: 62,
-    tipo: 'restaurant',
-    sums: { ambiente: 280, comida: 300, atendimento: 275, custoBeneficio: 295 },
-  },
-];
+// Lugares de exemplo foram retirados: o app só mostra lugares reais (catálogo, OSM e cadastros).
+// A lista fica vazia para os pontos do código que ainda a consultam.
+export const SAMPLE_PLACES: Place[] = [];
 
 async function post(path: string, body: any, fields: string, timeoutMs = 4500) {
   const key = getApiKey();
@@ -831,13 +656,14 @@ export async function getPlace(placeId: string): Promise<Place> {
     }
     if (osmPlace) return osmPlace;
 
-    // Para lugares criados pelo usuário (user-*): tenta recuperar do Firestore
-    if (placeId.startsWith('user-')) {
+    // Lugar fora do cache deste aparelho (aberto por um post ou avaliação de outra cidade,
+    // ou cadastrado por outra pessoa): busca no banco do app
+    {
       try {
         const { getDoc, doc: fsDoc } = await import('firebase/firestore');
         const snap = await getDoc(fsDoc(db, 'places', placeId));
         if (snap.exists()) {
-          const p = snap.data() as Place;
+          const p = { ...(snap.data() as Place), id: placeId };
           cachePlace(p);
           // Salva no localStorage para próximas visitas
           try {
@@ -851,89 +677,12 @@ export async function getPlace(placeId: string): Promise<Place> {
     }
 
     // Stub mínimo quando o lugar local não está no cache nem no Firestore
-    const fallbackPlace: Place = {
-      id: placeId,
-      name: 'Lugar selecionado',
-      address: 'São Paulo - SP',
-      lat: -23.561684,
-      lng: -46.682371,
-      cityName: 'São Paulo - SP',
-      cityKey: 'sao-paulo-sp',
-      tipo: 'restaurant',
-    };
-    cachePlace(fallbackPlace);
-    return fallbackPlace;
+    // Sem dados inventados: quem chamou mostra "lugar não encontrado"
+    throw new Error('Lugar não encontrado');
   }
 
-  const key = getApiKey();
-  if (!key) {
-    const fallbackSemChave: Place = {
-      id: placeId,
-      name: 'Restaurante Selecionado',
-      address: 'Endereço Gastronômico, São Paulo - SP',
-      lat: -23.561684,
-      lng: -46.682371,
-      cityName: 'São Paulo - SP',
-      cityKey: 'sao-paulo-sp',
-      rating: 4.8,
-      reviewsCount: 16,
-      sums: { ambiente: 120, comida: 125, atendimento: 115, custoBeneficio: 110 },
-    };
-    cachePlace(fallbackSemChave);
-    return fallbackSemChave;
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-    const res = await fetch(`${BASE}/places/${placeId}?languageCode=pt-BR`, {
-      signal: controller.signal,
-      headers: {
-        'X-Goog-Api-Key': key,
-        'X-Goog-FieldMask':
-          'id,displayName,formattedAddress,location,photos,priceLevel,addressComponents,regularOpeningHours,rating',
-      },
-    });
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      if (sample) return sample;
-      // Retornar fallback seguro em vez de travar a tela
-      const fallbackErroApi: Place = {
-        id: placeId,
-        name: 'Estabelecimento Gastronômico',
-        address: 'São Paulo - SP',
-        lat: -23.561684,
-        lng: -46.682371,
-        cityName: 'São Paulo - SP',
-        cityKey: 'sao-paulo-sp',
-        rating: 4.8,
-        reviewsCount: 18,
-      };
-      cachePlace(fallbackErroApi);
-      return fallbackErroApi;
-    }
-
-    const lugarCarregado = mapPlace(await res.json());
-    cachePlace(lugarCarregado);
-    return lugarCarregado;
-  } catch (err) {
-    if (sample) return sample;
-    const fallbackCatch: Place = {
-      id: placeId,
-      name: 'Estabelecimento Gastronômico',
-      address: 'São Paulo - SP',
-      lat: -23.561684,
-      lng: -46.682371,
-      cityName: 'São Paulo - SP',
-      cityKey: 'sao-paulo-sp',
-      rating: 4.7,
-      reviewsCount: 14,
-    };
-    cachePlace(fallbackCatch);
-    return fallbackCatch;
-  }
+  // Ids fora dos padrões do app (restos do Google Places) não têm de onde vir
+  throw new Error('Lugar não encontrado');
 }
 
 export const photoUrl = (photoName?: string, maxWidth = 800) => {
@@ -1000,14 +749,17 @@ export async function buscarLugaresLocais(q: string): Promise<Place[]> {
             : 'restaurant';
           const addr = item.address;
           const bairroOsm = addr?.suburb || addr?.quarter || addr?.neighbourhood || addr?.city_district || '';
-          const cidade = addr?.city || addr?.town || addr?.village || 'Brasil';
+          const cidade = addr?.city || addr?.town || addr?.village || '';
+          // Mesma chave do resto do app: "sao-jose-dos-campos-sp"
+          const uf = String(addr?.['ISO3166-2-lvl4'] || '').replace(/^BR-/, '');
+          const cidadeNome = cidade ? `${cidade}${uf ? ' - ' + uf : ''}` : '';
           return {
             id: `nom-${item.place_id}`,
             name: nome,
             address: `${addr?.road ? addr.road + (addr?.house_number ? ', ' + addr.house_number : '') + ' — ' : ''}${bairroOsm || cidade}`,
             bairro: bairroOsm,
-            cityName: cidade,
-            cityKey: cidade.toLowerCase().replace(/\s+/g, '-'),
+            cityName: cidadeNome || undefined,
+            cityKey: cidadeNome ? slug(cidadeNome) : undefined,
             lat: parseFloat(item.lat),
             lng: parseFloat(item.lon),
             tipo,

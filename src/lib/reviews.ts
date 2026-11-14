@@ -3,7 +3,7 @@ import {
   query, where, orderBy, limit, getDocs,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage, isFirebaseConfigured } from './firebase';
+import { auth, db, storage, isFirebaseConfigured } from './firebase';
 import { CRITERIOS, type Comment, type FeedMode, type Place, type Ratings, type Review, type ReviewCompanion, type VereditoCritico, type OcasiaoIdeal, type VoltariaOpcao, type PratoAvaliado, type PrecoPercepcao } from '../types';
 import { SAMPLE_PLACES } from './places';
 import { criarNotificacao } from './notifications';
@@ -50,9 +50,103 @@ export async function uploadFoto(uid: string, file: File): Promise<string> {
     const limite = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('upload timeout')), 15000));
     return await Promise.race([envio, limite]);
   } catch (err) {
-    console.warn('Storage upload fallback:', err);
-    return URL.createObjectURL(file);
+    // Endereço blob: só vale nesta aba; gravado na avaliação, a foto quebrava para todo mundo
+    console.warn('Envio da foto falhou:', err);
+    return '';
   }
+}
+
+const fotoRemota = (u?: string) => !!u && /^https?:\/\//.test(u);
+
+/**
+ * Grava a avaliação no Firestore e soma as notas no lugar. Pode ser chamada de novo
+ * para a mesma avaliação: se ela já estiver no servidor, não faz nada.
+ */
+async function subirAvaliacao(review: Review, place?: Place): Promise<void> {
+  const reviewRef = doc(db, 'reviews', review.id);
+  const placeRef = doc(db, 'places', review.placeId);
+
+  await runTransaction(db, async (tx) => {
+    const jaExiste = await tx.get(reviewRef);
+    if (jaExiste.exists()) return;
+
+    const snap = await tx.get(placeRef);
+    // Lugares do catálogo e os cadastrados por usuário nascem sem `sums`
+    const sums: Partial<Ratings> = (snap.exists() ? snap.data()?.sums : null) ?? {};
+    const novas: Record<string, number> = { ...sums };
+    Object.entries(review.ratings || {}).forEach(([chave, valor]) => {
+      if (typeof valor === 'number' && valor > 0) novas[chave] = (novas[chave] || 0) + valor;
+    });
+
+    // Lugar que já existe só recebe os contadores; os dados dele não são sobrescritos
+    const dadosDoLugar = !snap.exists() && place
+      ? {
+          name: place.name, address: place.address, lat: place.lat, lng: place.lng,
+          photoName: place.photoName ?? null, cityKey: place.cityKey ?? '', cityName: place.cityName ?? '',
+        }
+      : {};
+    tx.set(placeRef, { ...dadosDoLugar, reviewsCount: (snap.data()?.reviewsCount ?? 0) + 1, sums: novas }, { merge: true });
+
+    const { id: _id, ...campos } = review;
+    const remoto = {
+      ...campos,
+      photos: (review.photos || []).filter(fotoRemota),
+      peoplePhotos: (review.peoplePhotos || []).filter(fotoRemota),
+      menuPhotos: (review.menuPhotos || []).filter(fotoRemota),
+      placePhotoUrl: fotoRemota(review.placePhotoUrl) ? review.placePhotoUrl : undefined,
+      likesCount: 0,
+      commentsCount: 0,
+    };
+    // Firestore recusa campos undefined (ex.: lugar sem foto)
+    tx.set(reviewRef, JSON.parse(JSON.stringify(remoto)));
+  });
+}
+
+const reenviando = new Set<string>();
+const LS_JA_SUBIRAM_KEY = 'vimo_reviews_no_servidor_v1';
+
+function lerJaSubiram(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(LS_JA_SUBIRAM_KEY) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function marcarJaSubiram(ids: string[]) {
+  if (ids.length === 0) return;
+  try {
+    const todas = lerJaSubiram();
+    ids.forEach((id) => todas.add(id));
+    localStorage.setItem(LS_JA_SUBIRAM_KEY, JSON.stringify([...todas].slice(-2000)));
+  } catch {}
+}
+
+/** Idas minhas que ficaram só no aparelho (rede caiu, erro antigo) sobem na próxima leitura. */
+function reenviarPendentes(uid: string, locais: Review[], remotas: Review[]): void {
+  if (!isFirebaseConfigured || auth.currentUser?.uid !== uid) return;
+  const noServidor = new Set(remotas.map((r) => r.id));
+  // Quem já esteve no servidor e sumiu foi apagada em outro aparelho: não volta
+  const jaSubiram = lerJaSubiram();
+  marcarJaSubiram(locais.filter((r) => noServidor.has(r.id) && !jaSubiram.has(r.id)).map((r) => r.id));
+  const pendentes = locais.filter(
+    (r) => r.uid === uid && r.placeId && !noServidor.has(r.id) && !jaSubiram.has(r.id) && !reenviando.has(r.id),
+  );
+  for (const r of pendentes.slice(0, 20)) {
+    reenviando.add(r.id);
+    subirAvaliacao(r).then(() => marcarJaSubiram([r.id])).catch((err) => {
+      reenviando.delete(r.id);
+      console.warn('Reenvio da avaliação falhou:', err);
+    });
+  }
+}
+
+/** Junta o que está no aparelho com o que veio do servidor; a versão do servidor vale mais. */
+function juntarReviews(locais: Review[], remotas: Review[]): Review[] {
+  const mapa = new Map<string, Review>();
+  for (const r of locais) mapa.set(r.id, r);
+  for (const r of remotas) mapa.set(r.id, r);
+  return [...mapa.values()];
 }
 
 export interface Autor { uid: string; name: string; handle: string; photo: string }
@@ -171,10 +265,12 @@ export async function salvarAvaliacao(a: {
   pratosAvaliados?: PratoAvaliado[];
   modalidade?: 'presencial' | 'delivery';
 }) {
+  const enviar = async (arquivos: File[]) =>
+    (await Promise.all(arquivos.map((f) => uploadFoto(a.autor.uid, f)))).filter(Boolean);
   const [photos, peoplePhotos, menuPhotos] = await Promise.all([
-    Promise.all(a.fotos.slice(0, 6).map((f) => uploadFoto(a.autor.uid, f))),
-    Promise.all((a.fotosPessoas || []).slice(0, 6).map((f) => uploadFoto(a.autor.uid, f))),
-    Promise.all(a.cardapio.slice(0, 3).map((f) => uploadFoto(a.autor.uid, f))),
+    enviar(a.fotos.slice(0, 6)),
+    enviar((a.fotosPessoas || []).slice(0, 6)),
+    enviar(a.cardapio.slice(0, 3)),
   ]);
 
   const calculatedOverall = calcOverall(a.ratings);
@@ -254,45 +350,10 @@ export async function salvarAvaliacao(a: {
   // Firestore em segundo plano: a ida já está salva no aparelho, então a confirmação
   // aparece na hora mesmo com rede lenta ou sem conexão.
   if (isFirebaseConfigured) {
-    void (async () => {
-    try {
-      // mesmo id do aparelho: evita contar a ida duas vezes e permite apagar depois
-      const reviewRef = doc(db, 'reviews', newId);
-      const placeRef = doc(db, 'places', a.place.id);
-
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(placeRef);
-        const sums: Ratings = snap.exists() ? snap.data().sums
-          : { ambiente: 0, comida: 0, atendimento: 0, custoBeneficio: 0 };
-        const novas = { ...sums } as Ratings;
-        CRITERIOS.forEach((c) => {
-          novas[c.key] = (sums[c.key] || 0) + (a.ratings[c.key] || 0);
-        });
-
-        tx.set(placeRef, {
-          name: a.place.name, address: a.place.address, lat: a.place.lat, lng: a.place.lng,
-          photoName: a.place.photoName ?? null, cityKey: a.place.cityKey ?? '', cityName: a.place.cityName ?? '',
-          reviewsCount: (snap.data()?.reviewsCount ?? 0) + 1, sums: novas,
-        }, { merge: true });
-
-        const firestoreReview: Omit<Review, 'id'> = {
-          uid: a.autor.uid, authorName: a.autor.name, authorHandle: a.autor.handle, authorPhoto: a.autor.photo,
-          placeId: a.place.id, placeName: a.place.name, placePhotoName: a.place.photoName,
-          cityKey: a.place.cityKey ?? '', cityName: a.place.cityName ?? '',
-          ratings: a.ratings, overall: a.notaGeral ?? calcOverall(a.ratings), text: a.text, photos, peoplePhotos, menuPhotos,
-          visitedAt: a.visitedAt, createdAt: Date.now(), likesCount: 0, commentsCount: 0,
-          ...(a.voltaria ? { voltaria: a.voltaria } : {}),
-          ...(a.precoPercepcao ? { precoPercepcao: a.precoPercepcao } : {}),
-          ...(a.pratoDestaque ? { pratoDestaque: a.pratoDestaque } : {}),
-          ...(a.companions && a.companions.length > 0 ? { companions: a.companions } : {}),
-        };
-        // Firestore recusa campos undefined (ex.: lugar sem foto); sem isso a ida não subia
-        tx.set(reviewRef, JSON.parse(JSON.stringify(firestoreReview)));
-      });
-    } catch (err) {
-      console.warn('Firestore salvarAvaliacao error, used local fallback:', err);
-    }
-  })();
+    // mesmo id do aparelho: evita contar a ida duas vezes e permite apagar depois
+    subirAvaliacao(review, a.place).then(() => marcarJaSubiram([newId])).catch((err) => {
+      console.warn('Avaliação ficou só no aparelho; será reenviada depois:', err);
+    });
   }
 
   return newId;
@@ -416,13 +477,14 @@ export async function carregarReviewsDoUsuario(uid: string): Promise<Review[]> {
         query(collection(db, 'reviews'), where('uid', '==', uid), orderBy('createdAt', 'desc'), limit(200))
       );
       remotas = snap.docs.map(toReview);
+      // só reenvia quando a lista do servidor veio inteira
+      if (snap.size < 200) reenviarPendentes(uid, locais, remotas);
     } catch (err) {
       console.warn('Firestore carregarReviewsDoUsuario fallback:', err);
     }
   }
 
-  const lista = remotas.length > 0 ? remotas : locais;
-  return [...lista].sort((a, b) => b.visitedAt - a.visitedAt);
+  return juntarReviews(locais, remotas).sort((a, b) => b.visitedAt - a.visitedAt);
 }
 
 // Reviews de um lugar específico (para PlaceDetailScreen)
@@ -441,8 +503,7 @@ export async function carregarReviewsDoLugar(placeId: string): Promise<Review[]>
     }
   }
 
-  const lista = remotas.length > 0 ? remotas : locais;
-  return [...lista].sort((a, b) => b.createdAt - a.createdAt);
+  return juntarReviews(locais, remotas).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 // ---------- Aba COMUNIDADE (só amigos)
@@ -676,8 +737,14 @@ export function alternarListaUsuario(uid: string, listaKey: 'queroIr' | 'jaFui' 
   }
 }
 
-export function obterScoreRestaurante(placeId: string, googleRatingFallback = 4.6, googleCountFallback = 180) {
-  const reviews = getLocalReviews().filter((r) => r.placeId === placeId);
+export function obterScoreRestaurante(
+  placeId: string,
+  googleRatingFallback?: number,
+  googleCountFallback?: number,
+  avaliacoes?: Review[],
+) {
+  // Com a lista da tela entram as avaliações de todo mundo, não só as deste aparelho
+  const reviews = (avaliacoes ?? getLocalReviews()).filter((r) => r.placeId === placeId && (r.overall ?? 0) > 0);
   const count = reviews.length;
   if (count < 5) {
     return {
@@ -689,7 +756,7 @@ export function obterScoreRestaurante(placeId: string, googleRatingFallback = 4.
       faltamParaDesbloquear: 5,
     };
   }
-  const sum = reviews.reduce((acc, r) => acc + (r.overall || 4.5), 0);
+  const sum = reviews.reduce((acc, r) => acc + r.overall, 0);
   const vimoRating = Math.round((sum / count) * 2) / 2;
   return {
     googleRating: googleRatingFallback,

@@ -114,24 +114,6 @@ app.post('/api/verificar-lugar', async (req, res) => {
   }
 });
 
-// Endpoint para disparar importação manual de uma cidade (requer FIREBASE_SERVICE_ACCOUNT)
-app.post('/api/seed-cidade', async (req, res) => {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-    return res.status(501).json({ erro: 'FIREBASE_SERVICE_ACCOUNT não configurado' });
-  }
-  const { cidade, lat, lng, cityKey } = req.body as { cidade?: string; lat?: number; lng?: number; cityKey?: string };
-  if (!cidade || !lat || !lng) {
-    return res.status(400).json({ erro: 'cidade, lat e lng são obrigatórios' });
-  }
-  try {
-    const { importarCidade } = await import('./scripts/seed-cidades.js');
-    const r = await importarCidade(cidade, lat, lng, cityKey);
-    return res.json(r);
-  } catch (e: any) {
-    return res.status(500).json({ erro: e.message });
-  }
-});
-
 // Setup do Vite em dev vs arquivos estáticos em produção
 async function startServer() {
   if (!isProd) {
@@ -170,7 +152,9 @@ async function startServer() {
     });
   } else {
     app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req, res) => {
+    // Express 5 não aceita mais a rota '*': o fallback do SPA é o último middleware
+    app.use((req, res, next) => {
+      if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
       res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
     });
   }

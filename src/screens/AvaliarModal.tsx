@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   X,
   ArrowLeft,
@@ -26,7 +26,8 @@ import { buscarLugaresLocais, criarLugarUsuario, getPlace, photoUrl } from '../l
 import { verificarAntesDeRegistrar, type StatusVerificacao } from '../lib/verificacaoLugar';
 import { getLocalReviews, salvarAvaliacao } from '../lib/reviews';
 import { avisarUltrapassagens } from '../lib/clubes';
-import { buscarUsuariosParaMarcar } from '../lib/companions';
+import type { UserToTag } from '../lib/companions';
+import { buscarUsuarios } from '../lib/follows';
 import { obterCriteriosParaLugar } from '../lib/criteriosEstabelecimento';
 import { Mascote } from '../components/Mascote';
 import { btn } from '../components/ui';
@@ -318,12 +319,44 @@ export default function AvaliarModal({
   };
 
   // Autocomplete de amigos
-  const amigosSugeridos = useMemo(() => {
-    if (buscaAmigo.trim().length === 0) return [];
-    return buscarUsuariosParaMarcar(buscaAmigo, currentUser.uid).filter(
-      (u) => !amigos.some((a) => a.uid === u.uid)
-    );
-  }, [buscaAmigo, currentUser.uid, amigos]);
+  // Busca em contas reais do app (nome ou @), com pequena espera entre as teclas
+  const [pessoasEncontradas, setPessoasEncontradas] = useState<UserToTag[]>([]);
+  useEffect(() => {
+    const termo = buscaAmigo.trim().replace(/^@/, '');
+    if (termo.length < 2) {
+      setPessoasEncontradas([]);
+      return;
+    }
+    let ativo = true;
+    const espera = setTimeout(() => {
+      buscarUsuarios(termo)
+        .then((lista) => {
+          if (!ativo) return;
+          setPessoasEncontradas(
+            lista
+              .filter((u) => u.uid && u.uid !== currentUser.uid)
+              .map((u) => ({
+                uid: u.uid as string,
+                name: u.displayName || u.handle || 'Pessoa',
+                handle: u.handle || '',
+                photo: u.photoURL || '',
+              })),
+          );
+        })
+        .catch(() => {
+          if (ativo) setPessoasEncontradas([]);
+        });
+    }, 300);
+    return () => {
+      ativo = false;
+      clearTimeout(espera);
+    };
+  }, [buscaAmigo, currentUser.uid]);
+
+  const amigosSugeridos = useMemo(
+    () => pessoasEncontradas.filter((u) => !amigos.some((a) => a.uid === u.uid)),
+    [pessoasEncontradas, amigos],
+  );
 
   // Validação ao avançar de passo
   const handleAvancar = () => {

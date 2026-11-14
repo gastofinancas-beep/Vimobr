@@ -206,12 +206,8 @@ export default function PlaceDetailScreen({
 
   // Score do Vimo e do Google
   const scoreInfo = useMemo(() => {
-    return obterScoreRestaurante(
-      placeId,
-      place?.googleRating || place?.rating || 4.6,
-      place?.googleUserRatingCount || place?.reviewsCount || 100
-    );
-  }, [placeId, place, reviews.length]);
+    return obterScoreRestaurante(placeId, place?.googleRating, place?.googleUserRatingCount, reviews);
+  }, [placeId, place, reviews]);
 
   // Histograma de 10 barras (0.5 a 5.0 com passo 0.5) baseado em reviews reais
   const histograma = useMemo(() => {

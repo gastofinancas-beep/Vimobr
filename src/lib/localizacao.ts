@@ -197,16 +197,14 @@ export async function carregarLugaresDaCidade(cidade: CidadeAtual, forcar = fals
   const doFirestore = await buscarLugaresFirestore(cidade);
   let lista: Place[];
   if (doFirestore.length >= 5) {
-    const exemplos = SAMPLE_PLACES.filter((p) => p.cityKey === cidade.cityKey);
-    lista = [...exemplos, ...doFirestore];
+    lista = doFirestore;
   } else {
     // Raio maior (15 km) para cobrir cidades médias e grandes; o cache de 24h amortiza o custo
     const encontrados = await buscarRestaurantesReaisOSM(cidade.lat, cidade.lng, 8000);
     const daCidade: Place[] = encontrados
       .filter((p) => !p.id.startsWith('nom-'))
       .map((p) => ({ ...p, cityName: p.cityName ?? cidade.nome, cityKey: cidade.cityKey }));
-    const exemplos = SAMPLE_PLACES.filter((p) => p.cityKey === cidade.cityKey);
-    lista = [...exemplos, ...daCidade.sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99))];
+    lista = daCidade.sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99));
     // Salva no Firestore em segundo plano para que a próxima visita (de qualquer usuário) seja instantânea
     if (daCidade.length > 0) void salvarLugaresFirestore(daCidade, cidade);
   }

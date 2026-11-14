@@ -263,24 +263,8 @@ describe('criarLugarUsuario', () => {
 // ─── SAMPLE_PLACES ────────────────────────────────────────────────────────
 
 describe('SAMPLE_PLACES', () => {
-  it('tem pelo menos 10 lugares', () => {
-    expect(SAMPLE_PLACES.length).toBeGreaterThanOrEqual(10);
-  });
-
-  it('todos têm id, name, lat e lng', () => {
-    for (const p of SAMPLE_PLACES) {
-      expect(p.id).toBeTruthy();
-      expect(p.name).toBeTruthy();
-      expect(typeof p.lat).toBe('number');
-      expect(typeof p.lng).toBe('number');
-    }
-  });
-
-  it('todos têm tipo válido', () => {
-    const tipos = ['restaurant', 'cafe', 'bakery', 'bar'];
-    for (const p of SAMPLE_PLACES) {
-      expect(tipos).toContain(p.tipo);
-    }
+  it('não tem lugares de exemplo: o app só mostra lugares reais', () => {
+    expect(SAMPLE_PLACES).toHaveLength(0);
   });
 });
 
@@ -311,13 +295,6 @@ describe('searchPlaces sem chave API', () => {
 // ─── autocomplete sem chave API ───────────────────────────────────────────
 
 describe('autocomplete sem chave API', () => {
-  it('filtra SAMPLE_PLACES por nome', async () => {
-    const sugestoes = await autocomplete('torra');
-    expect(sugestoes.length).toBeGreaterThanOrEqual(1);
-    expect(sugestoes[0].placeId).toBeTruthy();
-    expect(sugestoes[0].texto).toBeTruthy();
-  });
-
   it('retorna array vazio para query sem match', async () => {
     const sugestoes = await autocomplete('xyzquenaoexiste');
     expect(sugestoes).toHaveLength(0);
