@@ -113,10 +113,11 @@ app.post('/api/verificar-lugar', async (req, res) => {
     return res.status(401).json({ erro: 'Entre na sua conta para cadastrar um lugar.' });
   }
 
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) {
+  const tomtomKey = process.env.TOMTOM_API_KEY;
+  const googleKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!tomtomKey && !googleKey) {
     // Sem chave não há como confirmar; o app avisa em vez de dizer que o lugar não existe
-    console.warn('[verificar-lugar] GOOGLE_PLACES_API_KEY não configurada no servidor');
+    console.warn('[verificar-lugar] nem TOMTOM_API_KEY nem GOOGLE_PLACES_API_KEY configuradas no servidor');
     return res.status(503).json({ status: 'indisponivel' });
   }
 
@@ -124,43 +125,53 @@ app.post('/api/verificar-lugar', async (req, res) => {
     return res.status(429).json({ erro: 'Limite de cadastros de hoje atingido. Tente amanhã.' });
   }
 
+  // Aceita o lugar se alguma palavra (> 2 letras) do nome digitado aparece no nome achado.
+  // Fuzzy: remove acentos e pontuação, ignora artigos e preposições.
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+  const palavras = normalize(nome).split(/\s+/).filter(w => w.length > 2);
+  const bate = (achado: string) => {
+    const n = normalize(achado);
+    return palavras.length > 0 && palavras.some(p => n.includes(p));
+  };
+  const consulta = `${nome}${endereco ? ', ' + endereco : ''}`;
+
   try {
-    const url = `https://places.googleapis.com/v1/places:searchText`;
-    const resp = await fetch(url, {
+    // TomTom primeiro (cota grátis diária, sem cartão); Google só se não houver chave da TomTom.
+    if (tomtomKey) {
+      const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(consulta)}.json?key=${tomtomKey}&countrySet=BR&limit=5&language=pt-BR&idxSet=POI`;
+      const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!resp.ok) {
+        console.error('[verificar-lugar] TomTom error', resp.status, (await resp.text()).slice(0, 300));
+        return res.status(503).json({ status: 'indisponivel' });
+      }
+      const data = await resp.json() as { results?: { id: string; poi?: { name?: string } }[] };
+      const achado = data.results?.find(r => r.poi?.name && bate(r.poi.name));
+      if (!achado) return res.json({ status: 'pending_review' });
+      // Guarda só o id (chave de deduplicação), com prefixo para não colidir com ids do Google
+      return res.json({ status: 'verified', googlePlaceId: `tomtom:${achado.id}` });
+    }
+
+    const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
+        'X-Goog-Api-Key': googleKey!,
         'X-Goog-FieldMask': 'places.id,places.displayName',
       },
-      body: JSON.stringify({ textQuery: `${nome}${endereco ? ', ' + endereco : ''}`, maxResultCount: 1 }),
+      body: JSON.stringify({ textQuery: consulta, maxResultCount: 1 }),
       signal: AbortSignal.timeout(8000),
     });
 
     if (!resp.ok) {
-      // 403 costuma ser chave errada ou a Places API (New) não ativada no projeto
+      // 403 costuma ser chave errada, Places API (New) não ativada ou faturamento fechado
       console.error('[verificar-lugar] Google Places error', resp.status, (await resp.text()).slice(0, 300));
       return res.status(503).json({ status: 'indisponivel' });
     }
 
     const data = await resp.json() as { places?: GooglePlace[] };
     const found = data.places?.[0];
-
-    if (!found) {
-      return res.json({ status: 'pending_review' });
-    }
-
-    // Verifica se o nome digitado pelo usuário tem alguma palavra presente no nome do Google.
-    // Fuzzy: remove acentos e pontuação, ignora palavras com ≤ 2 letras (artigos, preposições).
-    const normalize = (s: string) =>
-      s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
-    const palavras = normalize(nome).split(/\s+/).filter(w => w.length > 2);
-    const googleNome = normalize(found.displayName?.text || '');
-    const match = palavras.length > 0 && palavras.some(p => googleNome.includes(p));
-
-    if (!match) {
-      return res.json({ status: 'pending_review' });
-    }
+    if (!found || !bate(found.displayName?.text || '')) return res.json({ status: 'pending_review' });
 
     // Retorna só o place_id do Google — único campo que os Termos de Uso permitem guardar
     // indefinidamente. Nome, endereço e coordenadas ficam com o que o usuário digitou ou
