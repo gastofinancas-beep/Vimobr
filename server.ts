@@ -115,7 +115,9 @@ app.post('/api/verificar-lugar', async (req, res) => {
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
-    return res.json({ status: 'pending_review' });
+    // Sem chave não há como confirmar; o app avisa em vez de dizer que o lugar não existe
+    console.warn('[verificar-lugar] GOOGLE_PLACES_API_KEY não configurada no servidor');
+    return res.status(503).json({ status: 'indisponivel' });
   }
 
   if (!dentroDoLimite(uid)) {
@@ -136,8 +138,9 @@ app.post('/api/verificar-lugar', async (req, res) => {
     });
 
     if (!resp.ok) {
-      console.error('[verificar-lugar] Google Places error', resp.status);
-      return res.json({ status: 'verification_error' });
+      // 403 costuma ser chave errada ou a Places API (New) não ativada no projeto
+      console.error('[verificar-lugar] Google Places error', resp.status, (await resp.text()).slice(0, 300));
+      return res.status(503).json({ status: 'indisponivel' });
     }
 
     const data = await resp.json() as { places?: GooglePlace[] };

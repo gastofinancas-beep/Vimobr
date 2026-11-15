@@ -1,5 +1,5 @@
 import type { Place } from '../types';
-import { SAMPLE_PLACES, buscarRestaurantesReaisOSM, cachePlaces, slug } from './places';
+import { buscarRestaurantesReaisOSM, cachePlaces, slug } from './places';
 import { db } from './firebase';
 import { collection, query, where, getDocs, limit, writeBatch, doc } from 'firebase/firestore';
 import { auth } from './firebase';
@@ -152,22 +152,63 @@ function lugaresGuardadosValidos(cidade: CidadeAtual): boolean {
   }
 }
 
-/** Salva lugares no Firestore em segundo plano; só roda quando o usuário está autenticado. */
-async function salvarLugaresFirestore(lugares: Place[], cidade: CidadeAtual): Promise<void> {
-  if (!auth.currentUser) return;
-  try {
-    const col = collection(db, 'places');
-    for (let i = 0; i < lugares.length; i += 400) {
-      const batch = writeBatch(db);
-      for (const place of lugares.slice(i, i + 400)) {
-        batch.set(
-          doc(col, place.id),
-          { ...place, cityName: place.cityName ?? cidade.nome, cityKey: cidade.cityKey, source: 'openstreetmap', createdAt: Date.now() },
-        );
-      }
+/** Campos que o catálogo guarda. `distanceKm` fica de fora: é a distância de quem buscou. */
+function paraCatalogo(place: Place, cidade: CidadeAtual) {
+  const { distanceKm: _d, ...resto } = place;
+  return JSON.parse(JSON.stringify({
+    ...resto,
+    cityName: place.cityName ?? cidade.nome,
+    cityKey: cidade.cityKey,
+    source: 'openstreetmap',
+    createdAt: Date.now(),
+  }));
+}
+
+/**
+ * Grava no catálogo do app (coleção `places`) os lugares do OSM que ainda não estão lá.
+ * Roda em segundo plano e só com alguém logado (a regra exige). Lotes pequenos: se um
+ * lote falhar (ex.: outra pessoa gravou o mesmo lugar ao mesmo tempo), os outros seguem.
+ */
+async function salvarLugaresFirestore(lugares: Place[], cidade: CidadeAtual): Promise<number> {
+  // No início do app o login ainda está sendo restaurado; sem esperar, a gravação era pulada
+  await auth.authStateReady().catch(() => {});
+  if (!auth.currentUser) return 0;
+  const col = collection(db, 'places');
+  let gravados = 0;
+  for (let i = 0; i < lugares.length; i += 100) {
+    const parte = lugares.slice(i, i + 100);
+    const batch = writeBatch(db);
+    for (const place of parte) batch.set(doc(col, place.id), paraCatalogo(place, cidade));
+    try {
       await batch.commit();
+      gravados += parte.length;
+    } catch (err) {
+      console.warn('Catálogo: lote de lugares não gravado:', err);
     }
-  } catch {}
+  }
+  return gravados;
+}
+
+const cidadesConferidas = new Set<string>();
+
+/**
+ * Garante que a cidade está no catálogo do app. Confere uma vez por sessão: se o banco
+ * tem menos lugares do que a lista do aparelho, grava os que faltam.
+ */
+async function completarCatalogo(cidade: CidadeAtual, lugares: Place[]): Promise<void> {
+  if (cidadesConferidas.has(cidade.cityKey)) return;
+  const doOsm = lugares.filter((p) => p.id.startsWith('osm-'));
+  if (doOsm.length === 0) return;
+  cidadesConferidas.add(cidade.cityKey);
+  const doBanco = await buscarLugaresFirestore(cidade);
+  // A consulta traz até 300: com isso a cidade já está no catálogo
+  if (doBanco.length >= 300) return;
+  const noBanco = new Set(doBanco.map((p) => p.id));
+  const faltam = doOsm.filter((p) => !noBanco.has(p.id));
+  if (faltam.length === 0) return;
+  const gravados = await salvarLugaresFirestore(faltam, cidade);
+  // Sem login ou sem rede: tenta de novo na próxima vez que a tela abrir
+  if (gravados === 0) cidadesConferidas.delete(cidade.cityKey);
 }
 
 /** Busca lugares da coleção `places` no Firestore para a cidade dada. */
@@ -190,7 +231,11 @@ async function buscarLugaresFirestore(cidade: CidadeAtual): Promise<Place[]> {
 /** Restaurantes, cafés, padarias e bares da cidade, do mais perto ao mais longe do ponto dela. */
 export async function carregarLugaresDaCidade(cidade: CidadeAtual, forcar = false): Promise<Place[]> {
   const guardados = lugaresGuardados(cidade);
-  if (guardados && !forcar && lugaresGuardadosValidos(cidade)) return guardados;
+  if (guardados && !forcar && lugaresGuardadosValidos(cidade)) {
+    // A lista veio do aparelho; o catálogo do app pode ainda não ter esses lugares
+    void completarCatalogo(cidade, guardados).catch(() => {});
+    return guardados;
+  }
 
   // Tenta o Firestore primeiro; cai no OSM se a cidade não foi importada
   const doFirestore = await buscarLugaresFirestore(cidade);
@@ -206,9 +251,7 @@ export async function carregarLugaresDaCidade(cidade: CidadeAtual, forcar = fals
     lista = daCidade.sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99));
     // Salva no Firestore em segundo plano para que a próxima visita (de qualquer usuário) seja instantânea
     // Só os que ainda não existem: lugar já gravado não é reescrito pelo app
-    const jaNoBanco = new Set(doFirestore.map((p) => p.id));
-    const novos = daCidade.filter((p) => !jaNoBanco.has(p.id));
-    if (novos.length > 0) void salvarLugaresFirestore(novos, cidade);
+    if (daCidade.length > 0) void completarCatalogo(cidade, daCidade).catch(() => {});
   }
 
   if (lista.length === 0) return guardados ?? [];

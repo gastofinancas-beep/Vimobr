@@ -826,6 +826,8 @@ export default function AvaliarModal({
                                       ? 'Entre na sua conta para cadastrar um lugar.'
                                       : verificacao.motivo === 'limite'
                                       ? 'Limite de cadastros de hoje atingido. Tente amanhã.'
+                                      : verificacao.motivo === 'indisponivel'
+                                      ? 'Não foi possível confirmar o lugar agora. Tente de novo em alguns minutos.'
                                       : 'Não encontramos este lugar no Google Maps. Confira o nome e tente novamente.',
                                   );
                                   return;

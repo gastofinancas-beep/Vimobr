@@ -21,7 +21,7 @@ export type ResultadoPreVerificacao = {
   /** true = Google confirmou, pode criar o lugar */
   ok: boolean;
   /** Por que o servidor nem chegou a consultar: sem login ou limite do dia */
-  motivo?: 'login' | 'limite';
+  motivo?: 'login' | 'limite' | 'indisponivel';
   googlePlaceId?: string;
   /** Lugar Vimo já existente com esse googlePlaceId */
   lugarExistente?: Place;
@@ -45,6 +45,7 @@ export async function verificarAntesDeRegistrar(
 
     if (resp.status === 401) return { ok: false, motivo: 'login' };
     if (resp.status === 429) return { ok: false, motivo: 'limite' };
+    if (resp.status === 503 || resp.status === 404) return { ok: false, motivo: 'indisponivel' };
     if (!resp.ok) return { ok: false };
 
     const data = await resp.json() as { status: StatusVerificacao; googlePlaceId?: string };
@@ -61,7 +62,8 @@ export async function verificarAntesDeRegistrar(
 
     return { ok: true, googlePlaceId: data.googlePlaceId };
   } catch {
-    return { ok: false };
+    // Servidor fora do ar ou sem rede: não é o mesmo que "lugar não existe"
+    return { ok: false, motivo: 'indisponivel' };
   }
 }
 
